@@ -5,7 +5,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from '../components/Auth/LoginPage';
 import SignUpPage from '../components/Auth/SignUpPage';
 import ProfileSettings from '../components/Auth/ProfileSettings';
-import PasswordReset from '../components/Auth/PasswordReset';
+import ForgotPasswordPage from '../components/Auth/ForgotPassword';
+import ResetPasswordPage from '../components/Auth/ResetPassword';
 
 // Advisor Components (Yousef)
 import FinancialAdvicePage from '../components/Advisor/FinancialAdvicePage';
@@ -27,6 +28,8 @@ import NotificationsPanel from '../components/Admin/NotificationsPanel';
 import AdvisorAvailability from '../components/Admin/AdvisorAvailability';
 import UserManagement from '../components/Admin/UserManagement';
 
+
+
 function AppRoutes() {
   return (
     <Routes>
@@ -37,7 +40,8 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/profile" element={<ProfileSettings />} />
-      <Route path="/reset-password" element={<PasswordReset />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Dashboard Routes */}
       <Route path="/dashboard" element={<DashboardPage />} />
