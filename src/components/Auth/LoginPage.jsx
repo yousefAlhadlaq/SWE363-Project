@@ -33,7 +33,7 @@ const LoginPage = () => {
     // Apply fix
     document.body.style.margin = '0';
     document.body.style.padding = '0';
-    document.body.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.body.style.background = 'linear-gradient(to bottom right, #1e293b, #073733ff, #1e293b)';
     document.body.style.backgroundAttachment = 'fixed';
     document.body.style.minHeight = '100vh';
     
@@ -246,8 +246,7 @@ const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/forgot-password')}
-                  className="text-gray-300 hover:text-white transition-colors disabled:opacity-50"
-                  disabled={loading}
+                  className="text-gray-300 hover:text-white transition-colors"
                 >
                   Forgot Password?
                 </button>

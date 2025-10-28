@@ -61,6 +61,45 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const signup = async (formData) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // TODO: Replace with actual API call
+      // Simulated API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock validation - replace with actual API
+      if (formData.email === 'test@existing.com') {
+        throw new Error('This email is already registered');
+      }
+      
+      // Mock user data - replace with actual API response
+      const userData = {
+        id: Date.now().toString(),
+        fullName: formData.fullName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        address: formData.address,
+        status: formData.status,
+        role: 'user',
+        createdAt: new Date().toISOString(),
+      };
+      
+      setUser(userData);
+      localStorage.setItem('guroosh_user', JSON.stringify(userData));
+      
+      return { success: true, user: userData };
+    } catch (err) {
+      const errorMessage = err.message || 'Signup failed. Please try again.';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('guroosh_user');
@@ -86,6 +125,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     login,
+    signup,
     logout,
     updateProfile,
     isAuthenticated,
