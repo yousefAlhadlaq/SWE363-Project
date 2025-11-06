@@ -1,11 +1,12 @@
 import React from 'react';
 
-function Button({ children, onClick, variant = 'primary', type = 'button', disabled = false }) {
-  const baseClasses = 'px-4 py-2 rounded-md font-medium transition-colors';
+function Button({ children, onClick, variant = 'primary', type = 'button', disabled = false, className = '' }) {
+  const baseClasses = `px-4 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 ${className}`;
+  
   const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700',
-    secondary: 'bg-gray-600 text-white hover:bg-gray-700',
-    danger: 'bg-red-600 text-white hover:bg-red-700',
+    primary: 'bg-teal-600 text-white hover:bg-teal-500 focus:ring-teal-500', // Changed to teal for design consistency
+    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500',
+    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
   };
 
   return (
