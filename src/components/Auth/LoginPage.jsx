@@ -110,7 +110,7 @@ const LoginPage = () => {
           navigate('/advisor-dashboard');
           break;
         case 'admin':
-          navigate('/admin-dashboard');
+          navigate('/admin');
           break;
         default:
           navigate('/dashboard');

@@ -1,132 +1,120 @@
-import React, { useState } from 'react';
-import Button from '../Shared/Button';
+import React from 'react';
+import AdminLayout from './AdminLayout';
+
+const statusTokens = {
+  available: {
+    label: 'Available',
+    chip: 'bg-emerald-400/10 text-emerald-100 border border-emerald-400/40'
+  },
+  busy: {
+    label: 'Busy',
+    chip: 'bg-amber-400/10 text-amber-100 border border-amber-400/40'
+  },
+  offline: {
+    label: 'Offline',
+    chip: 'bg-slate-500/10 text-slate-200 border border-slate-300/20'
+  }
+};
+
+const advisors = [
+  {
+    id: 1,
+    name: 'Ahmed Al-Saud',
+    specialty: 'Investment',
+    status: 'available',
+    sessions: 45,
+    rating: 4.8
+  },
+  {
+    id: 2,
+    name: 'Fatima Hassan',
+    specialty: 'Zakah & Islamic Finance',
+    status: 'available',
+    sessions: 62,
+    rating: 4.9
+  },
+  {
+    id: 3,
+    name: 'Omar Ibrahim',
+    specialty: 'Budgeting & Savings',
+    status: 'busy',
+    sessions: 38,
+    rating: 4.7
+  },
+  {
+    id: 4,
+    name: 'Sara Abdullah',
+    specialty: 'Debt Management',
+    status: 'offline',
+    sessions: 29,
+    rating: 4.6
+  }
+];
 
 function AdvisorAvailability() {
-  const [advisors, setAdvisors] = useState([
-    {
-      id: 1,
-      name: 'Ahmed Al-Saud',
-      specialty: 'Investment',
-      status: 'available',
-      sessions: 45,
-      rating: 4.8
-    },
-    {
-      id: 2,
-      name: 'Fatima Hassan',
-      specialty: 'Zakah & Islamic Finance',
-      status: 'available',
-      sessions: 62,
-      rating: 4.9
-    },
-    {
-      id: 3,
-      name: 'Omar Ibrahim',
-      specialty: 'Budgeting & Savings',
-      status: 'busy',
-      sessions: 38,
-      rating: 4.7
-    },
-    {
-      id: 4,
-      name: 'Sara Abdullah',
-      specialty: 'Debt Management',
-      status: 'offline',
-      sessions: 29,
-      rating: 4.6
-    }
-  ]);
-
-  const toggleStatus = (id, newStatus) => {
-    setAdvisors(
-      advisors.map((advisor) =>
-        advisor.id === id ? { ...advisor, status: newStatus } : advisor
-      )
-    );
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'available':
-        return 'bg-green-100 text-green-800';
-      case 'busy':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'offline':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-6">Advisor Availability Management</h2>
+    <AdminLayout
+      accentLabel="Advisors"
+      title="Advisor Availability"
+      description="Monitor advisor load and service coverage. Advisors update their own status from their workspace."
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {advisors.map((advisor) => (
+          <article
+            key={advisor.id}
+            className="rounded-3xl bg-white/5 border border-white/10 p-6 shadow-[0_12px_45px_rgba(1,6,12,0.75)] flex flex-col gap-5"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.4em] text-gray-500">
+                  Advisor
+                </p>
+                <h3 className="text-2xl font-semibold text-white">
+                  {advisor.name}
+                </h3>
+                <p className="text-sm text-gray-400">{advisor.specialty}</p>
+              </div>
+              <span
+                className={`px-4 py-1 rounded-full text-xs font-semibold ${statusTokens[advisor.status].chip}`}
+              >
+                {statusTokens[advisor.status].label}
+              </span>
+            </div>
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Specialty
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Sessions
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Rating
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {advisors.map((advisor) => (
-              <tr key={advisor.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="font-medium text-gray-900">{advisor.name}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-600">{advisor.specialty}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{advisor.sessions}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">⭐ {advisor.rating}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
-                      advisor.status
-                    )}`}
-                  >
-                    {advisor.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <select
-                    value={advisor.status}
-                    onChange={(e) => toggleStatus(advisor.id, e.target.value)}
-                    className="border border-gray-300 rounded px-2 py-1"
-                  >
-                    <option value="available">Available</option>
-                    <option value="busy">Busy</option>
-                    <option value="offline">Offline</option>
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="rounded-2xl bg-white/10 border border-white/10 p-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">
+                  Sessions
+                </p>
+                <p className="text-xl font-semibold text-white">
+                  {advisor.sessions}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white/10 border border-white/10 p-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">
+                  Rating
+                </p>
+                <p className="text-xl font-semibold text-white">
+                  * {advisor.rating.toFixed(1)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white/10 border border-white/10 p-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">
+                  Status
+                </p>
+                <p className="text-lg font-semibold text-white capitalize">
+                  {advisor.status}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500">
+              Availability is self-managed by advisors.
+            </p>
+          </article>
+        ))}
       </div>
-    </div>
+    </AdminLayout>
   );
 }
 
