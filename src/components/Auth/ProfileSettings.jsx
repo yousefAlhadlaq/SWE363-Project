@@ -26,8 +26,9 @@ const ProfileSettings = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   
-  // Edit profile form
+  // Edit profile form - UPDATED to include fullName
   const [editForm, setEditForm] = useState({
+    fullName: '',
     email: '',
     phoneNumber: '',
     password: '',
@@ -49,10 +50,11 @@ const ProfileSettings = () => {
     };
   }, []);
 
-  // Load user data when edit modal opens
+  // Load user data when edit modal opens - UPDATED to include fullName
   useEffect(() => {
     if (showEditModal && user) {
       setEditForm({
+        fullName: user.fullName || '',
         email: user.email || '',
         phoneNumber: user.phoneNumber || '',
         password: '',
@@ -83,8 +85,15 @@ const ProfileSettings = () => {
     }
   };
 
+  // UPDATED validation to include fullName
   const validateEditForm = () => {
     const errors = {};
+    
+    if (!editForm.fullName) {
+      errors.fullName = 'Full name is required';
+    } else if (editForm.fullName.length < 2) {
+      errors.fullName = 'Name must be at least 2 characters';
+    }
     
     if (!editForm.email) {
       errors.email = 'Email is required';
@@ -108,6 +117,7 @@ const ProfileSettings = () => {
     return Object.keys(errors).length === 0;
   };
 
+  // UPDATED to save fullName
   const handleSaveChanges = async () => {
     if (!validateEditForm()) {
       return;
@@ -119,12 +129,20 @@ const ProfileSettings = () => {
       // TODO: Replace with actual API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Update user profile in context
-      updateProfile({
+      // Update user profile in context - UPDATED to include fullName
+      const updatedData = {
+        fullName: editForm.fullName,
         email: editForm.email,
         phoneNumber: editForm.phoneNumber,
         address: editForm.address,
-      });
+      };
+      
+      // Only include password if it was changed
+      if (editForm.password) {
+        updatedData.password = editForm.password;
+      }
+      
+      updateProfile(updatedData);
       
       setShowEditModal(false);
       // Show success message (optional)
@@ -419,12 +437,12 @@ const ProfileSettings = () => {
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
+      {/* Edit Profile Modal - UPDATED with Full Name field */}
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         title="Edit Profile"
-        subtitle="Update your contact info and password."
+        subtitle="Update your name, contact info and password."
       >
         <div className="space-y-4">
           {/* Error Message */}
@@ -433,6 +451,22 @@ const ProfileSettings = () => {
               <p className="text-sm text-red-400">{editErrors.general}</p>
             </div>
           )}
+
+          {/* Full Name - NEW FIELD */}
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              Full Name
+            </label>
+            <InputField
+              type="text"
+              name="fullName"
+              value={editForm.fullName}
+              onChange={handleEditInputChange}
+              placeholder="Jordan Carter"
+              error={editErrors.fullName}
+              disabled={saving}
+            />
+          </div>
 
           {/* Email and Phone - Side by Side */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -470,7 +504,7 @@ const ProfileSettings = () => {
           {/* Password */}
           <div>
             <label className="block text-gray-300 text-sm font-medium mb-2">
-              Password
+              Password <span className="text-gray-400 text-xs">(leave blank to keep current)</span>
             </label>
             <InputField
               type={showPassword ? "text" : "password"}
