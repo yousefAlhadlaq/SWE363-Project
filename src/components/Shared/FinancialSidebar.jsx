@@ -17,7 +17,7 @@ function FinancialSidebar() {
         {/* Navigation Links */}
         <nav className="space-y-2 px-4">
           <NavLink
-            to="/financial-request"
+            to="/financial-advisor"
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive
@@ -31,7 +31,7 @@ function FinancialSidebar() {
           </NavLink>
 
           <NavLink
-            to="/settings"
+            to="/financial-settings"
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive

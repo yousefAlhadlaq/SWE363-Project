@@ -1,62 +1,455 @@
+/* src/styles/globals.css */
+/* Global Styles and Reusable CSS Classes for Guroosh Financial Platform */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom global styles */
+/* ============================================
+   CSS VARIABLES - Easy to reference and change
+   ============================================ */
+:root {
+  /* Brand Colors */
+  --color-teal-primary: #2dd4bf;
+  --color-teal-hover: #14b8a6;
+  --color-yellow-primary: #eab308;
+  --color-purple-primary: #9333ea;
+  
+  /* Background Colors */
+  --bg-dark-primary: #0f172a;
+  --bg-dark-secondary: #1e293b;
+  --bg-card: rgba(30, 41, 59, 0.5);
+  --bg-input: rgba(15, 23, 42, 0.5);
+  
+  /* Border Colors */
+  --border-primary: rgba(51, 65, 85, 0.5);
+  --border-hover: rgba(71, 85, 105, 0.5);
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-disabled: #64748b;
+  
+  /* Spacing */
+  --spacing-card: 1.5rem;
+  --spacing-page: 2rem;
+  
+  /* Border Radius */
+  --radius-card: 0.75rem;
+  --radius-button: 0.5rem;
+  --radius-input: 0.5rem;
+  
+  /* Transitions */
+  --transition-default: all 0.3s ease;
+  --transition-fast: all 0.15s ease;
+}
+
+/* ============================================
+   LAYER: BASE - Reset and Base Styles
+   ============================================ */
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 text-slate-300;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  h1 {
-    @apply text-3xl font-bold;
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-white font-bold;
   }
 
-  h2 {
-    @apply text-2xl font-bold;
+  a {
+    @apply text-teal-400 hover:text-teal-300 transition-colors;
   }
 
-  h3 {
-    @apply text-xl font-semibold;
+  input, textarea, select {
+    @apply text-white;
   }
 }
 
+/* ============================================
+   LAYER: COMPONENTS - Reusable Component Classes
+   ============================================ */
 @layer components {
+  
+  /* ========== BACKGROUND PATTERNS ========== */
+  .bg-page {
+    @apply min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+  }
+
+  .bg-page-centered {
+    @apply min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 flex items-center justify-center p-4;
+  }
+
+  .bg-section {
+    @apply flex h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+  }
+
+  /* ========== CARD PATTERNS ========== */
+  .card {
+    @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6;
+  }
+
+  .card-hover {
+    @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all;
+  }
+
+  .card-compact {
+    @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4;
+  }
+
+  .card-large {
+    @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-8;
+  }
+
+  /* ========== BUTTON PATTERNS ========== */
   .btn {
-    @apply px-4 py-2 rounded-md font-medium transition-colors;
+    @apply px-6 py-3 font-semibold rounded-lg transition-all;
   }
 
   .btn-primary {
-    @apply bg-blue-600 text-white hover:bg-blue-700;
+    @apply px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-lg transition-all;
   }
 
   .btn-secondary {
-    @apply bg-gray-600 text-white hover:bg-gray-700;
+    @apply px-6 py-3 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all;
   }
 
-  .card {
-    @apply bg-white p-6 rounded-lg shadow-md;
+  .btn-success {
+    @apply px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-all;
   }
 
+  .btn-danger {
+    @apply px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-all;
+  }
+
+  .btn-warning {
+    @apply px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-semibold rounded-lg transition-all;
+  }
+
+  .btn-purple {
+    @apply px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg transition-all;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2 text-sm font-medium rounded-lg transition-all;
+  }
+
+  .btn-lg {
+    @apply px-8 py-4 text-lg font-semibold rounded-lg transition-all;
+  }
+
+  .btn-icon {
+    @apply flex items-center space-x-2;
+  }
+
+  /* ========== INPUT PATTERNS ========== */
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
+    @apply w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all;
+  }
+
+  .input-error {
+    @apply w-full px-4 py-3 bg-slate-900/50 border border-red-500 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all;
+  }
+
+  .textarea {
+    @apply w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none transition-all;
+  }
+
+  .select {
+    @apply w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-slate-300 mb-2;
+  }
+
+  .label-required::after {
+    content: " *";
+    @apply text-red-400;
+  }
+
+  /* ========== STATUS BADGE PATTERNS ========== */
+  .badge {
+    @apply px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .badge-pending {
+    @apply px-3 py-1 rounded-full text-xs font-semibold bg-yellow-900/30 text-yellow-400;
+  }
+
+  .badge-accepted {
+    @apply px-3 py-1 rounded-full text-xs font-semibold bg-teal-900/30 text-teal-400;
+  }
+
+  .badge-active {
+    @apply px-3 py-1 rounded-full text-xs font-semibold bg-blue-900/30 text-blue-400;
+  }
+
+  .badge-completed {
+    @apply px-3 py-1 rounded-full text-xs font-semibold bg-green-900/30 text-green-400;
+  }
+
+  .badge-declined {
+    @apply px-3 py-1 rounded-full text-xs font-semibold bg-red-900/30 text-red-400;
+  }
+
+  /* ========== MODAL PATTERNS ========== */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4;
+  }
+
+  .modal-content {
+    @apply bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto;
+  }
+
+  .modal-header {
+    @apply border-b border-slate-700 p-6 flex justify-between items-center;
+  }
+
+  .modal-body {
+    @apply p-6;
+  }
+
+  .modal-footer {
+    @apply border-t border-slate-700 p-6 flex space-x-4;
+  }
+
+  /* ========== LINK PATTERNS ========== */
+  .link {
+    @apply text-teal-400 hover:text-teal-300 transition-colors;
+  }
+
+  .link-muted {
+    @apply text-slate-400 hover:text-slate-300 transition-colors;
+  }
+
+  /* ========== DIVIDER PATTERNS ========== */
+  .divider {
+    @apply border-t border-slate-700 my-6;
+  }
+
+  .divider-vertical {
+    @apply border-l border-slate-700 mx-6;
+  }
+
+  /* ========== ALERT PATTERNS ========== */
+  .alert {
+    @apply p-4 rounded-lg border;
+  }
+
+  .alert-info {
+    @apply p-4 rounded-lg border bg-blue-900/20 border-blue-700/30 text-blue-300;
+  }
+
+  .alert-success {
+    @apply p-4 rounded-lg border bg-green-900/20 border-green-700/30 text-green-300;
+  }
+
+  .alert-warning {
+    @apply p-4 rounded-lg border bg-yellow-900/20 border-yellow-700/30 text-yellow-300;
+  }
+
+  .alert-error {
+    @apply p-4 rounded-lg border bg-red-900/20 border-red-700/30 text-red-300;
+  }
+
+  /* ========== TEXT PATTERNS ========== */
+  .text-heading {
+    @apply text-white font-bold;
+  }
+
+  .text-body {
+    @apply text-slate-300;
+  }
+
+  .text-muted {
+    @apply text-slate-400;
+  }
+
+  .text-disabled {
+    @apply text-slate-500;
+  }
+
+  /* ========== LOADING PATTERNS ========== */
+  .spinner {
+    @apply animate-spin h-5 w-5 border-2 border-teal-500 border-t-transparent rounded-full;
+  }
+
+  .skeleton {
+    @apply animate-pulse bg-slate-700/50 rounded;
+  }
+
+  /* ========== SIDEBAR PATTERNS ========== */
+  .sidebar-item {
+    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all text-slate-400 hover:text-white hover:bg-slate-700/30;
+  }
+
+  .sidebar-item-active {
+    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all bg-slate-700/50 text-white;
+  }
+
+  /* ========== FORM PATTERNS ========== */
+  .form-group {
+    @apply space-y-2;
+  }
+
+  .form-error {
+    @apply text-red-400 text-xs mt-1;
+  }
+
+  .form-help {
+    @apply text-slate-400 text-xs mt-1;
+  }
+
+  /* ========== TABLE PATTERNS ========== */
+  .table {
+    @apply w-full text-left;
+  }
+
+  .table-header {
+    @apply border-b border-slate-700 text-slate-400 text-sm font-medium;
+  }
+
+  .table-row {
+    @apply border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors;
+  }
+
+  .table-cell {
+    @apply px-4 py-3;
   }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* ============================================
+   LAYER: UTILITIES - Custom Utility Classes
+   ============================================ */
+@layer utilities {
+  
+  /* Glassmorphism Effect */
+  .glass {
+    @apply backdrop-blur-sm bg-opacity-50;
+  }
+
+  /* Gradient Text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-teal-400 to-blue-500 bg-clip-text text-transparent;
+  }
+
+  /* Truncate with tooltip */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Smooth scroll */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Custom scrollbar */
+  .scrollbar-custom {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(45, 212, 191, 0.3) transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    background-color: rgba(45, 212, 191, 0.3);
+    border-radius: 4px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(45, 212, 191, 0.5);
+  }
+
+  /* Focus visible only on keyboard navigation */
+  .focus-visible-only:focus:not(:focus-visible) {
+    outline: none;
+  }
 }
 
-::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-400 rounded-full;
+@keyframes slideIn {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-500;
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   RESPONSIVE UTILITIES
+   ============================================ */
+@media (max-width: 768px) {
+  .card {
+    @apply p-4;
+  }
+
+  .card-large {
+    @apply p-6;
+  }
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }

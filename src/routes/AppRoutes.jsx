@@ -11,6 +11,7 @@ import ResetPasswordPage from '../components/Auth/ResetPassword';
 // Advisor Components (Yousef)
 import FinancialAdvicePage from '../components/Advisor/FinancialAdvicePage';
 import FinancialAdvisorPage from '../components/Advisor/FinancialAdvisorPage';
+import FinancialSettingsPage from '../components/Advisor/FinancialSettingsPage';
 
 // Dashboard Components (Abdulmajeed)
 import DashboardPage from '../components/Dashboard/DashboardPage';
@@ -58,6 +59,7 @@ function AppRoutes() {
       {/* Advisor Routes */}
       <Route path="/financial-advice" element={<FinancialAdvicePage />} />
       <Route path="/financial-advisor" element={<FinancialAdvisorPage />} />
+      <Route path="/financial-settings" element={<FinancialSettingsPage />} />
 
       {/* Admin Routes */}
       <Route path="/admin" element={<AdminDashboard />} />
