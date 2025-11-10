@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, accountType) => {
     setLoading(true);
     setError(null);
 
@@ -38,18 +38,8 @@ export const AuthProvider = ({ children }) => {
       // Simulated API call
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Mock backend response - replace with actual API call
-      // In real implementation, the backend will return the user's role
-      // For demo purposes, we'll determine role based on email pattern:
-      // - emails containing 'advisor' → role: 'advisor'
-      // - emails containing 'admin' → role: 'admin'
-      // - all others → role: 'user'
-      let userRole = 'user';
-      if (email.toLowerCase().includes('advisor')) {
-        userRole = 'advisor';
-      } else if (email.toLowerCase().includes('admin')) {
-        userRole = 'admin';
-      }
+      // Use the accountType from the login form instead of email pattern
+      const userRole = accountType || 'user';
 
       // Mock user data - replace with actual API response
       const userData = {
