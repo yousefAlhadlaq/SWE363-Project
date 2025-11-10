@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../Shared/Button';
 import InputField from '../Shared/InputField';
 import Sidebar from '../Shared/Sidebar';
@@ -8,6 +8,31 @@ function FinancialAdvicePage() {
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedThread, setSelectedThread] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
+
+  // Fix white bar by setting body background directly
+  useEffect(() => {
+    const originalBodyMargin = document.body.style.margin;
+    const originalBodyPadding = document.body.style.padding;
+    const originalBodyBackground = document.body.style.background;
+    const originalHtmlBackground = document.documentElement.style.background;
+
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.body.style.backgroundAttachment = 'fixed';
+    document.body.style.minHeight = '100vh';
+
+    document.documentElement.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.documentElement.style.margin = '0';
+    document.documentElement.style.padding = '0';
+
+    return () => {
+      document.body.style.margin = originalBodyMargin;
+      document.body.style.padding = originalBodyPadding;
+      document.body.style.background = originalBodyBackground;
+      document.documentElement.style.background = originalHtmlBackground;
+    };
+  }, []);
   
   const [request, setRequest] = useState({
     topic: '',
@@ -161,13 +186,13 @@ function FinancialAdvicePage() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Pending':
-        return 'bg-yellow-900/30 text-yellow-400';
+        return 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30';
       case 'Accepted':
-        return 'bg-teal-900/30 text-teal-400';
+        return 'bg-teal-500/10 text-teal-400 border border-teal-500/30';
       case 'Answered':
-        return 'bg-green-900/30 text-green-400';
+        return 'bg-green-500/10 text-green-400 border border-green-500/30';
       default:
-        return 'bg-slate-700/30 text-slate-400';
+        return 'bg-slate-700/30 text-slate-400 border border-slate-600/30';
     }
   };
 
@@ -175,35 +200,47 @@ function FinancialAdvicePage() {
   if (selectedThread) {
     return (
       <div className="flex h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900">
+        {/* Decorative animated background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl"></div>
+        </div>
+
         {/* Sidebar */}
         <Sidebar />
-        
+
         {/* Main Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-6 relative">
         <div className="max-w-7xl mx-auto">
           {/* Back Button */}
           <button
             onClick={() => setSelectedThread(null)}
-            className="text-teal-400 hover:text-teal-300 mb-6 flex items-center space-x-2"
+            className="text-teal-400 hover:text-teal-300 mb-6 flex items-center space-x-2 transition-colors duration-200 group"
           >
-            <span>←</span>
-            <span>Back to Requests</span>
+            <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="font-medium">Back to Requests</span>
           </button>
 
           {/* Header Card */}
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 mb-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">{selectedThread.title}</h2>
-                <div className="flex items-center space-x-4 text-sm text-slate-400">
-                  <span>Topic: {selectedThread.topic}</span>
-                  <span>•</span>
-                  <span>Budget: {selectedThread.budget}</span>
+          <div className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
+            <div className="relative bg-slate-800/70 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 mb-6 hover:border-slate-600/50 transition-all duration-300">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-3">{selectedThread.title}</h2>
+                  <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-400">
+                    <span className="text-gray-300">{selectedThread.topic}</span>
+                    <span>•</span>
+                    <span>Budget: <span className="text-green-400 font-semibold">{selectedThread.budget}</span></span>
+                  </div>
                 </div>
+                <span className={`px-4 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(selectedThread.status)}`}>
+                  {selectedThread.status}
+                </span>
               </div>
-              <span className={`px-4 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(selectedThread.status)}`}>
-                {selectedThread.status}
-              </span>
             </div>
           </div>
 
@@ -321,30 +358,37 @@ function FinancialAdvicePage() {
   // Main Dashboard View
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900">
+      {/* Decorative animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl"></div>
+      </div>
+
       {/* Sidebar */}
       <Sidebar />
-      
+
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6 relative">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-3">
-            <h2 className="text-3xl font-bold text-white">Financial Advice</h2>
-            <span className="bg-yellow-500 text-slate-900 text-sm font-bold px-3 py-1.5 rounded-full">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent">Financial Advice</h2>
+            <span className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-slate-900 text-sm font-bold px-4 py-1.5 rounded-full shadow-lg">
               {sentRequests.length + receivedRequests.length}
             </span>
           </div>
         </div>
 
         {/* Toggle Tabs */}
-        <div className="flex space-x-2 mb-6">
+        <div className="flex space-x-3 mb-6">
           <button
             onClick={() => setActiveTab('sent')}
             className={`flex-1 px-6 py-4 rounded-xl font-semibold text-lg transition-all ${
               activeTab === 'sent'
-                ? 'bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 text-white'
-                : 'bg-slate-800/20 border border-slate-700/30 text-slate-400 hover:text-white hover:bg-slate-800/30'
+                ? 'bg-slate-800/70 backdrop-blur-xl text-white border border-slate-700/50 shadow-lg'
+                : 'bg-slate-800/30 border border-slate-700/30 text-gray-400 hover:text-white hover:bg-slate-800/50 hover:border-slate-600/50'
             }`}
           >
             Sent
@@ -353,8 +397,8 @@ function FinancialAdvicePage() {
             onClick={() => setActiveTab('received')}
             className={`flex-1 px-6 py-4 rounded-xl font-semibold text-lg transition-all ${
               activeTab === 'received'
-                ? 'bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 text-white'
-                : 'bg-slate-800/20 border border-slate-700/30 text-slate-400 hover:text-white hover:bg-slate-800/30'
+                ? 'bg-slate-800/70 backdrop-blur-xl text-white border border-slate-700/50 shadow-lg'
+                : 'bg-slate-800/30 border border-slate-700/30 text-gray-400 hover:text-white hover:bg-slate-800/50 hover:border-slate-600/50'
             }`}
           >
             Received
@@ -365,59 +409,65 @@ function FinancialAdvicePage() {
         <div className="space-y-4">
           {activeTab === 'sent' ? (
             sentRequests.map((req) => (
-                <div key={req.id} className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(req.status)}`}>
-                          {req.status}
-                        </span>
-                        <h3 className="text-lg font-semibold text-white">{req.title}</h3>
+                <div key={req.id} className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
+                  <div className="relative bg-slate-800/70 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 hover:border-slate-600/50 transition-all duration-300">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(req.status)}`}>
+                            {req.status}
+                          </span>
+                          <h3 className="text-lg font-bold text-white">{req.title}</h3>
+                        </div>
+                        <p className="text-sm text-gray-400 mb-2 flex items-center gap-2">
+                          <span>Submitted • {req.timestamp} • Topic: <span className="text-gray-300">{req.topic}</span></span>
+                        </p>
+                        <p className="text-gray-200 text-sm leading-relaxed">{req.description}</p>
                       </div>
-                      <p className="text-sm text-slate-400 mb-2">
-                        Submitted • {req.timestamp} • Topic: {req.topic}
-                      </p>
-                      <p className="text-slate-300 text-sm">{req.description}</p>
                     </div>
-                  </div>
-                  <div className="flex space-x-2 mt-4">
-                    <button
-                      onClick={() => viewThread(req)}
-                      className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all text-sm"
-                    >
-                      View
-                    </button>
-                    {req.status === 'Pending' && (
-                      <button className="px-4 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg transition-all text-sm" onClick={() => handleCancelRequest(req.id)}>
-                        Cancel
+                    <div className="flex space-x-2 mt-4">
+                      <button
+                        onClick={() => viewThread(req)}
+                        className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm border border-slate-600/50"
+                      >
+                        View
                       </button>
-                    )}
+                      {req.status === 'Pending' && (
+                        <button className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-medium rounded-lg transition-all text-sm" onClick={() => handleCancelRequest(req.id)}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
               receivedRequests.map((req) => (
-                <div key={req.id} className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(req.status)}`}>
-                          {req.status}
-                        </span>
-                        <h3 className="text-lg font-semibold text-white">{req.title}</h3>
+                <div key={req.id} className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
+                  <div className="relative bg-slate-800/70 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 hover:border-slate-600/50 transition-all duration-300">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(req.status)}`}>
+                            {req.status}
+                          </span>
+                          <h3 className="text-lg font-bold text-white">{req.title}</h3>
+                        </div>
+                        <p className="text-sm text-gray-400 mb-2">
+                          Updated • {req.timestamp} • Topic: <span className="text-gray-300">{req.topic}</span>
+                        </p>
+                        <p className="text-gray-200 text-sm leading-relaxed">{req.description}</p>
                       </div>
-                      <p className="text-sm text-slate-400 mb-2">
-                        Updated • {req.timestamp} • Topic: {req.topic}
-                      </p>
-                      <p className="text-slate-300 text-sm">{req.description}</p>
                     </div>
+                    <button
+                      onClick={() => viewThread(req)}
+                      className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm mt-4 border border-slate-600/50"
+                    >
+                      View
+                    </button>
                   </div>
-                  <button
-                    onClick={() => viewThread(req)}
-                    className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all text-sm mt-4"
-                  >
-                    View
-                  </button>
                 </div>
               ))
             )}

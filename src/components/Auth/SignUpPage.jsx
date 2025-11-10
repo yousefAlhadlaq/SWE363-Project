@@ -16,6 +16,7 @@ const SignUpPage = () => {
     phoneNumber: '',
     address: '',
     status: '',
+    userType: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false,
@@ -56,6 +57,12 @@ const SignUpPage = () => {
     { value: 'student', label: 'Student' },
     { value: 'unemployed', label: 'Unemployed' },
     { value: 'retired', label: 'Retired' },
+  ];
+
+  const userTypeOptions = [
+    { value: '', label: 'Select user type' },
+    { value: 'user', label: 'Regular User' },
+    { value: 'advisor', label: 'Financial Advisor' },
   ];
 
   const handleInputChange = (e) => {
@@ -101,7 +108,11 @@ const SignUpPage = () => {
     if (!formData.status) {
       newErrors.status = 'Please select your status';
     }
-    
+
+    if (!formData.userType) {
+      newErrors.userType = 'Please select your user type';
+    }
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
@@ -126,19 +137,37 @@ const SignUpPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
-    // TODO: Replace with actual signup API call
-    console.log('Signing up with:', formData);
-    
-    // Simulate signup (replace with actual logic)
-    const result = await signup?.(formData);
-    
-    if (result?.success) {
-      navigate('/dashboard');
+    try {
+      // TODO: Replace with actual signup API call
+      console.log('Signing up with:', formData);
+
+      // Simulate signup (replace with actual logic)
+      const result = await signup?.(formData);
+
+      if (result?.success) {
+        // Redirect based on user role
+        const userRole = result.role || result.user?.role || formData.userType;
+
+        switch(userRole) {
+          case 'advisor':
+            navigate('/financial-advisor');
+            break;
+          case 'admin':
+            navigate('/admin');
+            break;
+          default:
+            navigate('/dashboard');
+        }
+      } else {
+        setErrors({ submit: result.error || 'Signup failed. Please try again.' });
+      }
+    } catch (error) {
+      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
     }
   };
 
@@ -177,9 +206,9 @@ const SignUpPage = () => {
 
             <div className="relative bg-slate-800/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-slate-700/50 hover:border-slate-600/50 transition-all duration-300">
               {/* Auth Error Message */}
-              {authError && (
+              {(authError || errors.submit) && (
                 <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm animate-shake">
-                  <p className="text-sm text-red-300 font-medium">{authError}</p>
+                  <p className="text-sm text-red-300 font-medium">{authError || errors.submit}</p>
                 </div>
               )}
 
@@ -281,6 +310,27 @@ const SignUpPage = () => {
                   disabled={loading}
                 />
               </div>
+
+                {/* User Type */}
+                <div className="space-y-2">
+                  <label className="block text-gray-200 text-sm font-semibold tracking-wide">
+                    User Type
+                  </label>
+                  <SelectMenu
+                    name="userType"
+                    value={formData.userType}
+                    onChange={handleInputChange}
+                    options={userTypeOptions}
+                    error={errors.userType}
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    Choose between Regular User or Financial Advisor
+                  </p>
+                </div>
 
                 {/* Password Fields - Side by Side */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

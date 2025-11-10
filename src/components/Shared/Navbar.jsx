@@ -4,26 +4,37 @@ import LogoImage from "../../assets/images/logo.png";
 
 function Navbar() {
   return (
-    <nav className="border-b border-white/5 bg-gradient-to-r from-brand-midnight via-brand-deep to-brand-teal/80 text-white shadow-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link to="/" className="flex items-center gap-3">
-          <img
-            src={LogoImage}
-            alt="Quroosh logo"
-            className="h-10 w-auto rounded-2xl border border-white/10 bg-white/10 p-1 shadow-inner shadow-black/40"
-          />
+    <nav className="sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur-xl shadow-lg">
+      {/* Decorative gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-teal-900/10 via-transparent to-blue-900/10 pointer-events-none"></div>
+
+      <div className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        {/* Logo Section */}
+        <Link to="/" className="group flex items-center gap-3">
+          <div className="relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-blue-500 rounded-2xl opacity-20 group-hover:opacity-40 blur transition duration-300"></div>
+            <img
+              src={LogoImage}
+              alt="Quroosh logo"
+              className="relative h-11 w-auto rounded-2xl border border-slate-700/50 bg-slate-800/50 p-1.5 shadow-lg transition-transform duration-200 group-hover:scale-105"
+            />
+          </div>
           <div>
-            <p className="text-base font-semibold tracking-wide text-white">
+            <p className="text-lg font-bold bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent">
               Quroosh
             </p>
-            <p className="text-xs uppercase tracking-[0.3em] text-white/70">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-400">
               Financial Platform
             </p>
           </div>
         </Link>
-        <span className="text-xs font-medium uppercase tracking-[0.4em] text-brand-aqua/70">
-          Empower Advisors
-        </span>
+
+        {/* Center Section - Tagline */}
+        <div className="hidden md:block">
+          <span className="text-sm font-medium tracking-wide text-teal-400/80">
+            Empowering Financial Advisors
+          </span>
+        </div>
       </div>
     </nav>
   );

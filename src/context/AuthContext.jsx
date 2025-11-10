@@ -29,29 +29,41 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password, accountHolder) => {
+  const login = async (email, password) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // TODO: Replace with actual API call
       // Simulated API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
+      // Mock backend response - replace with actual API call
+      // In real implementation, the backend will return the user's role
+      // For demo purposes, we'll determine role based on email pattern:
+      // - emails containing 'advisor' → role: 'advisor'
+      // - emails containing 'admin' → role: 'admin'
+      // - all others → role: 'user'
+      let userRole = 'user';
+      if (email.toLowerCase().includes('advisor')) {
+        userRole = 'advisor';
+      } else if (email.toLowerCase().includes('admin')) {
+        userRole = 'admin';
+      }
+
       // Mock user data - replace with actual API response
       const userData = {
         id: '1',
         email,
-        accountHolder,
-        role: accountHolder || 'user',
+        role: userRole,
         name: 'User Name',
         createdAt: new Date().toISOString(),
       };
-      
+
       setUser(userData);
       localStorage.setItem('guroosh_user', JSON.stringify(userData));
-      
-      return { success: true, user: userData };
+
+      return { success: true, user: userData, role: userRole };
     } catch (err) {
       const errorMessage = err.message || 'Login failed. Please try again.';
       setError(errorMessage);
@@ -64,17 +76,21 @@ export const AuthProvider = ({ children }) => {
   const signup = async (formData) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // TODO: Replace with actual API call
       // Simulated API call
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Mock validation - replace with actual API
       if (formData.email === 'test@existing.com') {
         throw new Error('This email is already registered');
       }
-      
+
+      // Determine user role from formData.userType
+      // In real implementation, backend will validate and assign the role
+      const userRole = formData.userType || 'user';
+
       // Mock user data - replace with actual API response
       const userData = {
         id: Date.now().toString(),
@@ -83,14 +99,14 @@ export const AuthProvider = ({ children }) => {
         phoneNumber: formData.phoneNumber,
         address: formData.address,
         status: formData.status,
-        role: 'user',
+        role: userRole,
         createdAt: new Date().toISOString(),
       };
-      
+
       setUser(userData);
       localStorage.setItem('guroosh_user', JSON.stringify(userData));
-      
-      return { success: true, user: userData };
+
+      return { success: true, user: userData, role: userRole };
     } catch (err) {
       const errorMessage = err.message || 'Signup failed. Please try again.';
       setError(errorMessage);

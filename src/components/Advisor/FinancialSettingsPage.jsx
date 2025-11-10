@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FinancialSidebar from '../Shared/FinancialSidebar';
 import Button from '../Shared/Button';
@@ -7,6 +7,30 @@ import InputField from '../Shared/InputField';
 import { useAuth } from '../../context/AuthContext';
 
 function FinancialSettingsPage() {
+  // Fix white bar by setting body background directly
+  useEffect(() => {
+    const originalBodyMargin = document.body.style.margin;
+    const originalBodyPadding = document.body.style.padding;
+    const originalBodyBackground = document.body.style.background;
+    const originalHtmlBackground = document.documentElement.style.background;
+
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.body.style.backgroundAttachment = 'fixed';
+    document.body.style.minHeight = '100vh';
+
+    document.documentElement.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.documentElement.style.margin = '0';
+    document.documentElement.style.padding = '0';
+
+    return () => {
+      document.body.style.margin = originalBodyMargin;
+      document.body.style.padding = originalBodyPadding;
+      document.body.style.background = originalBodyBackground;
+      document.documentElement.style.background = originalHtmlBackground;
+    };
+  }, []);
   // Modal states
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -225,20 +249,27 @@ function FinancialSettingsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-brand-midnight via-brand-deep to-brand-midnight">
+    <div className="flex h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900">
+      {/* Decorative animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl"></div>
+      </div>
+
       {/* Sidebar */}
       <FinancialSidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto relative">
         <div className="max-w-7xl mx-auto p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-white">Advisor Settings</h1>
-              <p className="text-white/60 text-sm mt-1">All parameters in one panel • No scrolling</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent">Advisor Settings</h1>
+              <p className="text-white/70 mt-1">Manage your profile, availability, notifications, and preferences.</p>
             </div>
-            <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all">
+            <button className="px-4 py-2.5 bg-slate-800/70 hover:bg-slate-700 text-white font-medium rounded-lg transition-all border border-slate-700/50">
               Quick Edit
             </button>
           </div>
@@ -246,55 +277,65 @@ function FinancialSettingsPage() {
           {/* Settings Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Profile Section */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Profile</h2>
+            <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Profile
+              </h2>
               <div className="space-y-4 mb-4">
                 <div>
-                  <p className="text-xs text-white/50 uppercase tracking-[0.2em]">Name</p>
-                  <p className="text-lg text-white font-medium">{profile.fullName}</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Name</p>
+                  <p className="text-lg text-white font-semibold">{profile.fullName}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-white/50 uppercase tracking-[0.2em]">Email</p>
-                  <p className="text-sm text-white/80">{profile.email}</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Email</p>
+                  <p className="text-sm text-gray-200">{profile.email}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-white/50 uppercase tracking-[0.2em]">Phone</p>
-                  <p className="text-sm text-white/80">{profile.phoneNumber}</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Phone</p>
+                  <p className="text-sm text-gray-200">{profile.phoneNumber}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-white/50 uppercase tracking-[0.2em]">Office</p>
-                  <p className="text-sm text-white/80">{profile.address}</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Office</p>
+                  <p className="text-sm text-gray-200">{profile.address}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={handleOpenEditProfile}
-                className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all"
+                className="w-full px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all border border-slate-600/50"
               >
                 Edit Profile
               </button>
             </div>
 
             {/* Support Section */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Support</h2>
+            <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
+              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Support
+              </h2>
               <div className="grid grid-cols-2 gap-3">
-                <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm">
+                <button className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm border border-slate-600/50">
                   Help Center
                 </button>
-                <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm">
+                <button className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm border border-slate-600/50">
                   Contact
                 </button>
-                <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm">
+                <button className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm border border-slate-600/50">
                   Terms
                 </button>
-                <button className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm">
+                <button className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm border border-slate-600/50">
                   Privacy
                 </button>
               </div>
             </div>
 
             {/* Availability Section */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+            <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
               <h2 className="text-xl font-semibold text-white mb-4">Availability</h2>
               
               {/* Open to new requests toggle */}

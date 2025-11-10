@@ -95,26 +95,35 @@ const LoginPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = async (e, userType = 'user') => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
-    const result = await login(formData.email, formData.password, userType);
-    
-    if (result.success) {
-      switch(userType) {
-        case 'advisor':
-          navigate('/advisor-dashboard');
-          break;
-        case 'admin':
-          navigate('/admin-dashboard');
-          break;
-        default:
-          navigate('/dashboard');
+    try {
+      const result = await login(formData.email, formData.password);
+
+      if (result.success) {
+        // Redirect based on role returned from backend
+        const userRole = result.role || result.user?.role;
+
+        switch(userRole) {
+          case 'advisor':
+            navigate('/financial-advisor');
+            break;
+          case 'admin':
+            navigate('/admin');
+            break;
+          default:
+            navigate('/dashboard');
+        }
+      } else {
+        setErrors({ submit: result.error || 'Login failed. Please try again.' });
       }
+    } catch (error) {
+      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
     }
   };
 
@@ -156,13 +165,13 @@ const LoginPage = () => {
 
             <div className="relative bg-slate-800/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-slate-700/50 hover:border-slate-600/50 transition-all duration-300">
               {/* Auth Error Message */}
-              {authError && (
+              {(authError || errors.submit) && (
                 <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm animate-shake">
-                  <p className="text-sm text-red-300 font-medium">{authError}</p>
+                  <p className="text-sm text-red-300 font-medium">{authError || errors.submit}</p>
                 </div>
               )}
 
-              <form onSubmit={(e) => handleLogin(e, formData.accountHolder || 'user')} className="space-y-6">
+              <form onSubmit={handleLogin} className="space-y-6">
                 {/* Account Holder Dropdown */}
                 <div className="space-y-2">
                   <label className="block text-gray-200 text-sm font-semibold tracking-wide">
@@ -219,8 +228,8 @@ const LoginPage = () => {
                   />
                 </div>
 
-                {/* Login Buttons */}
-                <div className="space-y-3 pt-2">
+                {/* Login Button */}
+                <div className="pt-2">
                   <Button
                     type="submit"
                     variant="primary"
@@ -244,37 +253,6 @@ const LoginPage = () => {
                           </svg>
                         </>
                       )}
-                    </span>
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="primary"
-                    fullWidth
-                    onClick={(e) => handleLogin(e, 'advisor')}
-                    disabled={loading}
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                      Financial Advisor
-                    </span>
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="primary"
-                    fullWidth
-                    onClick={(e) => handleLogin(e, 'admin')}
-                    disabled={loading}
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      Administrator
                     </span>
                   </Button>
                 </div>
