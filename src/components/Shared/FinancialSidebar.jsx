@@ -15,7 +15,7 @@ function FinancialSidebar() {
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-blue-500 rounded-xl opacity-20 group-hover:opacity-40 blur transition duration-300"></div>
             <h1 className="relative text-2xl font-bold tracking-wide bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent px-6 py-3">
-              Quroosh
+              Guroosh
             </h1>
           </div>
         </div>
@@ -89,7 +89,7 @@ function FinancialSidebar() {
             <p className="text-xs text-gray-400">Advisor</p>
           </div>
         </div>
-        <p className="text-xs text-gray-500 text-center">v1.0 • © Quroosh 2024</p>
+        <p className="text-xs text-gray-500 text-center">v1.0 • © Guroosh 2024</p>
       </div>
     </div>
   );
