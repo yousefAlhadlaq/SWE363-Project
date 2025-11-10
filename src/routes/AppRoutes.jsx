@@ -13,10 +13,10 @@ import FinancialAdvicePage from '../components/Advisor/FinancialAdvicePage';
 import FinancialAdvisorPage from '../components/Advisor/FinancialAdvisorPage';
 import FinancialSettingsPage from '../components/Advisor/FinancialSettingsPage';
 
-// Dashboard Components (Abdulmajeed)
-import DashboardPage from '../components/Dashboard/DashboardPage';
-import ZakahCalculator from '../components/Dashboard/ZakahCalculator';
-import ReportsExport from '../components/Dashboard/ReportsExport';
+// Investment Components (Abdulmajeed)
+import DashboardPage from '../components/Investments/DashboardPage';
+import ZakahCalculator from '../components/Investments/ZakahCalculator';
+import ReportsExport from '../components/Investments/ReportsExport';
 
 // Expenses Components (Abdulaziz)
 import IncomeEntry from '../components/Expenses/IncomeEntry';
@@ -41,12 +41,13 @@ function AppRoutes() {
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
-      <Route path="/profile" element={<ProfileSettings />} />
+      <Route path="/settings" element={<ProfileSettings />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Dashboard Routes */}
-      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/home" element={<DashboardPage />} />
+      <Route path="/investments" element={<DashboardPage />} />
       <Route path="/zakah-calculator" element={<ZakahCalculator />} />
       <Route path="/reports" element={<ReportsExport />} />
 
