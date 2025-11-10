@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
+import AdminLayout from './AdminLayout';
 
 function NotificationsPanel() {
   const [notification, setNotification] = useState({
@@ -45,111 +46,154 @@ function NotificationsPanel() {
       sent: false
     };
     setNotifications([newNotification, ...notifications]);
-    setNotification({ title: '', message: '', type: 'info', targetAudience: 'all' });
+    setNotification({
+      title: '',
+      message: '',
+      type: 'info',
+      targetAudience: 'all'
+    });
+  };
+
+  const typeChipStyles = {
+    info: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-100',
+    warning: 'border-amber-400/40 bg-amber-400/10 text-amber-100',
+    success: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-100',
+    error: 'border-rose-400/40 bg-rose-400/10 text-rose-100'
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-6">Notifications Panel</h2>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Create Notification */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold mb-4">Create Notification</h3>
-          <form onSubmit={handleSubmit}>
+    <AdminLayout
+      accentLabel="Notifications"
+      title="Notifications Control Center"
+      description="Compose targeted announcements, review historical sends, and keep admins in sync."
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section className="rounded-3xl bg-white/5 border border-white/10 p-6 shadow-[0_12px_45px_rgba(1,6,12,0.75)]">
+          <header className="mb-6">
+            <p className="text-xs uppercase tracking-[0.4em] text-gray-400">
+              Composer
+            </p>
+            <h2 className="text-2xl font-semibold text-white">
+              Create Notification
+            </h2>
+          </header>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <InputField
               label="Title"
               type="text"
               name="title"
               value={notification.title}
               onChange={handleChange}
+              placeholder="System update..."
               required
             />
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 Message
               </label>
               <textarea
                 name="message"
                 value={notification.message}
                 onChange={handleChange}
-                rows="4"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                rows={5}
+                placeholder="Include clear action items for recipients..."
+                className="w-full px-4 py-3 rounded-2xl bg-slate-900/70 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400/70"
                 required
               />
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Type
-              </label>
-              <select
-                name="type"
-                value={notification.type}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="info">Info</option>
-                <option value="warning">Warning</option>
-                <option value="success">Success</option>
-                <option value="error">Error</option>
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Type
+                </label>
+                <select
+                  name="type"
+                  value={notification.type}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-900/70 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-teal-400/70"
+                >
+                  <option value="info">Info</option>
+                  <option value="warning">Warning</option>
+                  <option value="success">Success</option>
+                  <option value="error">Error</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Target Audience
+                </label>
+                <select
+                  name="targetAudience"
+                  value={notification.targetAudience}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-900/70 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-teal-400/70"
+                >
+                  <option value="all">All Users</option>
+                  <option value="advisors">Advisors Only</option>
+                  <option value="clients">Clients Only</option>
+                </select>
+              </div>
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Target Audience
-              </label>
-              <select
-                name="targetAudience"
-                value={notification.targetAudience}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="all">All Users</option>
-                <option value="advisors">Advisors Only</option>
-                <option value="clients">Clients Only</option>
-              </select>
-            </div>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" fullWidth>
               Send Notification
             </Button>
           </form>
-        </div>
+        </section>
 
-        {/* Notifications History */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold mb-4">Notification History</h3>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
+        <section className="rounded-3xl bg-white/5 border border-white/10 p-6 shadow-[0_12px_45px_rgba(1,6,12,0.75)]">
+          <header className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.4em] text-gray-400">
+                History
+              </p>
+              <h2 className="text-2xl font-semibold text-white">
+                Notification Log
+              </h2>
+            </div>
+            <span className="text-sm text-gray-500">
+              {notifications.length} total records
+            </span>
+          </header>
+          <div className="space-y-4 max-h-[32rem] overflow-y-auto pr-2">
             {notifications.map((notif) => (
-              <div
+              <article
                 key={notif.id}
-                className={`p-4 border-l-4 rounded ${
-                  notif.type === 'info'
-                    ? 'border-blue-500 bg-blue-50'
-                    : notif.type === 'warning'
-                    ? 'border-yellow-500 bg-yellow-50'
-                    : notif.type === 'success'
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-red-500 bg-red-50'
-                }`}
+                className="p-4 rounded-2xl bg-white/10 border border-white/10"
               >
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-semibold">{notif.title}</h4>
-                  <span className="text-xs text-gray-500">{notif.date}</span>
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <div>
+                    <h3 className="text-lg font-semibold">{notif.title}</h3>
+                    <p className="text-sm text-gray-400">{notif.message}</p>
+                  </div>
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                    {notif.date}
+                  </span>
                 </div>
-                <p className="text-sm text-gray-700">{notif.message}</p>
-                <span
-                  className={`text-xs ${
-                    notif.sent ? 'text-green-600' : 'text-gray-500'
-                  }`}
-                >
-                  {notif.sent ? '✓ Sent' : 'Draft'}
-                </span>
-              </div>
+                <div className="flex flex-wrap gap-3 text-xs font-semibold">
+                  <span
+                    className={`px-3 py-1 rounded-full border ${typeChipStyles[notif.type]}`}
+                  >
+                    {notif.type}
+                  </span>
+                  <span
+                    className={`px-3 py-1 rounded-full border ${
+                      notif.sent
+                        ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-100'
+                        : 'border-slate-400/40 bg-slate-500/10 text-slate-200'
+                    }`}
+                  >
+                    {notif.sent ? 'Sent' : 'Draft'}
+                  </span>
+                  <span className="px-3 py-1 rounded-full border border-white/10 text-gray-300">
+                    Audience: {notif.targetAudience}
+                  </span>
+                </div>
+              </article>
             ))}
           </div>
-        </div>
+        </section>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
 

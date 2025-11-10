@@ -103,11 +103,11 @@ const LoginPage = () => {
     }
 
     try {
-      const result = await login(formData.email, formData.password);
+      const result = await login(formData.email, formData.password, formData.accountHolder);
 
       if (result.success) {
-        // Redirect based on role returned from backend
-        const userRole = result.role || result.user?.role;
+        // Use the role from the login result
+        const userRole = result.role;
 
         switch(userRole) {
           case 'advisor':
