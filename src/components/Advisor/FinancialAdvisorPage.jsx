@@ -5,6 +5,13 @@ function FinancialAdvisorPage() {
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedThread, setSelectedThread] = useState(null);
   const [responseText, setResponseText] = useState('');
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [replyForm, setReplyForm] = useState({
+    clientName: '',
+    subject: '',
+    message: '',
+    attachments: []
+  });
 
   // Fix white bar by setting body background directly
   useEffect(() => {
@@ -223,9 +230,30 @@ function FinancialAdvisorPage() {
       alert('Nothing to save');
       return;
     }
-    
+
     console.log('Draft saved:', responseText);
     alert('Draft saved successfully!');
+  };
+
+  const handleReplyFormChange = (e) => {
+    const { name, value } = e.target;
+    setReplyForm({
+      ...replyForm,
+      [name]: value
+    });
+  };
+
+  const handleReplyFormSubmit = (e) => {
+    e.preventDefault();
+    console.log('Reply submitted:', replyForm);
+    alert('Reply sent successfully!');
+    setShowReplyModal(false);
+    setReplyForm({
+      clientName: '',
+      subject: '',
+      message: '',
+      attachments: []
+    });
   };
 
   // Thread View
@@ -701,6 +729,130 @@ function FinancialAdvisorPage() {
             </div>
           ))}
         </div>
+
+        {/* Floating Action Button */}
+        <button
+          onClick={() => setShowReplyModal(true)}
+          className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-50 group"
+        >
+          <svg className="w-8 h-8 text-slate-900 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+
+        {/* Reply Modal */}
+        {showReplyModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 flex justify-between items-center">
+                <h3 className="text-2xl font-bold text-white">Send Reply to Client</h3>
+                <button
+                  onClick={() => setShowReplyModal(false)}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form onSubmit={handleReplyFormSubmit} className="p-6 space-y-6">
+                <p className="text-sm text-slate-400">
+                  Compose your professional response to a client's financial request.
+                </p>
+
+                {/* Client Name */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Client Name</label>
+                  <input
+                    type="text"
+                    name="clientName"
+                    value={replyForm.clientName}
+                    onChange={handleReplyFormChange}
+                    placeholder="e.g., John Doe"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                {/* Subject */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Subject</label>
+                  <input
+                    type="text"
+                    name="subject"
+                    value={replyForm.subject}
+                    onChange={handleReplyFormChange}
+                    placeholder="e.g., Re: Investment Strategy for Q4"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                {/* Message */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Your Professional Response</label>
+                  <textarea
+                    name="message"
+                    value={replyForm.message}
+                    onChange={handleReplyFormChange}
+                    rows="8"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                    placeholder="Provide your professional advice, recommendations, analysis, and actionable steps..."
+                    required
+                  />
+                  <p className="text-xs text-slate-500 mt-2">
+                    Include detailed strategies, calculations if relevant, and explain your reasoning clearly.
+                  </p>
+                </div>
+
+                {/* Attachments */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Attachments (optional)</label>
+                  <div className="border-2 border-dashed border-slate-700 rounded-lg p-6 text-center bg-slate-900/30 hover:border-slate-600 transition-colors">
+                    <input type="file" className="hidden" id="reply-file-upload" multiple />
+                    <label htmlFor="reply-file-upload" className="cursor-pointer">
+                      <svg className="w-8 h-8 text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span className="text-teal-400 hover:text-teal-300">Choose Files</span>
+                    </label>
+                    <p className="text-xs text-slate-500 mt-2">PDF, Excel, or Images. Up to 10MB each.</p>
+                  </div>
+                </div>
+
+                {/* Professional Tip */}
+                <div className="bg-teal-500/10 border border-teal-500/30 rounded-lg p-4">
+                  <p className="text-xs text-teal-300 flex items-start gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <span><strong>Professional Tip:</strong> Ensure your response is clear, actionable, and tailored to the client's specific situation. Include relevant data, strategies, and next steps.</span>
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex space-x-4 pt-4">
+                  <button
+                    type="submit"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-teal-500/20"
+                  >
+                    Send Reply
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowReplyModal(false)}
+                    className="px-6 py-3 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
       </div>
     </div>

@@ -150,19 +150,27 @@ const SignUpPage = () => {
       const result = await signup?.(formData);
 
       if (result?.success) {
-        // Redirect based on user role
-        const userRole = result.role || result.user?.role || formData.userType;
+        // Redirect to email verification page
+        navigate('/verify-email', {
+          state: {
+            email: formData.email
+          }
+        });
+        return;
 
-        switch(userRole) {
-          case 'advisor':
-            navigate('/financial-advisor');
-            break;
-          case 'admin':
-            navigate('/admin');
-            break;
-          default:
-            navigate('/dashboard');
-        }
+        // OLD CODE - commented out for email verification flow
+        // Redirect based on user role
+        // const userRole = result.role || result.user?.role || formData.userType;
+        // switch(userRole) {
+        //   case 'advisor':
+        //     navigate('/financial-advisor');
+        //     break;
+        //   case 'admin':
+        //     navigate('/admin');
+        //     break;
+        //   default:
+        //     navigate('/dashboard');
+        // }
       } else {
         setErrors({ submit: result.error || 'Signup failed. Please try again.' });
       }

@@ -1,8 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import LogoImage from "../../assets/images/logo.png";
+import NotificationBell from "./NotificationBell";
+import { useAuth } from "../../context/AuthContext";
 
 function Navbar() {
+  const { user } = useAuth();
+
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur-xl shadow-lg">
       {/* Decorative gradient overlay */}
@@ -35,6 +39,13 @@ function Navbar() {
             Empowering Financial Advisors
           </span>
         </div>
+
+        {/* Right Section - Notifications (only show when logged in) */}
+        {user && (
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+          </div>
+        )}
       </div>
     </nav>
   );
