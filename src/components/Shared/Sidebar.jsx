@@ -1,8 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, TrendingDown, TrendingUp, Users, Settings } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 function Sidebar() {
+  const { user } = useAuth();
+
   const navigationItems = [
     { to: '/home', icon: Home, label: 'Homepage' },
     { to: '/expenses', icon: TrendingDown, label: 'Expenses' },
@@ -10,6 +13,16 @@ function Sidebar() {
     { to: '/financial-advice', icon: Users, label: 'Financial Advisor' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
+
+  // Get user initials for avatar
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return parts[0][0] + parts[1][0];
+    }
+    return parts[0][0];
+  };
 
   return (
     <aside className="h-screen w-64 bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50 flex flex-col justify-between relative z-10">
@@ -60,11 +73,11 @@ function Sidebar() {
       <div className="relative z-10 px-6 py-6 border-t border-slate-700/50">
         <div className="flex items-center gap-3 mb-3 px-3 py-2 bg-slate-800/40 rounded-lg border border-slate-700/30">
           <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-white/10">
-            U
+            {getInitials(user?.name)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">User</p>
-            <p className="text-xs text-gray-400">Member</p>
+            <p className="text-sm font-semibold text-white truncate">{user?.name || 'User'}</p>
+            <p className="text-xs text-gray-400 capitalize">{user?.role || 'Member'}</p>
           </div>
         </div>
         <p className="text-xs text-gray-500 text-center">v1.0 • © Guroosh 2024</p>

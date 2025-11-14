@@ -117,7 +117,8 @@ const LoginPage = () => {
             navigate('/admin');
             break;
           default:
-            navigate('/dashboard');
+            // Client role - redirect to home/dashboard
+            navigate('/home');
         }
       } else {
         setErrors({ submit: result.error || 'Login failed. Please try again.' });
