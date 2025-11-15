@@ -50,7 +50,6 @@
    ============================================ */
 @layer base {
   body {
-    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 text-slate-300;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
       sans-serif;
@@ -58,16 +57,48 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Dark theme (default) */
+  html.dark body,
+  body {
+    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 text-slate-300;
+  }
+
+  /* Light theme */
+  html.light body {
+    @apply bg-gradient-to-br from-sky-50 via-cyan-50 to-blue-50 text-slate-700;
+  }
+
+  /* Dark theme typography */
+  html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6,
   h1, h2, h3, h4, h5, h6 {
     @apply text-white font-bold;
   }
 
+  /* Light theme typography */
+  html.light h1, html.light h2, html.light h3, html.light h4, html.light h5, html.light h6 {
+    @apply text-slate-900 font-bold;
+  }
+
+  /* Dark theme links */
+  html.dark a,
   a {
     @apply text-teal-400 hover:text-teal-300 transition-colors;
   }
 
+  /* Light theme links */
+  html.light a {
+    @apply text-teal-600 hover:text-teal-700 transition-colors;
+  }
+
+  /* Dark theme inputs */
+  html.dark input, html.dark textarea, html.dark select,
   input, textarea, select {
     @apply text-white;
+  }
+
+  /* Light theme inputs */
+  html.light input, html.light textarea, html.light select {
+    @apply text-slate-900;
   }
 }
 
@@ -78,32 +109,88 @@
   
   /* ========== BACKGROUND PATTERNS ========== */
   .bg-page {
-    @apply min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+    @apply min-h-screen;
+  }
+
+  html.dark .bg-page {
+    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+  }
+
+  html.light .bg-page {
+    @apply bg-gradient-to-br from-sky-50 via-cyan-50 to-blue-50;
   }
 
   .bg-page-centered {
-    @apply min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 flex items-center justify-center p-4;
+    @apply min-h-screen flex items-center justify-center p-4;
+  }
+
+  html.dark .bg-page-centered {
+    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+  }
+
+  html.light .bg-page-centered {
+    @apply bg-gradient-to-br from-sky-50 via-cyan-50 to-blue-50;
   }
 
   .bg-section {
-    @apply flex h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+    @apply flex h-screen;
+  }
+
+  html.dark .bg-section {
+    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+  }
+
+  html.light .bg-section {
+    @apply bg-gradient-to-br from-sky-50 via-cyan-50 to-blue-50;
   }
 
   /* ========== CARD PATTERNS ========== */
   .card {
-    @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6;
+    @apply backdrop-blur-sm rounded-xl p-6;
+  }
+
+  html.dark .card {
+    @apply bg-slate-800/50 border border-slate-700/50;
+  }
+
+  html.light .card {
+    @apply bg-white/90 border border-slate-200;
   }
 
   .card-hover {
-    @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all;
+    @apply backdrop-blur-sm rounded-xl p-6 transition-all;
+  }
+
+  html.dark .card-hover {
+    @apply bg-slate-800/50 border border-slate-700/50 hover:border-slate-600/50;
+  }
+
+  html.light .card-hover {
+    @apply bg-white/90 border border-slate-200 hover:border-slate-300;
   }
 
   .card-compact {
-    @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4;
+    @apply backdrop-blur-sm rounded-xl p-4;
+  }
+
+  html.dark .card-compact {
+    @apply bg-slate-800/50 border border-slate-700/50;
+  }
+
+  html.light .card-compact {
+    @apply bg-white/90 border border-slate-200;
   }
 
   .card-large {
-    @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-8;
+    @apply backdrop-blur-sm rounded-xl p-8;
+  }
+
+  html.dark .card-large {
+    @apply bg-slate-800/50 border border-slate-700/50;
+  }
+
+  html.light .card-large {
+    @apply bg-white/90 border border-slate-200;
   }
 
   /* ========== BUTTON PATTERNS ========== */
@@ -149,23 +236,63 @@
 
   /* ========== INPUT PATTERNS ========== */
   .input {
-    @apply w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all;
+    @apply w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all;
+  }
+
+  html.dark .input {
+    @apply bg-slate-900/50 border border-slate-700 text-white placeholder-slate-500;
+  }
+
+  html.light .input {
+    @apply bg-white border border-slate-300 text-slate-900 placeholder-slate-400;
   }
 
   .input-error {
-    @apply w-full px-4 py-3 bg-slate-900/50 border border-red-500 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all;
+    @apply w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all;
+  }
+
+  html.dark .input-error {
+    @apply bg-slate-900/50 border border-red-500 text-white placeholder-slate-500;
+  }
+
+  html.light .input-error {
+    @apply bg-white border border-red-500 text-slate-900 placeholder-slate-400;
   }
 
   .textarea {
-    @apply w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none transition-all;
+    @apply w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none transition-all;
+  }
+
+  html.dark .textarea {
+    @apply bg-slate-900/50 border border-slate-700 text-white placeholder-slate-500;
+  }
+
+  html.light .textarea {
+    @apply bg-white border border-slate-300 text-slate-900 placeholder-slate-400;
   }
 
   .select {
-    @apply w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all;
+    @apply w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all;
+  }
+
+  html.dark .select {
+    @apply bg-slate-900/50 border border-slate-700 text-white;
+  }
+
+  html.light .select {
+    @apply bg-white border border-slate-300 text-slate-900;
   }
 
   .label {
-    @apply block text-sm font-medium text-slate-300 mb-2;
+    @apply block text-sm font-medium mb-2;
+  }
+
+  html.dark .label {
+    @apply text-slate-300;
+  }
+
+  html.light .label {
+    @apply text-slate-700;
   }
 
   .label-required::after {
@@ -200,15 +327,39 @@
 
   /* ========== MODAL PATTERNS ========== */
   .modal-overlay {
-    @apply fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4;
+    @apply fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4;
+  }
+
+  html.dark .modal-overlay {
+    @apply bg-black/70;
+  }
+
+  html.light .modal-overlay {
+    @apply bg-black/40;
   }
 
   .modal-content {
-    @apply bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto;
+    @apply rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto;
+  }
+
+  html.dark .modal-content {
+    @apply bg-slate-800 border border-slate-700;
+  }
+
+  html.light .modal-content {
+    @apply bg-white border border-slate-200;
   }
 
   .modal-header {
-    @apply border-b border-slate-700 p-6 flex justify-between items-center;
+    @apply p-6 flex justify-between items-center;
+  }
+
+  html.dark .modal-header {
+    @apply border-b border-slate-700;
+  }
+
+  html.light .modal-header {
+    @apply border-b border-slate-200;
   }
 
   .modal-body {
@@ -216,7 +367,15 @@
   }
 
   .modal-footer {
-    @apply border-t border-slate-700 p-6 flex space-x-4;
+    @apply p-6 flex space-x-4;
+  }
+
+  html.dark .modal-footer {
+    @apply border-t border-slate-700;
+  }
+
+  html.light .modal-footer {
+    @apply border-t border-slate-200;
   }
 
   /* ========== LINK PATTERNS ========== */
@@ -286,11 +445,27 @@
 
   /* ========== SIDEBAR PATTERNS ========== */
   .sidebar-item {
-    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all text-slate-400 hover:text-white hover:bg-slate-700/30;
+    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all;
+  }
+
+  html.dark .sidebar-item {
+    @apply text-slate-400 hover:text-white hover:bg-slate-700/30;
+  }
+
+  html.light .sidebar-item {
+    @apply text-slate-600 hover:text-slate-900 hover:bg-slate-100;
   }
 
   .sidebar-item-active {
-    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all bg-slate-700/50 text-white;
+    @apply w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all;
+  }
+
+  html.dark .sidebar-item-active {
+    @apply bg-slate-700/50 text-white;
+  }
+
+  html.light .sidebar-item-active {
+    @apply bg-teal-50 text-teal-700;
   }
 
   /* ========== FORM PATTERNS ========== */

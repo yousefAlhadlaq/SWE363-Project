@@ -213,16 +213,48 @@ function FinancialAdvisorPage() {
       attachments: []
     };
 
-    setSelectedThread({
+    const updatedThread = {
       ...selectedThread,
       messages: [...selectedThread.messages, newMessage]
-    });
+    };
+
+    // OPTIMISTIC UPDATE: Move request to Active if it's currently Pending
+    if (selectedThread.status === 'Pending') {
+      // Update status to Accepted
+      updatedThread.status = 'Accepted';
+
+      // Remove from pending requests
+      setPendingRequests(pendingRequests.filter(req => req.id !== selectedThread.id));
+
+      // Add to active requests
+      const activeRequest = {
+        ...selectedThread,
+        status: 'Accepted',
+        messages: updatedThread.messages
+      };
+      setActiveRequests([...activeRequests, activeRequest]);
+
+      // Switch to Active tab to show the request
+      setActiveTab('active');
+
+      console.log('Request moved to Active:', selectedThread.id);
+    } else if (selectedThread.status === 'Accepted' || selectedThread.status === 'In Progress') {
+      // If already active, just update the messages in active requests
+      setActiveRequests(activeRequests.map(req =>
+        req.id === selectedThread.id
+          ? { ...req, messages: updatedThread.messages }
+          : req
+      ));
+    }
+
+    // Update the selected thread
+    setSelectedThread(updatedThread);
 
     // Clear the response text
     setResponseText('');
-    
+
     console.log('Response sent:', responseText);
-    alert('Response sent successfully!');
+    alert('Response sent successfully! Request moved to Active tab.');
   };
 
   const handleSaveDraft = () => {
@@ -245,8 +277,109 @@ function FinancialAdvisorPage() {
 
   const handleReplyFormSubmit = (e) => {
     e.preventDefault();
-    console.log('Reply submitted:', replyForm);
-    alert('Reply sent successfully!');
+
+    if (!replyForm.message.trim()) {
+      alert('Please enter a message before sending');
+      return;
+    }
+
+    // CASE 1: If there's a selected thread, add the reply to it
+    if (selectedThread) {
+      const newMessage = {
+        sender: 'You (Advisor)',
+        role: 'Advisor',
+        timestamp: 'Just now',
+        content: replyForm.message,
+        attachments: replyForm.attachments || []
+      };
+
+      const updatedThread = {
+        ...selectedThread,
+        messages: [...selectedThread.messages, newMessage]
+      };
+
+      // OPTIMISTIC UPDATE: Move request to Active if it's currently Pending
+      if (selectedThread.status === 'Pending') {
+        // Update status to Accepted
+        updatedThread.status = 'Accepted';
+
+        // Remove from pending requests
+        setPendingRequests(pendingRequests.filter(req => req.id !== selectedThread.id));
+
+        // Add to active requests
+        const activeRequest = {
+          ...selectedThread,
+          status: 'Accepted',
+          messages: updatedThread.messages
+        };
+        setActiveRequests([...activeRequests, activeRequest]);
+
+        // Switch to Active tab to show the request
+        setActiveTab('active');
+
+        console.log('Request moved to Active via modal:', selectedThread.id);
+      } else if (selectedThread.status === 'Accepted' || selectedThread.status === 'In Progress') {
+        // If already active, just update the messages in active requests
+        setActiveRequests(activeRequests.map(req =>
+          req.id === selectedThread.id
+            ? { ...req, messages: updatedThread.messages }
+            : req
+        ));
+      }
+
+      // Update the selected thread
+      setSelectedThread(updatedThread);
+
+      console.log('Reply added to existing thread:', replyForm);
+      alert('Reply sent successfully! Request moved to Active tab.');
+    }
+    // CASE 2: No selected thread - create a NEW request
+    else {
+      // Validate required fields for new request
+      if (!replyForm.clientName.trim() || !replyForm.subject.trim()) {
+        alert('Please enter both client name and subject for a new request');
+        return;
+      }
+
+      // Generate new unique ID
+      const allIds = [
+        ...activeRequests.map(r => r.id),
+        ...pendingRequests.map(r => r.id),
+        ...completedRequests.map(r => r.id)
+      ];
+      const newId = allIds.length > 0 ? Math.max(...allIds) + 1 : 1;
+
+      // Create new request object
+      const newRequest = {
+        id: newId,
+        status: 'Accepted',
+        title: replyForm.subject,
+        from: replyForm.clientName,
+        timestamp: 'Just now',
+        topic: 'General',
+        urgency: 'Normal',
+        description: replyForm.message,
+        budget: 'TBD',
+        messages: [{
+          sender: 'You (Advisor)',
+          role: 'Advisor',
+          timestamp: 'Just now',
+          content: replyForm.message,
+          attachments: replyForm.attachments || []
+        }]
+      };
+
+      // Add to active requests (at the beginning)
+      setActiveRequests([newRequest, ...activeRequests]);
+
+      // Switch to Active tab to show the new request
+      setActiveTab('active');
+
+      console.log('New request created:', newId);
+      alert('New request created and added to Active tab!');
+    }
+
+    // Close modal and reset form
     setShowReplyModal(false);
     setReplyForm({
       clientName: '',
