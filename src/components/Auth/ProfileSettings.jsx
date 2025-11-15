@@ -5,13 +5,13 @@ import Sidebar from '../Shared/Sidebar';
 import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
+import ThemeToggleSegmented from '../Shared/ThemeToggleSegmented';
 
 const ProfileSettings = () => {
   const navigate = useNavigate();
   const { user, logout, updateProfile } = useAuth();
 
   const [settings, setSettings] = useState({
-    theme: 'system',
     notifications: {
       transactionAlerts: true,
       budgetReminders: true,
@@ -62,10 +62,6 @@ const ProfileSettings = () => {
       });
     }
   }, [showEditModal, user]);
-
-  const handleThemeChange = (theme) => {
-    setSettings(prev => ({ ...prev, theme }));
-  };
 
   const handleNotificationToggle = (key) => {
     setSettings(prev => ({
@@ -228,41 +224,8 @@ const ProfileSettings = () => {
 
               {/* Theme Selector */}
               <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
-                <div className="flex gap-2 mb-4">
-                  <button
-                    onClick={() => handleThemeChange('system')}
-                    className={`flex-1 py-3 rounded-lg font-medium transition-all ${
-                      settings.theme === 'system'
-                        ? 'bg-slate-700 text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-slate-700/50'
-                    }`}
-                  >
-                    System
-                  </button>
-                  <button
-                    onClick={() => handleThemeChange('light')}
-                    className={`flex-1 py-3 rounded-lg font-medium transition-all ${
-                      settings.theme === 'light'
-                        ? 'bg-slate-700 text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-slate-700/50'
-                    }`}
-                  >
-                    Light
-                  </button>
-                  <button
-                    onClick={() => handleThemeChange('dark')}
-                    className={`flex-1 py-3 rounded-lg font-medium transition-all ${
-                      settings.theme === 'dark'
-                        ? 'bg-slate-700 text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-slate-700/50'
-                    }`}
-                  >
-                    Dark
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400">
-                  Your theme preference is saved on this device.
-                </p>
+                <h3 className="text-white font-medium mb-4">Theme</h3>
+                <ThemeToggleSegmented />
               </div>
 
               {/* Currency & Language */}

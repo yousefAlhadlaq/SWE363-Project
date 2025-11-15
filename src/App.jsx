@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import AppRoutes from './routes/AppRoutes';
 import Navbar from './components/Shared/Navbar';
 import './styles/globals.css';
@@ -13,7 +14,7 @@ function AppContent() {
   const shouldShowNavbar = !authRoutes.includes(location.pathname);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {shouldShowNavbar && <Navbar />}
       <main>
         <AppRoutes />
@@ -24,11 +25,13 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

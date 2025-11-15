@@ -4,6 +4,7 @@ import FinancialSidebar from '../Shared/FinancialSidebar';
 import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
+import ThemeToggleSegmented from '../Shared/ThemeToggleSegmented';
 import { useAuth } from '../../context/AuthContext';
 
 function FinancialSettingsPage() {
@@ -56,18 +57,6 @@ function FinancialSettingsPage() {
   const [editErrors, setEditErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-  // Availability state
-  const [availability, setAvailability] = useState({
-    openToRequests: true,
-    schedule: {
-      mon: { enabled: true, time: '09:00-17:00' },
-      tue: { enabled: true, time: '09:00-17:00' },
-      wed: { enabled: true, time: '09:00-17:00' },
-      thu: { enabled: true, time: '09:00-17:00' },
-      fri: { enabled: false, time: '10:00-14:00' }
-    }
-  });
-
   // Notifications state
   const [notifications, setNotifications] = useState({
     newMessages: true,
@@ -80,8 +69,7 @@ function FinancialSettingsPage() {
   const [preferences, setPreferences] = useState({
     language: 'English',
     currency: 'USD',
-    timezone: 'UTC',
-    theme: 'System'
+    timezone: 'UTC'
   });
 
   // Security state
@@ -92,42 +80,8 @@ function FinancialSettingsPage() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  const handleAvailabilityToggle = () => {
-    setAvailability({ ...availability, openToRequests: !availability.openToRequests });
-  };
-
-  const handleDayToggle = (day) => {
-    setAvailability({
-      ...availability,
-      schedule: {
-        ...availability.schedule,
-        [day]: {
-          ...availability.schedule[day],
-          enabled: !availability.schedule[day].enabled
-        }
-      }
-    });
-  };
-
-  const handleTimeChange = (day, time) => {
-    setAvailability({
-      ...availability,
-      schedule: {
-        ...availability.schedule,
-        [day]: {
-          ...availability.schedule[day],
-          time: time
-        }
-      }
-    });
-  };
-
   const handleNotificationToggle = (key) => {
     setNotifications({ ...notifications, [key]: !notifications[key] });
-  };
-
-  const handleThemeChange = (theme) => {
-    setPreferences({ ...preferences, theme });
   };
 
   const handleSecurityToggle = () => {
@@ -334,52 +288,6 @@ function FinancialSettingsPage() {
               </div>
             </div>
 
-            {/* Availability Section */}
-            <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
-              <h2 className="text-xl font-semibold text-white mb-4">Availability</h2>
-              
-              {/* Open to new requests toggle */}
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm text-white/80">Open to new requests</span>
-                <button
-                  onClick={handleAvailabilityToggle}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    availability.openToRequests ? 'bg-brand-aqua' : 'bg-white/20'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      availability.openToRequests ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Schedule */}
-              <div className="space-y-2">
-                {Object.entries(availability.schedule).map(([day, data]) => (
-                  <div key={day} className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={data.enabled}
-                      onChange={() => handleDayToggle(day)}
-                      className="w-4 h-4 rounded bg-white/10 border-white/20 text-brand-aqua focus:ring-brand-aqua"
-                    />
-                    <span className="text-sm text-white/80 w-8 capitalize">{day}</span>
-                    <input
-                      type="text"
-                      value={data.time}
-                      onChange={(e) => handleTimeChange(day, e.target.value)}
-                      disabled={!data.enabled}
-                      className={`flex-1 px-3 py-1.5 bg-white/10 border border-white/20 rounded text-sm text-white/80 focus:ring-2 focus:ring-brand-aqua focus:border-transparent ${
-                        !data.enabled ? 'opacity-50' : ''
-                      }`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Notifications Section */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
               <h2 className="text-xl font-semibold text-white mb-4">Notifications</h2>
@@ -456,24 +364,8 @@ function FinancialSettingsPage() {
 
                 {/* Theme */}
                 <div>
-                  <label className="block text-xs text-white/60 mb-2">Theme</label>
-                  <div className="space-y-2">
-                    <RadioItem
-                      label="System"
-                      checked={preferences.theme === 'System'}
-                      onChange={() => handleThemeChange('System')}
-                    />
-                    <RadioItem
-                      label="Light"
-                      checked={preferences.theme === 'Light'}
-                      onChange={() => handleThemeChange('Light')}
-                    />
-                    <RadioItem
-                      label="Dark"
-                      checked={preferences.theme === 'Dark'}
-                      onChange={() => handleThemeChange('Dark')}
-                    />
-                  </div>
+                  <label className="block text-xs text-white/60 uppercase tracking-wide mb-3">Theme</label>
+                  <ThemeToggleSegmented />
                 </div>
               </div>
             </div>
@@ -739,21 +631,6 @@ const ToggleItem = ({ label, checked, onChange }) => {
         />
       </button>
     </div>
-  );
-};
-
-// Radio Item Component
-const RadioItem = ({ label, checked, onChange }) => {
-  return (
-    <label className="flex items-center space-x-2 cursor-pointer">
-      <input
-        type="radio"
-        checked={checked}
-        onChange={onChange}
-        className="w-4 h-4 text-brand-aqua bg-white/10 border-white/20 focus:ring-brand-aqua"
-      />
-      <span className="text-sm text-white/80">{label}</span>
-    </label>
   );
 };
 
