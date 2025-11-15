@@ -1,2 +1,2 @@
-# quroosh-frontend
-Front-end React prototype for Quroosh app
+# Guroosh-frontend
+Front-end React prototype for Guroosh app
