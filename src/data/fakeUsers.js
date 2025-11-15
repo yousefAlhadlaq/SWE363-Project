@@ -31,7 +31,7 @@ export const fakeUsers = [
   {
     id: 3,
     name: 'Admin User',
-    email: 'admin@quroosh.com',
+    email: 'admin@Guroosh.com',
     password: 'admin123',
     role: 'admin',
     avatar: null,

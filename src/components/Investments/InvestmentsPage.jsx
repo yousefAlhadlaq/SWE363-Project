@@ -21,6 +21,13 @@ const categoryColors = {
   Gold: 'from-yellow-400 to-yellow-600',
 };
 
+const categoryLineColors = {
+  Stock: '#2dd4bf',
+  'Real Estate': '#34d399',
+  Crypto: '#fb923c',
+  Gold: '#facc15',
+};
+
 const defaultUnitLabels = {
   Stock: 'shares',
   Gold: 'oz',
@@ -229,149 +236,246 @@ const timeSeriesData = {
   ],
 };
 
-const InvestmentChart = ({ distribution, total, onSelectCategory }) => (
-  <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-5 border border-slate-700/50 h-full">
-    <div className="flex items-center justify-between mb-4">
-      <div>
-        <p className="text-sm uppercase tracking-widest text-gray-400">Portfolio Mix</p>
-        <h2 className="text-xl font-semibold text-white">Investment Allocation</h2>
-        <p className="text-xs text-gray-500">Select a category to inspect its holdings.</p>
-      </div>
-      <p className="text-sm text-gray-400">
-        Total · <span className="text-teal-300">{formatCurrency(total)}</span>
+const InvestmentChart = ({
+  distribution,
+  total,
+  onSelectCategory,
+  onFilterCategory,
+  filteredCategory
+}) => (
+  <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-3 border border-slate-700/50 h-full">
+    <div className="flex items-start justify-between gap-3 mb-3">
+      <p className="text-xs text-gray-400 text-right">
+        Total · <span className="text-teal-300 font-semibold">{formatCurrency(total)}</span>
       </p>
     </div>
 
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {categoryOptions.map(({ value, label }) => {
         const amount = distribution[value] || 0;
         const percentage = total ? Math.round((amount / total) * 100) : 0;
+        const isFocused = filteredCategory === value;
 
         return (
-          <button
+          <div
             key={value}
-            type="button"
-            onClick={() => onSelectCategory(value)}
-            className="w-full text-left group rounded-lg border border-slate-700/40 hover:border-teal-500/50 bg-slate-900/20 hover:bg-slate-900/40 transition-colors px-4 py-3"
+            className="rounded-lg border border-slate-700/50 bg-slate-900/20 px-3 py-2.5"
           >
-            <div className="flex items-center justify-between text-sm mb-1.5">
-              <span className="text-gray-300">{label}</span>
-              <span className="text-white font-medium">
-                {formatCurrency(amount)}{' '}
-                <span className="text-gray-400 font-normal">({percentage}%)</span>
-              </span>
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => onSelectCategory(value)}
+                className="text-left flex-1"
+              >
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-200">{label}</span>
+                  <span className="text-white font-semibold">
+                    {formatCurrency(amount)}{' '}
+                    <span className="text-gray-400 font-normal text-xs">({percentage}%)</span>
+                  </span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => onFilterCategory(value)}
+                className={`text-xs px-2 py-1 rounded-full border transition ${
+                  isFocused
+                    ? 'bg-teal-500/20 text-teal-200 border-teal-400/60'
+                    : 'text-gray-400 border-slate-600 hover:text-white hover:border-teal-400/50'
+                }`}
+              >
+                {isFocused ? 'Focused' : 'Focus'}
+              </button>
             </div>
-            <div className="h-3 bg-slate-700/70 rounded-full overflow-hidden">
+            <div className="h-2.5 bg-slate-800/80 rounded-full overflow-hidden mt-2">
               <div
                 className={`h-full rounded-full bg-gradient-to-r ${categoryColors[value] || 'from-teal-500 to-blue-500'}`}
                 style={{ width: `${percentage || (total ? 2 : 0)}%` }}
               />
             </div>
-          </button>
+          </div>
         );
       })}
     </div>
   </div>
 );
 
-const InvestmentTrendChart = ({ data }) => {
-  if (!data || !data.length) {
+const InvestmentTrendChart = ({
+  labels,
+  totalSeries,
+  categorySeries,
+  filteredCategory,
+  onFilterCategory
+}) => {
+  if (!totalSeries.length) {
     return (
-      <div className="h-56 bg-slate-900/40 rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-gray-500">
+      <div className="h-60 bg-slate-900/40 rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-gray-500">
         No performance data available.
       </div>
     );
   }
 
-  const width = 500;
-  const height = 190;
-  const paddingX = 22;
+  const width = 1000;
+  const height = 240;
+  const paddingX = 26;
   const paddingY = 18;
 
-  const values = data.map((point) => point.value);
-  const maxValue = Math.max(...values);
-  const minValue = Math.min(...values);
+  const activeLabels =
+    labels.length ? labels : totalSeries.map((point) => point.label) || [];
+  const pointsCount = activeLabels.length || 1;
+
+  const allValues = [
+    ...totalSeries.map((point) => point.value),
+    ...categorySeries.flatMap((series) => series.data.map((point) => point.value)),
+  ];
+  const maxValue = Math.max(...allValues, 1);
+  const minValue = Math.min(...allValues);
   const range = maxValue - minValue || maxValue * 0.05 || 1;
 
   const usableWidth = width - paddingX * 2;
   const usableHeight = height - paddingY * 2;
 
-  const coordinates = data.map((point, index) => {
-    const x =
-      data.length === 1
-        ? paddingX + usableWidth / 2
-        : paddingX + (index / (data.length - 1)) * usableWidth;
-    const y =
-      height -
-      paddingY -
-      ((point.value - minValue) / range) * usableHeight;
-    return { ...point, x, y };
-  });
+  const getCoordinates = (points) =>
+    points.map((point, index) => {
+      const x =
+        pointsCount === 1
+          ? paddingX + usableWidth / 2
+          : paddingX + (index / (pointsCount - 1)) * usableWidth;
+      const y =
+        height -
+        paddingY -
+        ((point.value - minValue) / range) * usableHeight;
+      return { ...point, x, y };
+    });
 
-  const linePath = coordinates
-    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
-    .join(' ');
-  const areaPath = `${linePath} L ${coordinates[coordinates.length - 1].x.toFixed(
-    2
-  )} ${height - paddingY} L ${coordinates[0].x.toFixed(2)} ${height - paddingY} Z`;
+  const seriesPaths = categorySeries.map((series) => {
+    const coordinates = getCoordinates(series.data);
+    const linePath = coordinates
+      .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+      .join(' ');
+    return { ...series, coordinates, linePath };
+  });
 
   const gridLines = Array.from({ length: 4 }, (_, index) => ({
     y: paddingY + (index / 3) * usableHeight,
   }));
 
+  const totalCoordinates = getCoordinates(totalSeries);
+  const totalLinePath = totalCoordinates
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(' ');
+  const totalAreaPath = `${totalLinePath} L ${totalCoordinates[totalCoordinates.length - 1]?.x.toFixed(
+    2
+  )} ${height - paddingY} L ${totalCoordinates[0]?.x.toFixed(2)} ${height - paddingY} Z`;
+
   return (
-    <div>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-44"
-        role="img"
-        aria-label="Investment performance chart"
-      >
-        <defs>
-          <linearGradient id="trendLine" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#5eead4" />
-            <stop offset="50%" stopColor="#34d399" />
-            <stop offset="100%" stopColor="#14b8a6" />
-          </linearGradient>
-          <linearGradient id="trendFill" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="rgba(45,212,191,0.35)" />
-            <stop offset="100%" stopColor="rgba(15,118,110,0)" />
-          </linearGradient>
-        </defs>
+    <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex-1">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full h-48"
+          role="img"
+          aria-label="Investment performance chart"
+        >
+          {gridLines.map((line, index) => (
+            <line
+              // eslint-disable-next-line react/no-array-index-key
+              key={`grid-${index}`}
+              x1={paddingX}
+              x2={width - paddingX}
+              y1={line.y}
+              y2={line.y}
+              stroke="rgba(255,255,255,0.05)"
+              strokeWidth="1"
+            />
+          ))}
 
-        {gridLines.map((line, index) => (
-          <line
-            // eslint-disable-next-line react/no-array-index-key
-            key={`grid-${index}`}
-            x1={paddingX}
-            x2={width - paddingX}
-            y1={line.y}
-            y2={line.y}
-            stroke="rgba(255,255,255,0.05)"
-            strokeWidth="1"
+          <defs>
+            <linearGradient id="portfolioLine" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#94a3b8" />
+              <stop offset="100%" stopColor="#cbd5f5" />
+            </linearGradient>
+            <linearGradient id="portfolioFill" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="rgba(148,163,184,0.35)" />
+              <stop offset="100%" stopColor="rgba(15,23,42,0)" />
+            </linearGradient>
+          </defs>
+
+          <path d={totalAreaPath} fill="url(#portfolioFill)" opacity={0.5} />
+          <path
+            d={totalLinePath}
+            fill="none"
+            stroke="url(#portfolioLine)"
+            strokeWidth="3.2"
+            strokeLinecap="round"
           />
-        ))}
+          {totalCoordinates.map((point, index) => (
+            <circle
+              key={`total-${point.label}-${index}`}
+              cx={point.x}
+              cy={point.y}
+              r={3}
+              fill="#cbd5f5"
+              opacity={0.85}
+            />
+          ))}
 
-        <path d={areaPath} fill="url(#trendFill)" opacity={0.75} />
-        <path
-          d={linePath}
-          fill="none"
-          stroke="url(#trendLine)"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-
-        {coordinates.map((point) => (
-          <g key={point.label}>
-            <circle cx={point.x} cy={point.y} r={5} fill="#0f172a" stroke="#5eead4" strokeWidth="2" />
-            <circle cx={point.x} cy={point.y} r={2} fill="#5eead4" />
-          </g>
-        ))}
-      </svg>
-      <div className="flex justify-between text-xs text-gray-400 px-1 mt-2">
-        {data.map((point) => (
-          <span key={point.label}>{point.label}</span>
-        ))}
+          {seriesPaths.map((series) => {
+            const isFocused = filteredCategory === series.key;
+            const strokeWidth = isFocused ? 3.5 : filteredCategory ? 1.8 : 2.3;
+            const opacity = isFocused ? 1 : filteredCategory ? 0.2 : 0.7;
+            return (
+              <g key={series.key}>
+                <path
+                  d={series.linePath}
+                  fill="none"
+                  stroke={series.color}
+                  strokeWidth={strokeWidth}
+                  strokeLinecap="round"
+                  opacity={opacity}
+                />
+                {series.coordinates.map((point, idx) => (
+                  <circle
+                    key={`${series.key}-${point.label}-${idx}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r={isFocused ? 3 : 1.8}
+                    fill={series.color}
+                    opacity={opacity}
+                  />
+                ))}
+              </g>
+            );
+          })}
+        </svg>
+        <div className="flex justify-between text-xs text-gray-400 px-1 mt-2">
+          {activeLabels.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-wrap lg:flex-col gap-2 lg:w-44">
+        {categorySeries.map((series) => {
+          const isActive = filteredCategory === series.key;
+          return (
+            <button
+              key={series.key}
+              type="button"
+              onClick={() => onFilterCategory(series.key)}
+              className={`w-full px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-2 justify-center transition ${
+                isActive
+                  ? 'bg-teal-500/10 text-teal-200 border-teal-400/60'
+                  : 'text-gray-400 border-slate-700/70 hover:text-white hover:border-teal-500/40'
+              }`}
+            >
+              <span
+                className="inline-block w-2 h-2 rounded-full"
+                style={{ backgroundColor: series.color }}
+              />
+              {series.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -383,7 +487,12 @@ function DashboardPage() {
   const [form, setForm] = useState(initialFormState);
   const [errors, setErrors] = useState({});
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showZakahModal, setShowZakahModal] = useState(false);
   const [categoryModal, setCategoryModal] = useState({ open: false, category: null });
+  const [filteredCategory, setFilteredCategory] = useState(null);
+  const [zakahSelections, setZakahSelections] = useState(() =>
+    categoryOptions.reduce((acc, { value }) => ({ ...acc, [value]: true }), {})
+  );
 
   const totalValue = useMemo(
     () => investments.reduce((sum, investment) => sum + getCurrentValue(investment), 0),
@@ -408,18 +517,47 @@ function DashboardPage() {
     return entries[0];
   }, [distribution]);
 
-  const trendData = useMemo(() => timeSeriesData[selectedRange] || [], [selectedRange]);
+  const baseTrendData = useMemo(() => timeSeriesData[selectedRange] || [], [selectedRange]);
+
+  const categorySeries = useMemo(() => {
+    if (!baseTrendData.length) {
+      return categoryOptions.map(({ value, label }) => ({
+        key: value,
+        label,
+        color: categoryLineColors[value] || '#2dd4bf',
+        data: [],
+      }));
+    }
+    return categoryOptions.map(({ value, label }) => {
+      const categoryValue = distribution[value] || 0;
+      const ratio = totalValue ? categoryValue / totalValue : 0;
+      const data = baseTrendData.map((point) => ({
+        label: point.label,
+        value: Number((point.value * ratio).toFixed(2)),
+      }));
+      return {
+        key: value,
+        label,
+        color: categoryLineColors[value] || '#2dd4bf',
+        data,
+      };
+    });
+  }, [baseTrendData, distribution, totalValue]);
+
+  const trendStatsData = filteredCategory
+    ? categorySeries.find((series) => series.key === filteredCategory)?.data || []
+    : baseTrendData;
 
   const trendStats = useMemo(() => {
-    if (!trendData.length) {
+    if (!trendStatsData.length) {
       return { latest: 0, changeAbs: 0, changePct: 0 };
     }
-    const first = trendData[0].value;
-    const last = trendData[trendData.length - 1].value;
+    const first = trendStatsData[0].value;
+    const last = trendStatsData[trendStatsData.length - 1].value;
     const changeAbs = last - first;
     const changePct = first ? (changeAbs / first) * 100 : 0;
     return { latest: last, changeAbs, changePct };
-  }, [trendData]);
+  }, [trendStatsData]);
   const isRealEstateSelected = form.category === 'Real Estate';
   const selectedUnitLabel = getDefaultUnitLabel(form.category);
 
@@ -448,6 +586,32 @@ function DashboardPage() {
   };
 
   const activeCategoryLabel = categoryModal.category ? getCategoryLabel(categoryModal.category) : 'Category';
+  const filteredCategoryLabel = filteredCategory ? getCategoryLabel(filteredCategory) : 'All categories';
+
+  const handleFilterCategory = (category) => {
+    setFilteredCategory((prev) => (prev === category ? null : category));
+  };
+
+  const handleToggleZakahCategory = (category) => {
+    setZakahSelections((prev) => ({
+      ...prev,
+      [category]: !prev[category],
+    }));
+  };
+
+  const handleSelectAllZakah = () => {
+    setZakahSelections(categoryOptions.reduce((acc, { value }) => ({ ...acc, [value]: true }), {}));
+  };
+
+  const zakahBase = useMemo(
+    () =>
+      categoryOptions.reduce(
+        (sum, { value }) => (zakahSelections[value] ? sum + (distribution[value] || 0) : sum),
+        0
+      ),
+    [zakahSelections, distribution]
+  );
+  const zakahAmount = zakahBase * 0.025;
 
   const handleFormChange = (field, sanitizeNumber = false) => (event) => {
     const inputValue = event.target.value;
@@ -554,8 +718,8 @@ function DashboardPage() {
       <div className="flex min-h-screen bg-gradient-to-br from-slate-800 via-teal-900 to-slate-800">
         <Sidebar />
 
-        <div className="flex-1 px-4 py-6 overflow-auto">
-          <div className="w-full max-w-4xl mx-auto space-y-4">
+        <div className="flex-1 px-5 py-6 overflow-auto">
+          <div className="w-full max-w-5xl mx-auto space-y-5">
           <header>
             <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">
               Portfolio
@@ -578,7 +742,7 @@ function DashboardPage() {
           </header>
 
 
-          <section className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-3.5 border border-slate-700/50">
+      <section className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-sm uppercase tracking-widest text-gray-400">
@@ -610,59 +774,88 @@ function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-2">
-              <InvestmentTrendChart data={trendData} />
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center gap-5 text-sm">
-              <div>
-                <p className="text-xs uppercase tracking-widest text-gray-400">Latest value</p>
-                <p className="text-2xl font-semibold text-white mt-1">
-                  {formatCurrency(trendStats.latest)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-widest text-gray-400">Change</p>
-                <p
-                  className={`text-lg font-semibold ${
-                    trendStats.changeAbs >= 0 ? 'text-teal-300' : 'text-rose-400'
-                  }`}
-                >
-                  {formatSignedCurrency(trendStats.changeAbs)}{' '}
-                  <span className="text-sm text-gray-400">
-                    ({trendStats.changePct >= 0 ? '+' : ''}
-                    {trendStats.changePct.toFixed(2)}%)
-                  </span>
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-            <div className="lg:col-span-2">
-              <InvestmentChart
-                distribution={distribution}
-                total={totalValue}
-                onSelectCategory={handleOpenCategoryModal}
+            <div className="mt-3 space-y-3">
+              <InvestmentTrendChart
+                labels={baseTrendData.map((point) => point.label)}
+                totalSeries={baseTrendData}
+                categorySeries={categorySeries}
+                filteredCategory={filteredCategory}
+                onFilterCategory={handleFilterCategory}
               />
-            </div>
-            <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-3.5 border border-slate-700/50 flex flex-col gap-1.5">
-              <p className="text-sm uppercase tracking-widest text-gray-400 mb-1">
-                Add Investment
-              </p>
-              <h2 className="text-xl font-semibold text-white">
-                Track a new asset
-              </h2>
-              <p className="text-sm text-gray-400 flex-1">
-                Capture stocks, property, crypto, or gold in a single, streamlined flow.
-              </p>
-              <Button variant="primary" className="mt-auto" onClick={() => setShowAddModal(true)}>
-                Add investment
-              </Button>
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-gray-400">Latest value</p>
+                  <p className="text-2xl font-semibold text-white mt-1">
+                    {formatCurrency(trendStats.latest)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-gray-400">Change</p>
+                  <p
+                    className={`text-lg font-semibold ${
+                      trendStats.changeAbs >= 0 ? 'text-teal-300' : 'text-rose-400'
+                    }`}
+                  >
+                    {formatSignedCurrency(trendStats.changeAbs)}{' '}
+                    <span className="text-sm text-gray-400">
+                      ({trendStats.changePct >= 0 ? '+' : ''}
+                      {trendStats.changePct.toFixed(2)}%)
+                    </span>
+                  </p>
+                </div>
+                <p className="text-xs text-gray-500 ml-auto">
+                  Viewing · <span className="text-teal-200">{filteredCategoryLabel}</span>
+                </p>
+              </div>
             </div>
           </section>
+
+          <section className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+            <div className="flex items-center justify-between mb-2.5">
+              <div>
+                <p className="text-sm uppercase tracking-widest text-gray-400">Investment Allocation</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSelectAllZakah}
+                className="text-xs px-3 py-1 rounded-full border border-slate-600 text-gray-400 hover:text-white hover:border-teal-400/60 transition"
+              >
+                Reset focus
+              </button>
+            </div>
+            <InvestmentChart
+              distribution={distribution}
+              total={totalValue}
+              onSelectCategory={handleOpenCategoryModal}
+              onFilterCategory={handleFilterCategory}
+              filteredCategory={filteredCategory}
+            />
+          </section>
+
           </div>
         </div>
+      </div>
+
+      <div className="fixed bottom-8 right-28 z-50">
+        <button
+          type="button"
+          onClick={() => setShowZakahModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-teal-500/40 text-teal-200 text-sm font-semibold bg-slate-900/70 backdrop-blur hover:bg-teal-500/10 transition shadow-lg"
+        >
+          Zakah
+        </button>
+      </div>
+      <div className="fixed bottom-8 right-8 z-50">
+        <button
+          type="button"
+          onClick={() => setShowAddModal(true)}
+          className="w-14 h-14 bg-yellow-500 hover:bg-yellow-400 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+        >
+          <svg className="w-6 h-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+          </svg>
+          <span className="sr-only">Add investment</span>
+        </button>
       </div>
 
       <Modal
@@ -783,6 +976,72 @@ function DashboardPage() {
           </Button>
         </div>
       </form>
+      </Modal>
+
+      <Modal
+        isOpen={showZakahModal}
+        onClose={() => setShowZakahModal(false)}
+        title="Calculate zakah"
+        subtitle="Select which categories should be included (2.5% of selected assets)."
+        maxWidth="max-w-3xl"
+      >
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-gray-300">
+              Currently selected categories contribute{' '}
+              <span className="text-teal-200 font-semibold">
+                {formatCurrency(zakahBase)}
+              </span>{' '}
+              to zakatable wealth.
+            </p>
+            <button
+              type="button"
+              onClick={handleSelectAllZakah}
+              className="text-xs px-3 py-1 rounded-full border border-slate-600 text-gray-300 hover:text-white hover:border-teal-400/60 transition"
+            >
+              Select all
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {categoryOptions.map(({ value, label }) => (
+              <label
+                key={value}
+                className="flex items-center gap-3 rounded-lg border border-slate-700/60 bg-slate-900/30 px-4 py-3 text-sm text-gray-200 cursor-pointer hover:border-teal-500/50 transition"
+              >
+                <input
+                  type="checkbox"
+                  checked={zakahSelections[value]}
+                  onChange={() => handleToggleZakahCategory(value)}
+                  className="h-4 w-4 rounded border-slate-600 text-teal-500 focus:ring-teal-400"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-gray-400">Zakah due</p>
+              <p className="text-2xl font-semibold text-teal-200 mt-1">
+                {formatCurrency(zakahAmount, { fractionDigits: 2 })}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-widest text-gray-400 text-right">Rate</p>
+              <p className="text-lg font-semibold text-white mt-1 text-right">2.5%</p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setShowZakahModal(false)}>
+              Close
+            </Button>
+            <Button variant="primary" onClick={() => setShowZakahModal(false)}>
+              Done
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       <Modal
