@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import Sidebar from '../Shared/Sidebar';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
+import Modal from '../Shared/Modal';
 
 const categoryOptions = [
   { value: 'Stock', label: 'Stocks' },
@@ -9,6 +10,9 @@ const categoryOptions = [
   { value: 'Crypto', label: 'Crypto' },
   { value: 'Gold', label: 'Gold' },
 ];
+
+const getCategoryLabel = (value) =>
+  categoryOptions.find((option) => option.value === value)?.label || value;
 
 const categoryColors = {
   Stock: 'from-teal-400 to-teal-600',
@@ -225,23 +229,31 @@ const timeSeriesData = {
   ],
 };
 
-const InvestmentChart = ({ distribution, total }) => (
-  <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 h-full">
-    <div className="flex items-center justify-between mb-6">
+const InvestmentChart = ({ distribution, total, onSelectCategory }) => (
+  <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-5 border border-slate-700/50 h-full">
+    <div className="flex items-center justify-between mb-4">
       <div>
         <p className="text-sm uppercase tracking-widest text-gray-400">Portfolio Mix</p>
         <h2 className="text-xl font-semibold text-white">Investment Allocation</h2>
+        <p className="text-xs text-gray-500">Select a category to inspect its holdings.</p>
       </div>
-      <p className="text-sm text-gray-400">Total · <span className="text-teal-300">{formatCurrency(total)}</span></p>
+      <p className="text-sm text-gray-400">
+        Total · <span className="text-teal-300">{formatCurrency(total)}</span>
+      </p>
     </div>
 
-    <div className="space-y-5">
+    <div className="space-y-3">
       {categoryOptions.map(({ value, label }) => {
         const amount = distribution[value] || 0;
         const percentage = total ? Math.round((amount / total) * 100) : 0;
 
         return (
-          <div key={value}>
+          <button
+            key={value}
+            type="button"
+            onClick={() => onSelectCategory(value)}
+            className="w-full text-left group rounded-lg border border-slate-700/40 hover:border-teal-500/50 bg-slate-900/20 hover:bg-slate-900/40 transition-colors px-4 py-3"
+          >
             <div className="flex items-center justify-between text-sm mb-1.5">
               <span className="text-gray-300">{label}</span>
               <span className="text-white font-medium">
@@ -255,7 +267,7 @@ const InvestmentChart = ({ distribution, total }) => (
                 style={{ width: `${percentage || (total ? 2 : 0)}%` }}
               />
             </div>
-          </div>
+          </button>
         );
       })}
     </div>
@@ -265,16 +277,16 @@ const InvestmentChart = ({ distribution, total }) => (
 const InvestmentTrendChart = ({ data }) => {
   if (!data || !data.length) {
     return (
-      <div className="h-64 bg-slate-900/40 rounded-2xl border border-dashed border-slate-700 flex items-center justify-center text-gray-500">
+      <div className="h-56 bg-slate-900/40 rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-gray-500">
         No performance data available.
       </div>
     );
   }
 
-  const width = 640;
-  const height = 260;
-  const paddingX = 28;
-  const paddingY = 24;
+  const width = 500;
+  const height = 190;
+  const paddingX = 22;
+  const paddingY = 18;
 
   const values = data.map((point) => point.value);
   const maxValue = Math.max(...values);
@@ -311,7 +323,7 @@ const InvestmentTrendChart = ({ data }) => {
     <div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-64"
+        className="w-full h-44"
         role="img"
         aria-label="Investment performance chart"
       >
@@ -370,6 +382,8 @@ function DashboardPage() {
   const [selectedRange, setSelectedRange] = useState('month');
   const [form, setForm] = useState(initialFormState);
   const [errors, setErrors] = useState({});
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [categoryModal, setCategoryModal] = useState({ open: false, category: null });
 
   const totalValue = useMemo(
     () => investments.reduce((sum, investment) => sum + getCurrentValue(investment), 0),
@@ -408,6 +422,32 @@ function DashboardPage() {
   }, [trendData]);
   const isRealEstateSelected = form.category === 'Real Estate';
   const selectedUnitLabel = getDefaultUnitLabel(form.category);
+
+  const categoryInvestments = useMemo(() => {
+    if (!categoryModal.category) return [];
+    return investments.filter((investment) => investment.category === categoryModal.category);
+  }, [categoryModal.category, investments]);
+
+  const categoryTotals = useMemo(() => {
+    if (!categoryModal.category || !categoryInvestments.length) {
+      return { current: 0, purchase: 0, diff: 0, pct: 0 };
+    }
+    const purchase = categoryInvestments.reduce((sum, investment) => sum + getPurchaseValue(investment), 0);
+    const current = categoryInvestments.reduce((sum, investment) => sum + getCurrentValue(investment), 0);
+    const diff = current - purchase;
+    const pct = purchase ? (diff / purchase) * 100 : 0;
+    return { current, purchase, diff, pct };
+  }, [categoryInvestments, categoryModal.category]);
+
+  const handleOpenCategoryModal = (category) => {
+    setCategoryModal({ open: true, category });
+  };
+
+  const handleCloseCategoryModal = () => {
+    setCategoryModal({ open: false, category: null });
+  };
+
+  const activeCategoryLabel = categoryModal.category ? getCategoryLabel(categoryModal.category) : 'Category';
 
   const handleFormChange = (field, sanitizeNumber = false) => (event) => {
     const inputValue = event.target.value;
@@ -506,26 +546,25 @@ function DashboardPage() {
       category: prev.category,
     }));
     setErrors({});
+    setShowAddModal(false);
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-800 via-teal-900 to-slate-800">
-      <Sidebar />
+    <>
+      <div className="flex min-h-screen bg-gradient-to-br from-slate-800 via-teal-900 to-slate-800">
+        <Sidebar />
 
-      <div className="flex-1 p-8 overflow-auto">
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="flex-1 px-4 py-6 overflow-auto">
+          <div className="w-full max-w-4xl mx-auto space-y-4">
           <header>
             <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">
               Portfolio
             </p>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-white">
+                <h1 className="text-2xl md:text-3xl font-bold text-white">
                   Investment Overview
                 </h1>
-                <p className="text-gray-300">
-                  Track every asset the same way you do on the profile page.
-                </p>
               </div>
               <div className="text-right">
                 <p className="text-xs uppercase tracking-widest text-gray-400">
@@ -539,7 +578,7 @@ function DashboardPage() {
           </header>
 
 
-          <section className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+          <section className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-3.5 border border-slate-700/50">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-sm uppercase tracking-widest text-gray-400">
@@ -571,11 +610,11 @@ function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-2">
               <InvestmentTrendChart data={trendData} />
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-8 text-sm">
+            <div className="mt-3 flex flex-wrap items-center gap-5 text-sm">
               <div>
                 <p className="text-xs uppercase tracking-widest text-gray-400">Latest value</p>
                 <p className="text-2xl font-semibold text-white mt-1">
@@ -599,227 +638,256 @@ function DashboardPage() {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
             <div className="lg:col-span-2">
-              <InvestmentChart distribution={distribution} total={totalValue} />
+              <InvestmentChart
+                distribution={distribution}
+                total={totalValue}
+                onSelectCategory={handleOpenCategoryModal}
+              />
             </div>
-            <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+            <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-3.5 border border-slate-700/50 flex flex-col gap-1.5">
               <p className="text-sm uppercase tracking-widest text-gray-400 mb-1">
                 Add Investment
               </p>
-              <h2 className="text-xl font-semibold text-white mb-4">
+              <h2 className="text-xl font-semibold text-white">
                 Track a new asset
               </h2>
-              <form className="space-y-4" onSubmit={handleAddInvestment}>
-                <InputField
-                  label="Investment name"
-                  name="name"
-                  value={form.name}
-                  onChange={handleFormChange('name')}
-                  placeholder="e.g., Tech Growth ETF"
-                  error={errors.name}
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
-                    Type
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={form.category}
-                      onChange={handleCategoryChange}
-                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    >
-                      {categoryOptions.map(({ value, label }) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {isRealEstateSelected ? (
-                  <>
-                    <InputField
-                      label="Area (m²)"
-                      type="number"
-                      name="areaSqm"
-                      value={form.areaSqm}
-                      onChange={handleFormChange('areaSqm', true)}
-                      placeholder="e.g., 320"
-                      error={errors.areaSqm}
-                    />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <InputField
-                        label="Purchase price"
-                        type="number"
-                        name="buyPrice"
-                        value={form.buyPrice}
-                        onChange={handleFormChange('buyPrice', true)}
-                        placeholder="e.g., 720000"
-                        error={errors.buyPrice}
-                      />
-                      <InputField
-                        label="Today's price"
-                        type="number"
-                        name="currentPrice"
-                        value={form.currentPrice}
-                        onChange={handleFormChange('currentPrice', true)}
-                        placeholder="e.g., 860000"
-                        error={errors.currentPrice}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <InputField
-                      label={`Amount (${selectedUnitLabel})`}
-                      type="number"
-                      name="amountOwned"
-                      value={form.amountOwned}
-                      onChange={handleFormChange('amountOwned', true)}
-                      placeholder={`Number of ${selectedUnitLabel}`}
-                      error={errors.amountOwned}
-                    />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <InputField
-                        label="Purchase price / unit"
-                        type="number"
-                        name="buyPrice"
-                        value={form.buyPrice}
-                        onChange={handleFormChange('buyPrice', true)}
-                        placeholder="e.g., 420"
-                        error={errors.buyPrice}
-                      />
-                      <InputField
-                        label="Today's price / unit"
-                        type="number"
-                        name="currentPrice"
-                        value={form.currentPrice}
-                        onChange={handleFormChange('currentPrice', true)}
-                        placeholder="e.g., 465"
-                        error={errors.currentPrice}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <Button type="submit" variant="primary" className="w-full mt-2">
-                  Save investment
-                </Button>
-              </form>
+              <p className="text-sm text-gray-400 flex-1">
+                Capture stocks, property, crypto, or gold in a single, streamlined flow.
+              </p>
+              <Button variant="primary" className="mt-auto" onClick={() => setShowAddModal(true)}>
+                Add investment
+              </Button>
             </div>
           </section>
-
-          <section className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-sm uppercase tracking-widest text-gray-400">
-                  Holdings
-                </p>
-                <h2 className="text-xl font-semibold text-white">
-                  All investments
-                </h2>
-              </div>
-              <span className="text-sm text-gray-400">
-                Updated {new Date().toLocaleDateString()}
-              </span>
-            </div>
-
-            {investments.length ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-700/60">
-                  <thead>
-                    <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
-                      <th className="pb-3">Asset</th>
-                      <th className="pb-3">Holdings</th>
-                      <th className="pb-3">Price Points</th>
-                      <th className="pb-3 text-right">Value &amp; Change</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700/60">
-                    {investments.map((investment) => {
-                      const { current, purchase, diff, pct } = getPerformanceDelta(investment);
-                      const isRealEstate = investment.category === 'Real Estate';
-                      const pricePerSqm = getPricePerSquareMeter(investment);
-                      const unitLabel = investment.unitLabel || getDefaultUnitLabel(investment.category);
-                      const amountOwnedValue =
-                        typeof investment.amountOwned === 'number' && !Number.isNaN(investment.amountOwned)
-                          ? investment.amountOwned
-                          : null;
-                      const ownedLabel = isRealEstate
-                        ? investment.areaSqm
-                          ? `${formatHoldingsAmount(investment.areaSqm)} m²`
-                          : 'Area not specified'
-                        : `${amountOwnedValue !== null ? formatHoldingsAmount(amountOwnedValue) : '—'} ${unitLabel}`;
-                      const buyLabel = isRealEstate
-                        ? formatCurrency(investment.buyPrice ?? purchase)
-                        : `${formatCurrency(investment.buyPrice ?? purchase, { fractionDigits: 2 })} / unit`;
-                      const todayLabel = isRealEstate
-                        ? formatCurrency(investment.currentPrice ?? current)
-                        : `${formatCurrency(investment.currentPrice ?? current, { fractionDigits: 2 })} / unit`;
-
-                      return (
-                        <tr key={investment.id} className="text-sm text-gray-300 align-top">
-                          <td className="py-4 pr-4">
-                            <p className="font-semibold text-white">{investment.name}</p>
-                            <p className="text-xs text-gray-400">{investment.category}</p>
-                          </td>
-                          <td className="py-4 pr-4">
-                            <p className="text-white font-medium">{ownedLabel}</p>
-                            <p className="text-xs text-gray-400">
-                              {isRealEstate ? 'Area' : 'Amount owned'}
-                            </p>
-                            {isRealEstate && pricePerSqm && (
-                              <p className="text-[0.7rem] text-gray-500 mt-1">
-                                {formatCurrency(pricePerSqm, { fractionDigits: 0 })} per m²
-                              </p>
-                            )}
-                          </td>
-                          <td className="py-4 pr-4">
-                            <p className="text-sm text-gray-300">
-                              Bought @ <span className="text-white">{buyLabel}</span>
-                            </p>
-                            <p className="text-sm text-gray-300">
-                              Today @ <span className="text-white">{todayLabel}</span>
-                            </p>
-                            {!isRealEstate && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Total now: {formatCurrency(current)}
-                              </p>
-                            )}
-                          </td>
-                          <td className="py-4 text-right">
-                            <p className="text-xs uppercase tracking-widest text-gray-500">
-                              Current value
-                            </p>
-                            <p className="text-lg font-semibold text-teal-200">
-                              {formatCurrency(current)}
-                            </p>
-                            <p
-                              className={`text-sm font-semibold ${
-                                diff >= 0 ? 'text-teal-300' : 'text-rose-400'
-                              }`}
-                            >
-                              {formatSignedCurrency(diff)} (
-                              {diff >= 0 ? '+' : ''}
-                              {pct.toFixed(2)}%)
-                            </p>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-400">Add your first investment to see it here.</p>
-            )}
-          </section>
+          </div>
         </div>
       </div>
-    </div>
+
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add investment"
+      subtitle="Track a new asset across stocks, property, crypto, or gold."
+      maxWidth="max-w-3xl"
+    >
+      <form className="space-y-4" onSubmit={handleAddInvestment}>
+        <InputField
+          label="Investment name"
+          name="name"
+          value={form.name}
+          onChange={handleFormChange('name')}
+          placeholder="e.g., Tech Growth ETF"
+          error={errors.name}
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">
+            Type
+          </label>
+          <select
+            value={form.category}
+            onChange={handleCategoryChange}
+            className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+          >
+            {categoryOptions.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {isRealEstateSelected ? (
+          <>
+            <InputField
+              label="Area (m²)"
+              type="number"
+              name="areaSqm"
+              value={form.areaSqm}
+              onChange={handleFormChange('areaSqm', true)}
+              placeholder="e.g., 320"
+              error={errors.areaSqm}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField
+                label="Purchase price"
+                type="number"
+                name="buyPrice"
+                value={form.buyPrice}
+                onChange={handleFormChange('buyPrice', true)}
+                placeholder="e.g., 720000"
+                error={errors.buyPrice}
+              />
+              <InputField
+                label="Today's price"
+                type="number"
+                name="currentPrice"
+                value={form.currentPrice}
+                onChange={handleFormChange('currentPrice', true)}
+                placeholder="e.g., 860000"
+                error={errors.currentPrice}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <InputField
+              label={`Amount (${selectedUnitLabel})`}
+              type="number"
+              name="amountOwned"
+              value={form.amountOwned}
+              onChange={handleFormChange('amountOwned', true)}
+              placeholder={`Number of ${selectedUnitLabel}`}
+              error={errors.amountOwned}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField
+                label="Purchase price / unit"
+                type="number"
+                name="buyPrice"
+                value={form.buyPrice}
+                onChange={handleFormChange('buyPrice', true)}
+                placeholder="e.g., 420"
+                error={errors.buyPrice}
+              />
+              <InputField
+                label="Today's price / unit"
+                type="number"
+                name="currentPrice"
+                value={form.currentPrice}
+                onChange={handleFormChange('currentPrice', true)}
+                placeholder="e.g., 465"
+                error={errors.currentPrice}
+              />
+            </div>
+          </>
+        )}
+
+        {errors.general && (
+          <p className="text-sm text-red-400">{errors.general}</p>
+        )}
+
+        <div className="flex justify-end gap-3 pt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            className="px-6"
+            onClick={() => setShowAddModal(false)}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" className="px-6">
+            Save investment
+          </Button>
+        </div>
+      </form>
+      </Modal>
+
+      <Modal
+        isOpen={categoryModal.open}
+        onClose={handleCloseCategoryModal}
+        title={`${activeCategoryLabel} holdings`}
+      subtitle="Detailed breakdown of every asset inside this category."
+      maxWidth="max-w-4xl"
+    >
+      {categoryInvestments.length ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="rounded-lg border border-slate-700/60 p-4 bg-slate-900/40">
+              <p className="text-xs uppercase tracking-widest text-gray-400">Current value</p>
+              <p className="text-lg font-semibold text-white mt-1">
+                {formatCurrency(categoryTotals.current)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-700/60 p-4 bg-slate-900/40">
+              <p className="text-xs uppercase tracking-widest text-gray-400">Invested</p>
+              <p className="text-lg font-semibold text-white mt-1">
+                {formatCurrency(categoryTotals.purchase)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-700/60 p-4 bg-slate-900/40">
+              <p className="text-xs uppercase tracking-widest text-gray-400">Performance</p>
+              <p
+                className={`text-lg font-semibold ${
+                  categoryTotals.diff >= 0 ? 'text-teal-300' : 'text-rose-400'
+                } mt-1`}
+              >
+                {formatSignedCurrency(categoryTotals.diff)} ({categoryTotals.pct >= 0 ? '+' : ''}
+                {categoryTotals.pct.toFixed(2)}%)
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3 max-h-[50vh] overflow-auto pr-1">
+            {categoryInvestments.map((investment) => {
+              const { current, diff, pct } = getPerformanceDelta(investment);
+              const isRealEstate = investment.category === 'Real Estate';
+              const pricePerSqm = getPricePerSquareMeter(investment);
+              const unitLabel = investment.unitLabel || getDefaultUnitLabel(investment.category);
+              const amountOwnedValue =
+                typeof investment.amountOwned === 'number' && !Number.isNaN(investment.amountOwned)
+                  ? formatHoldingsAmount(investment.amountOwned)
+                  : null;
+
+              return (
+                <div
+                  key={investment.id}
+                  className="rounded-lg border border-slate-700/70 bg-slate-900/30 p-4 flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-white">{investment.name}</p>
+                      <p className="text-xs text-gray-400">{investment.category}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs uppercase tracking-widest text-gray-500">Value</p>
+                      <p className="text-base font-semibold text-teal-200">
+                        {formatCurrency(current)}
+                      </p>
+                      <p
+                        className={`text-xs font-semibold ${
+                          diff >= 0 ? 'text-teal-300' : 'text-rose-400'
+                        }`}
+                      >
+                        {formatSignedCurrency(diff)} ({diff >= 0 ? '+' : ''}
+                        {pct.toFixed(2)}%)
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    {isRealEstate ? (
+                      <>
+                        <p>Area: {investment.areaSqm ? `${formatHoldingsAmount(investment.areaSqm)} m²` : 'Not specified'}</p>
+                        <p>Purchased at: {formatCurrency(investment.buyPrice)}</p>
+                        <p>Today: {formatCurrency(investment.currentPrice)}</p>
+                        {pricePerSqm && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatCurrency(pricePerSqm, { fractionDigits: 0 })} per m²
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p>
+                          Holdings: {amountOwnedValue ?? '—'} {unitLabel}
+                        </p>
+                        <p>Purchased @ {formatCurrency(investment.buyPrice, { fractionDigits: 2 })} / unit</p>
+                        <p>Today @ {formatCurrency(investment.currentPrice, { fractionDigits: 2 })} / unit</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <p className="text-sm text-gray-400">No holdings recorded for this category yet.</p>
+      )}
+      </Modal>
+    </>
   );
 }
 

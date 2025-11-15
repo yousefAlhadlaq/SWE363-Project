@@ -14,7 +14,7 @@ import FinancialAdvisorPage from '../components/Advisor/FinancialAdvisorPage';
 import FinancialSettingsPage from '../components/Advisor/FinancialSettingsPage';
 
 // Investment Components (Abdulmajeed)
-import DashboardPage from '../components/Investments/DashboardPage';
+import DashboardPage from '../components/Investments/InvestmentsPage';
 import ZakahCalculator from '../components/Investments/ZakahCalculator';
 import ReportsExport from '../components/Investments/ReportsExport';
 
