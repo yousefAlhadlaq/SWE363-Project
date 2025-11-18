@@ -481,7 +481,7 @@ const InvestmentTrendChart = ({
   );
 };
 
-function DashboardPage() {
+function InvestmentsPage() {
   const [investments, setInvestments] = useState(initialInvestments);
   const [selectedRange, setSelectedRange] = useState('month');
   const [form, setForm] = useState(initialFormState);
@@ -1150,4 +1150,4 @@ function DashboardPage() {
   );
 }
 
-export default DashboardPage;
+export default InvestmentsPage;
