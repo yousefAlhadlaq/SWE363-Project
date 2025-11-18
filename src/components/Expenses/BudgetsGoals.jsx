@@ -2,17 +2,12 @@ import React, { useState } from 'react';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 
-function BudgetsGoals() {
+function BudgetsGoals({ budgets = [], onAddBudget, expenses = [] }) {
   const [budget, setBudget] = useState({
     category: '',
     amount: '',
     period: 'monthly'
   });
-
-  const [budgets, setBudgets] = useState([
-    { id: 1, category: 'Food', amount: 500, period: 'monthly', spent: 350 },
-    { id: 2, category: 'Entertainment', amount: 200, period: 'monthly', spent: 180 }
-  ]);
 
   const handleChange = (e) => {
     setBudget({
@@ -24,16 +19,17 @@ function BudgetsGoals() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const newBudget = {
-      id: budgets.length + 1,
+      id: Date.now(),
       ...budget,
       amount: parseFloat(budget.amount),
       spent: 0
     };
-    setBudgets([...budgets, newBudget]);
+    if (onAddBudget) onAddBudget(newBudget);
     setBudget({ category: '', amount: '', period: 'monthly' });
   };
 
   const getProgressPercentage = (spent, amount) => {
+    if (!amount || amount === 0) return 0;
     return Math.min((spent / amount) * 100, 100);
   };
 
@@ -41,6 +37,10 @@ function BudgetsGoals() {
     if (percentage < 70) return 'bg-green-500';
     if (percentage < 90) return 'bg-yellow-500';
     return 'bg-red-500';
+  };
+
+  const computeSpentForCategory = (category) => {
+    return expenses.filter(e => e.category === category).reduce((s, x) => s + Number(x.amount || 0), 0);
   };
 
   return (
@@ -93,14 +93,15 @@ function BudgetsGoals() {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-xl font-semibold mb-4">Budget Progress</h3>
           <div className="space-y-4">
-            {budgets.map((item) => {
-              const percentage = getProgressPercentage(item.spent, item.amount);
+            {(budgets || []).map((item) => {
+              const spent = computeSpentForCategory(item.category);
+              const percentage = getProgressPercentage(spent, item.amount);
               return (
                 <div key={item.id} className="p-4 border border-gray-200 rounded">
                   <div className="flex justify-between mb-2">
                     <h4 className="font-semibold">{item.category}</h4>
                     <span className="text-sm text-gray-600">
-                      ${item.spent} / ${item.amount}
+                      ${spent} / ${item.amount}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-4">
@@ -109,9 +110,7 @@ function BudgetsGoals() {
                       style={{ width: `${percentage}%` }}
                     ></div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {percentage.toFixed(1)}% used
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{percentage.toFixed(1)}% used</p>
                 </div>
               );
             })}

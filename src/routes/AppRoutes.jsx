@@ -26,6 +26,7 @@ import IncomeEntry from '../components/Expenses/IncomeEntry';
 import ExpenseEntry from '../components/Expenses/ExpenseEntry';
 import CategoryManager from '../components/Expenses/CategoryManager';
 import BudgetsGoals from '../components/Expenses/BudgetsGoals';
+import ExpensesPage from '../components/Expenses/ExpensesPage';
 
 // Admin Components (Rayan)
 import AdminDashboard from '../components/Admin/AdminDashboard';
@@ -112,6 +113,11 @@ function AppRoutes() {
 
       {/* Dashboard Routes - Client only (supports both 'user' and 'client' roles) */}
       {renderRoutes(dashboardRoutes)}
+      {/* Expense & Income Routes */}
+  <Route path="/income" element={<IncomeEntry />} />
+  <Route path="/expenses" element={<ExpensesPage />} />
+  <Route path="/categories" element={<CategoryManager />} />
+  <Route path="/budgets" element={<BudgetsGoals />} />
 
       {/* Expense & Income Routes - Client only (supports both 'user' and 'client' roles) */}
       {renderRoutes(expenseAndIncomeRoutes)}
