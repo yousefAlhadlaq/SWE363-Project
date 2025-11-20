@@ -28,6 +28,9 @@ import CategoryManager from '../components/Expenses/CategoryManager';
 import BudgetsGoals from '../components/Expenses/BudgetsGoals';
 import ExpensesPage from '../components/Expenses/ExpensesPage';
 
+// Dashboard Components (Rayan)
+import DashboardPage from '../components/Dashboard/DashboardPage';
+
 // Admin Components (Rayan)
 import AdminDashboard from '../components/Admin/AdminDashboard';
 import NotificationsPanel from '../components/Admin/NotificationsPanel';
