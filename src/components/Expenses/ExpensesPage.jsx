@@ -7,7 +7,7 @@ import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 import useLocalStorage from '../../hooks/useLocalStorage';
 
-const colorPalette = ['#FDE047', '#F97316', '#F43F5E', '#A855F7', '#22D3EE', '#4ADE80'];
+const colorPalette = ['#22d3ee', '#0ea5e9', '#14b8a6', '#2dd4bf', '#34d399', '#67e8f9'];
 
 const currencyFormatter = new Intl.NumberFormat('en-SA', {
   style: 'currency',
@@ -576,10 +576,10 @@ function ExpensesPage() {
   );
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-slate-950 via-teal-950 to-slate-900 text-slate-100">
+    <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 text-slate-100 pt-20">
       <Sidebar />
-      <main className="flex-1 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#12252f] via-[#07191f] to-[#03090c]" aria-hidden />
+      <main className="flex-1 ml-64 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-900/70 to-slate-900" aria-hidden />
     <div className="absolute -top-28 right-0 w-80 h-80 bg-emerald-400/15 blur-[140px]" aria-hidden />
     <div className="absolute top-1/3 -left-28 w-72 h-72 bg-cyan-500/10 blur-[160px]" aria-hidden />
   <div className="relative w-full max-w-[1700px] mx-auto px-4 sm:px-8 lg:px-12 py-10 space-y-8">
@@ -593,7 +593,7 @@ function ExpensesPage() {
 
           <div className="grid gap-6 xl:grid-cols-[1.35fr,1fr] items-start">
             <div className="space-y-6">
-              <Card className="rounded-[32px] border border-slate-700/50 bg-slate-900/70 backdrop-blur-sm p-6 lg:p-8 shadow-[0_25px_80px_rgba(0,0,0,0.55)]">
+              <Card className="rounded-xl border border-slate-700/50 bg-slate-800/95 backdrop-blur-sm p-6 lg:p-8 shadow-xl">
                 <div className="flex flex-wrap items-start justify-between gap-6">
                   <div>
                     <p className="text-sm text-slate-300">Total spent · This month</p>
@@ -621,7 +621,7 @@ function ExpensesPage() {
                   </div>
                 </div>
                 <div className="mt-8 grid gap-4 lg:grid-cols-[1.8fr,1fr]">
-                  <div className="rounded-[28px] bg-slate-900/70 border border-slate-800 p-4">
+                  <div className="rounded-xl bg-slate-900/40 border border-slate-700/60 p-4">
                     <div className="flex items-center justify-between text-xs text-slate-400 mb-4">
                       <span>30d trend</span>
                       <span>{remainingBudget > 0 ? `${formatSar(remainingBudget)} left` : 'Over budget'}</span>
@@ -662,7 +662,7 @@ function ExpensesPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {showcaseMetrics.map((metric) => (
-                      <div key={metric.label} className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                      <div key={metric.label} className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4">
                         <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">{metric.label}</p>
                         <p className="mt-2 text-xl font-semibold text-white">{metric.value}</p>
                         <p className="text-xs text-emerald-300/80">{metric.helper}</p>
@@ -671,7 +671,7 @@ function ExpensesPage() {
                   </div>
                 </div>
               </Card>
-              <Card className="rounded-[32px] border border-slate-700/50 bg-slate-900/70 backdrop-blur-sm p-6">
+              <Card className="rounded-xl border border-slate-700/50 bg-slate-800/95 backdrop-blur-sm p-6 shadow-xl">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <p className="text-sm text-slate-400">Goals</p>
@@ -681,7 +681,7 @@ function ExpensesPage() {
                 </div>
                 <div className="mt-6 space-y-4">
                   {goalsWithProgress.map((goal) => (
-                    <div key={goal.id} className="rounded-[24px] border border-slate-800/60 bg-slate-900/60 p-4 space-y-4">
+                    <div key={goal.id} className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4 space-y-4">
                       <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
                           <p className="font-semibold text-white">{goal.name}</p>
@@ -722,7 +722,7 @@ function ExpensesPage() {
               </Card>
             </div>
 
-            <Card className="rounded-[28px] border border-slate-700/50 bg-slate-900/70 backdrop-blur-sm p-5">
+            <Card className="rounded-xl border border-slate-700/50 bg-slate-800/95 backdrop-blur-sm p-5 shadow-xl">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-sm text-slate-400">Categories</p>
@@ -734,10 +734,10 @@ function ExpensesPage() {
                 {orderedCategories.map((category, index) => {
                   const showcaseNumber = String(index + 1).padStart(2, '0');
                   return (
-                    <div key={category.id} className="rounded-[24px] border border-slate-800/60 bg-slate-900/60 p-4 space-y-4">
+                    <div key={category.id} className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4 space-y-4">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex items-start gap-4">
-                          <div className="w-14 h-14 rounded-2xl border border-slate-800 bg-slate-950/70 text-slate-200 font-semibold tracking-[0.3em] flex items-center justify-center text-sm">
+                          <div className="w-14 h-14 rounded-2xl border border-slate-700/60 bg-slate-800/70 text-slate-200 font-semibold tracking-[0.3em] flex items-center justify-center text-sm">
                             {showcaseNumber}
                           </div>
                           <div>

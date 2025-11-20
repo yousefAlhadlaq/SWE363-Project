@@ -30,11 +30,11 @@ const ResetPasswordPage = () => {
     
     document.body.style.margin = '0';
     document.body.style.padding = '0';
-    document.body.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.body.style.background = 'linear-gradient(to bottom right, #0f172a, rgba(15, 23, 42, 0.7), #0f172a)';
     document.body.style.backgroundAttachment = 'fixed';
     document.body.style.minHeight = '100vh';
     
-    document.documentElement.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.documentElement.style.background = 'linear-gradient(to bottom right, #0f172a, rgba(15, 23, 42, 0.7), #0f172a)';
     document.documentElement.style.margin = '0';
     document.documentElement.style.padding = '0';
     

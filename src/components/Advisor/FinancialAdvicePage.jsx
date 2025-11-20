@@ -18,11 +18,11 @@ function FinancialAdvicePage() {
 
     document.body.style.margin = '0';
     document.body.style.padding = '0';
-    document.body.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.body.style.background = 'linear-gradient(to bottom right, #0f172a, rgba(15, 23, 42, 0.7), #0f172a)';
     document.body.style.backgroundAttachment = 'fixed';
     document.body.style.minHeight = '100vh';
 
-    document.documentElement.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.documentElement.style.background = 'linear-gradient(to bottom right, #0f172a, rgba(15, 23, 42, 0.7), #0f172a)';
     document.documentElement.style.margin = '0';
     document.documentElement.style.padding = '0';
 
@@ -199,7 +199,7 @@ function FinancialAdvicePage() {
   // Thread View
   if (selectedThread) {
     return (
-      <div className="flex h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900">
+      <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900">
         {/* Decorative animated background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
@@ -357,7 +357,7 @@ function FinancialAdvicePage() {
 
   // Main Dashboard View
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900">
+    <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900">
       {/* Decorative animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>

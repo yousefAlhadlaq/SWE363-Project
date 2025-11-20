@@ -243,7 +243,7 @@ const InvestmentChart = ({
   onFilterCategory,
   filteredCategory
 }) => (
-  <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-3 border border-slate-700/50 h-full">
+  <div className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-3 border border-slate-700/50 h-full shadow-xl">
     <div className="flex items-start justify-between gap-3 mb-3">
       <p className="text-xs text-gray-400 text-right">
         Total · <span className="text-teal-300 font-semibold">{formatCurrency(total)}</span>
@@ -259,7 +259,7 @@ const InvestmentChart = ({
         return (
           <div
             key={value}
-            className="rounded-lg border border-slate-700/50 bg-slate-900/20 px-3 py-2.5"
+            className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2.5"
           >
             <div className="flex items-center justify-between gap-3">
               <button
@@ -715,10 +715,10 @@ function InvestmentsPage() {
 
   return (
     <>
-      <div className="flex min-h-screen bg-gradient-to-br from-slate-800 via-teal-900 to-slate-800">
+      <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 pt-20">
         <Sidebar />
 
-        <div className="flex-1 px-5 py-6 overflow-auto">
+        <div className="flex-1 ml-64 px-5 py-6">
           <div className="w-full max-w-5xl mx-auto space-y-5">
           <header>
             <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">
@@ -742,7 +742,7 @@ function InvestmentsPage() {
           </header>
 
 
-      <section className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+      <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-sm uppercase tracking-widest text-gray-400">
@@ -810,7 +810,7 @@ function InvestmentsPage() {
             </div>
           </section>
 
-          <section className="bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+          <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
             <div className="flex items-center justify-between mb-2.5">
               <div>
                 <p className="text-sm uppercase tracking-widest text-gray-400">Investment Allocation</p>

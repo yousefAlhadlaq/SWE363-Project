@@ -42,9 +42,9 @@ const ProfileSettings = () => {
   useEffect(() => {
     document.body.style.margin = '0';
     document.body.style.padding = '0';
-    document.body.style.background = 'linear-gradient(to bottom right, #1e293b, #0f766e, #1e293b)';
+    document.body.style.background = 'linear-gradient(to bottom right, #0f172a, rgba(15, 23, 42, 0.7), #0f172a)';
     document.body.style.backgroundAttachment = 'fixed';
-    
+
     return () => {
       document.body.style.background = '';
     };
@@ -171,12 +171,12 @@ const ProfileSettings = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-800 via-teal-900 to-slate-800">
+    <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 p-8 overflow-auto">
+      <div className="flex-1 p-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
@@ -188,7 +188,7 @@ const ProfileSettings = () => {
             {/* Left Column - Profile & Theme */}
             <div className="lg:col-span-2 space-y-6">
               {/* Profile Card */}
-              <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+              <div className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 shadow-xl">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-gray-400 text-xs mb-1">Name</label>
@@ -223,13 +223,13 @@ const ProfileSettings = () => {
               </div>
 
               {/* Theme Selector */}
-              <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+              <div className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 shadow-xl">
                 <h3 className="text-white font-medium mb-4">Theme</h3>
                 <ThemeToggleSegmented />
               </div>
 
               {/* Currency & Language */}
-              <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+              <div className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 shadow-xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-gray-300 text-sm font-medium mb-2">
@@ -277,7 +277,7 @@ const ProfileSettings = () => {
             {/* Right Column */}
             <div className="space-y-6">
               {/* Quick Links */}
-              <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 space-y-3">
+              <div className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 shadow-xl space-y-3">
                 <button
                   onClick={() => navigate('/help')}
                   className="w-full py-3 px-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-white text-left transition-all"
@@ -305,7 +305,7 @@ const ProfileSettings = () => {
               </div>
 
               {/* Notifications */}
-              <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+              <div className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 shadow-xl">
                 <h3 className="text-white font-medium mb-4">Transaction alerts</h3>
                 
                 <div className="space-y-4">
@@ -380,7 +380,7 @@ const ProfileSettings = () => {
               </div>
 
               {/* Logout Button */}
-              <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+              <div className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 shadow-xl">
                 <Button
                   variant="danger"
                   fullWidth

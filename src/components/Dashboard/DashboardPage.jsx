@@ -706,29 +706,18 @@ function DashboardPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 text-white">
+    <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 text-white pt-20">
       <Sidebar />
-      <div className="flex-1 px-6 py-8 overflow-auto">
+      <div className="flex-1 ml-64 px-6 py-8">
         <div className="max-w-6xl mx-auto space-y-6">
           <header className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">
-                  Home
-                </p>
-                <h1 className="text-3xl md:text-4xl font-bold text-white">
-                  Welcome back, {displayName.split(' ')[0] || 'there'} 👋
-                </h1>
-              </div>
-              <div className="flex items-center gap-3 px-4 py-2 rounded-2xl border border-slate-700/60 bg-slate-900/50">
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-white">{displayName}</p>
-                  <p className="text-xs text-gray-400 capitalize">{user?.role || 'Member'}</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-400 to-blue-500 flex items-center justify-center text-lg font-bold">
-                  {userInitials}
-                </div>
-              </div>
+            <div>
+              <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">
+                Home
+              </p>
+              <h1 className="text-3xl md:text-4xl font-bold text-white">
+                Welcome back, {displayName.split(' ')[0] || 'there'} 👋
+              </h1>
             </div>
             <div className="relative">
               <input

@@ -8,11 +8,11 @@ function Navbar() {
   const { user } = useAuth();
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur-xl shadow-lg">
+    <nav className="fixed top-0 left-0 right-0 flex-shrink-0 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur-xl shadow-lg z-50">
       {/* Decorative gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-r from-teal-900/10 via-transparent to-blue-900/10 pointer-events-none"></div>
 
-      <div className="relative mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <div className="relative flex items-center justify-between pl-6 pr-6 py-4">
         {/* Logo Section */}
         <Link to="/" className="group flex items-center gap-3">
           <div className="relative">
@@ -34,7 +34,7 @@ function Navbar() {
         </Link>
 
         {/* Center Section - Tagline */}
-        <div className="hidden md:block">
+        <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2">
           <span className="text-sm font-medium tracking-wide text-teal-400/80">
             Empowering Financial Advisors
           </span>

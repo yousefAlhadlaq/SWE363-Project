@@ -17,22 +17,12 @@ function FinancialSidebar() {
   };
 
   return (
-    <div className="h-screen w-64 bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50 flex flex-col justify-between relative z-10">
+    <div className="fixed top-0 left-0 h-screen w-64 bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50 flex flex-col justify-between z-10">
       {/* Decorative gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-teal-900/10 via-transparent to-slate-900/50 pointer-events-none"></div>
 
       {/* Top Section */}
-      <div className="relative z-10">
-        {/* Logo / Title */}
-        <div className="flex items-center justify-center mt-8 mb-10 px-4">
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-blue-500 rounded-xl opacity-20 group-hover:opacity-40 blur transition duration-300"></div>
-            <h1 className="relative text-2xl font-bold tracking-wide bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent px-6 py-3">
-              Guroosh
-            </h1>
-          </div>
-        </div>
-
+      <div className="relative z-10 pt-20">
         {/* Navigation Links */}
         <nav className="space-y-2 px-4">
           <NavLink

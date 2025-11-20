@@ -28,10 +28,10 @@ function ZakahCalculator() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-6">Zakah Calculator</h2>
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <p className="text-gray-600 mb-4">
+    <div className="max-w-2xl mx-auto p-6 bg-slate-900/50 border border-slate-800 rounded-2xl backdrop-blur-sm shadow-xl">
+      <h2 className="text-2xl font-bold mb-6 text-white">Zakah Calculator</h2>
+      <div className="bg-slate-800/80 p-6 rounded-xl shadow-lg border border-slate-700/60 space-y-4">
+        <p className="text-slate-300 mb-2">
           Enter your assets to calculate the Zakah due (2.5% of total wealth).
         </p>
 
@@ -89,11 +89,11 @@ function ZakahCalculator() {
         </Button>
 
         {zakahAmount !== null && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded">
-            <h3 className="text-lg font-semibold text-green-800">
+          <div className="mt-4 p-4 bg-emerald-900/40 border border-emerald-500/40 rounded-lg">
+            <h3 className="text-lg font-semibold text-emerald-200">
               Zakah Due: ${zakahAmount.toFixed(2)}
             </h3>
-            <p className="text-sm text-green-600">
+            <p className="text-sm text-emerald-100">
               Based on total assets of ${Object.values(assets).reduce((sum, val) => sum + val, 0).toFixed(2)}
             </p>
           </div>

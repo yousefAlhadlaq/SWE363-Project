@@ -43,14 +43,17 @@ function IncomeEntry({ categories = [], onAdd, onDelete, entries = [] }) {
   };
 
   return (
-    <div className="w-full h-full">
-      <h2 className="text-2xl font-bold mb-6 text-white">Income Entry</h2>
+    <div className="w-full h-full bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-6 backdrop-blur-sm">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">Income Entry</h2>
+        <p className="text-sm text-slate-400">Dashboard palette applied</p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
         {/* Income Form */}
-  <div className="bg-white p-6 rounded-lg shadow-md min-h-[360px]">
-          <h3 className="text-xl font-semibold mb-4">Add Income</h3>
-          <form onSubmit={handleSubmit}>
+        <div className="bg-slate-800/80 p-6 rounded-xl shadow-lg border border-slate-700/70 backdrop-blur-sm min-h-[360px]">
+          <h3 className="text-xl font-semibold text-white mb-4">Add Income</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <InputField
               label="Source"
               type="text"
@@ -76,14 +79,14 @@ function IncomeEntry({ categories = [], onAdd, onDelete, entries = [] }) {
               required
             />
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Category
               </label>
               <select
                 name="category"
                 value={income.category}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 rounded-md bg-slate-900/70 border border-slate-700/70 text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
                 required
               >
                 <option value="">Select Category</option>
@@ -93,7 +96,7 @@ function IncomeEntry({ categories = [], onAdd, onDelete, entries = [] }) {
               </select>
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Description
               </label>
               <textarea
@@ -101,7 +104,7 @@ function IncomeEntry({ categories = [], onAdd, onDelete, entries = [] }) {
                 value={income.description}
                 onChange={handleChange}
                 rows="3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 rounded-md bg-slate-900/70 border border-slate-700/70 text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
               />
             </div>
             <Button type="submit" variant="primary">
@@ -111,20 +114,20 @@ function IncomeEntry({ categories = [], onAdd, onDelete, entries = [] }) {
         </div>
 
         {/* Income List */}
-  <div className="bg-white p-6 rounded-lg shadow-md min-h-[360px]">
-          <h3 className="text-xl font-semibold mb-4">Recent Income</h3>
+        <div className="bg-slate-800/80 p-6 rounded-xl shadow-lg border border-slate-700/70 backdrop-blur-sm min-h-[360px]">
+          <h3 className="text-xl font-semibold text-white mb-4">Recent Income</h3>
           <div className="space-y-3">
             {(entries.length ? entries : localList).map((item) => (
-              <div key={item.id} className="p-4 border border-gray-200 rounded">
+              <div key={item.id} className="p-4 border border-slate-700/70 rounded-lg bg-slate-900/60">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-semibold">{item.source}</h4>
-                    <p className="text-sm text-gray-600">{item.category}</p>
-                    <p className="text-xs text-gray-500">{item.date}</p>
+                    <h4 className="font-semibold text-white">{item.source}</h4>
+                    <p className="text-sm text-slate-400">{item.category}</p>
+                    <p className="text-xs text-slate-500">{item.date}</p>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <p className="text-lg font-bold text-green-600">${Number(item.amount).toLocaleString()}</p>
-                    <div className="mt-2">
+                  <div className="flex flex-col items-end gap-2">
+                    <p className="text-lg font-bold text-teal-300">SAR {Number(item.amount).toLocaleString()}</p>
+                    <div className="mt-1">
                       <Button onClick={() => handleDelete(item.id)} variant="danger">Delete</Button>
                     </div>
                   </div>
