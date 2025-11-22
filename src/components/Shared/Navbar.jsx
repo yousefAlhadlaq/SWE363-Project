@@ -6,6 +6,14 @@ import { useAuth } from "../../context/AuthContext";
 
 function Navbar() {
   const { user } = useAuth();
+  const isAdmin = typeof user?.role === 'string' && user.role.toLowerCase().includes('admin');
+  const isAdvisor = typeof user?.role === 'string' && user.role.toLowerCase().includes('advisor');
+  const homeRoute = isAdmin ? '/admin' : isAdvisor ? '/financial-advisor' : '/home';
+  const subLabel = isAdmin
+    ? 'Admin Portal'
+    : isAdvisor
+    ? 'Advisor Workspace'
+    : 'Financial Platform';
 
   return (
     <nav className="fixed top-0 left-0 right-0 flex-shrink-0 border-b border-slate-700/50 bg-slate-900/95 backdrop-blur-xl shadow-lg z-50">
@@ -14,7 +22,7 @@ function Navbar() {
 
       <div className="relative flex items-center justify-between pl-6 pr-6 py-4">
         {/* Logo Section */}
-        <Link to="/" className="group flex items-center gap-3">
+        <Link to={homeRoute} className="group flex items-center gap-3">
           <div className="relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-blue-500 rounded-2xl opacity-20 group-hover:opacity-40 blur transition duration-300"></div>
             <img
@@ -28,7 +36,7 @@ function Navbar() {
               Guroosh
             </p>
             <p className="text-xs uppercase tracking-[0.3em] text-gray-400">
-              Financial Platform
+              {subLabel}
             </p>
           </div>
         </Link>

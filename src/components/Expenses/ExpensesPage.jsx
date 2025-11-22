@@ -576,17 +576,17 @@ function ExpensesPage() {
   );
 
   return (
-    <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 text-slate-100 pt-20">
+    <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-20">
       <Sidebar />
       <main className="flex-1 ml-64 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-900/70 to-slate-900" aria-hidden />
-    <div className="absolute -top-28 right-0 w-80 h-80 bg-emerald-400/15 blur-[140px]" aria-hidden />
-    <div className="absolute top-1/3 -left-28 w-72 h-72 bg-cyan-500/10 blur-[160px]" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-white to-white dark:from-slate-900 dark:via-slate-900/70 dark:to-slate-900" aria-hidden />
+    <div className="absolute -top-28 right-0 w-80 h-80 bg-emerald-400/20 blur-[140px] dark:bg-emerald-400/15" aria-hidden />
+    <div className="absolute top-1/3 -left-28 w-72 h-72 bg-cyan-400/10 blur-[160px] dark:bg-cyan-500/10" aria-hidden />
   <div className="relative w-full max-w-[1700px] mx-auto px-4 sm:px-8 lg:px-12 py-10 space-y-8">
           <div className="space-y-1">
-            <p className="text-3xl font-semibold text-white">Spending</p>
-            <div className="flex gap-4 text-sm text-slate-400">
-              <span className="text-white font-medium">Total spent</span>
+            <p className="text-3xl font-semibold text-slate-900 dark:text-white">Spending</p>
+            <div className="flex gap-4 text-sm text-slate-500 dark:text-slate-400">
+              <span className="text-slate-800 font-medium dark:text-white">Total spent</span>
               <span>This month</span>
             </div>
           </div>

@@ -706,7 +706,7 @@ function DashboardPage() {
   };
 
   return (
-    <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 text-white pt-20">
+    <div className="flex min-h-screen bg-page text-white pt-20">
       <Sidebar />
       <div className="flex-1 ml-64 px-6 py-8">
         <div className="max-w-6xl mx-auto space-y-6">

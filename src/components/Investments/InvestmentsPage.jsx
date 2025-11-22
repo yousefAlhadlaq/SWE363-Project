@@ -715,7 +715,7 @@ function InvestmentsPage() {
 
   return (
     <>
-      <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 pt-20">
+      <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-20">
         <Sidebar />
 
         <div className="flex-1 ml-64 px-5 py-6">

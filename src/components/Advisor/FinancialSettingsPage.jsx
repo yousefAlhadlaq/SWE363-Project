@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FinancialSidebar from '../Shared/FinancialSidebar';
 import Button from '../Shared/Button';
@@ -8,30 +8,6 @@ import ThemeToggleSegmented from '../Shared/ThemeToggleSegmented';
 import { useAuth } from '../../context/AuthContext';
 
 function FinancialSettingsPage() {
-  // Fix white bar by setting body background directly
-  useEffect(() => {
-    const originalBodyMargin = document.body.style.margin;
-    const originalBodyPadding = document.body.style.padding;
-    const originalBodyBackground = document.body.style.background;
-    const originalHtmlBackground = document.documentElement.style.background;
-
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-    document.body.style.background = 'linear-gradient(to bottom right, #0f172a, rgba(15, 23, 42, 0.7), #0f172a)';
-    document.body.style.backgroundAttachment = 'fixed';
-    document.body.style.minHeight = '100vh';
-
-    document.documentElement.style.background = 'linear-gradient(to bottom right, #0f172a, rgba(15, 23, 42, 0.7), #0f172a)';
-    document.documentElement.style.margin = '0';
-    document.documentElement.style.padding = '0';
-
-    return () => {
-      document.body.style.margin = originalBodyMargin;
-      document.body.style.padding = originalBodyPadding;
-      document.body.style.background = originalBodyBackground;
-      document.documentElement.style.background = originalHtmlBackground;
-    };
-  }, []);
   // Modal states
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -203,27 +179,27 @@ function FinancialSettingsPage() {
   };
 
   return (
-    <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900">
+    <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
       {/* Decorative animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-400/15 dark:bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-400/15 dark:bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-300/10 dark:bg-purple-500/5 rounded-full blur-3xl"></div>
       </div>
 
       {/* Sidebar */}
       <FinancialSidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto relative">
+      <div className="flex-1 overflow-auto relative ml-64 pt-24">
         <div className="max-w-7xl mx-auto p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent">Advisor Settings</h1>
-              <p className="text-white/70 mt-1">Manage your profile, availability, notifications, and preferences.</p>
+              <p className="text-slate-600 dark:text-white/70 mt-1">Manage your profile, availability, notifications, and preferences.</p>
             </div>
-            <button className="px-4 py-2.5 bg-slate-800/70 hover:bg-slate-700 text-white font-medium rounded-lg transition-all border border-slate-700/50">
+            <button className="px-4 py-2.5 bg-white text-slate-900 font-medium rounded-lg transition-all border border-slate-200 shadow-sm hover:border-teal-400 hover:bg-teal-50 dark:bg-slate-800/70 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700/50">
               Quick Edit
             </button>
           </div>
@@ -231,66 +207,66 @@ function FinancialSettingsPage() {
           {/* Settings Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Profile Section */}
-            <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-teal-500 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 Profile
               </h2>
               <div className="space-y-4 mb-4">
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Name</p>
-                  <p className="text-lg text-white font-semibold">{profile.fullName}</p>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wide mb-1">Name</p>
+                  <p className="text-lg text-slate-900 dark:text-white font-semibold">{profile.fullName}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Email</p>
-                  <p className="text-sm text-gray-200">{profile.email}</p>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wide mb-1">Email</p>
+                  <p className="text-sm text-slate-700 dark:text-gray-200">{profile.email}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Phone</p>
-                  <p className="text-sm text-gray-200">{profile.phoneNumber}</p>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wide mb-1">Phone</p>
+                  <p className="text-sm text-slate-700 dark:text-gray-200">{profile.phoneNumber}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Office</p>
-                  <p className="text-sm text-gray-200">{profile.address}</p>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 uppercase tracking-wide mb-1">Office</p>
+                  <p className="text-sm text-slate-700 dark:text-gray-200">{profile.address}</p>
                 </div>
               </div>
               <button
                 onClick={handleOpenEditProfile}
-                className="w-full px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all border border-slate-600/50"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 text-slate-900 font-medium rounded-lg transition-all hover:border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white"
               >
                 Edit Profile
               </button>
             </div>
 
             {/* Support Section */}
-            <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover-border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-teal-500 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
                 Support
               </h2>
               <div className="grid grid-cols-2 gap-3">
-                <button className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm border border-slate-600/50">
+                <button className="px-4 py-2.5 bg-white border border-slate-200 text-slate-900 font-medium rounded-lg transition-all text-sm hover:border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white">
                   Help Center
                 </button>
-                <button className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm border border-slate-600/50">
+                <button className="px-4 py-2.5 bg-white border border-slate-200 text-slate-900 font-medium rounded-lg transition-all text-sm hover:border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white">
                   Contact
                 </button>
-                <button className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm border border-slate-600/50">
+                <button className="px-4 py-2.5 bg-white border border-slate-200 text-slate-900 font-medium rounded-lg transition-all text-sm hover:border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white">
                   Terms
                 </button>
-                <button className="px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all text-sm border border-slate-600/50">
+                <button className="px-4 py-2.5 bg-white border border-slate-200 text-slate-900 font-medium rounded-lg transition-all text-sm hover:border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white">
                   Privacy
                 </button>
               </div>
             </div>
 
             {/* Notifications Section */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Notifications</h2>
+            <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Notifications</h2>
               <div className="space-y-3">
                 <ToggleItem
                   label="New messages"
@@ -316,17 +292,17 @@ function FinancialSettingsPage() {
             </div>
 
             {/* Preferences Section */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Preferences</h2>
+            <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Preferences</h2>
               <div className="space-y-4">
                 {/* Language & Currency */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-white/60 mb-1">Language</label>
+                    <label className="block text-xs text-slate-600 dark:text-white/60 mb-1">Language</label>
                     <select
                       value={preferences.language}
                       onChange={(e) => setPreferences({ ...preferences, language: e.target.value })}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-sm text-white/80 focus:ring-2 focus:ring-brand-aqua focus:border-transparent"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-900 focus:ring-2 focus:ring-brand-aqua focus:border-transparent dark:bg-white/10 dark:border-white/20 dark:text-white/80"
                     >
                       <option>English</option>
                       <option>Spanish</option>
@@ -334,11 +310,11 @@ function FinancialSettingsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-white/60 mb-1">Currency</label>
+                    <label className="block text-xs text-slate-600 dark:text-white/60 mb-1">Currency</label>
                     <select
                       value={preferences.currency}
                       onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-sm text-white/80 focus:ring-2 focus:ring-brand-aqua focus:border-transparent"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-900 focus:ring-2 focus:ring-brand-aqua focus:border-transparent dark:bg-white/10 dark:border-white/20 dark:text-white/80"
                     >
                       <option>USD</option>
                       <option>EUR</option>
@@ -349,11 +325,11 @@ function FinancialSettingsPage() {
 
                 {/* Timezone */}
                 <div>
-                  <label className="block text-xs text-white/60 mb-1">Timezone</label>
+                  <label className="block text-xs text-slate-600 dark:text-white/60 mb-1">Timezone</label>
                   <select
                     value={preferences.timezone}
                     onChange={(e) => setPreferences({ ...preferences, timezone: e.target.value })}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-sm text-white/80 focus:ring-2 focus:ring-brand-aqua focus:border-transparent"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-900 focus:ring-2 focus:ring-brand-aqua focus:border-transparent dark:bg-white/10 dark:border-white/20 dark:text-white/80"
                   >
                     <option>UTC</option>
                     <option>EST</option>
@@ -364,15 +340,15 @@ function FinancialSettingsPage() {
 
                 {/* Theme */}
                 <div>
-                  <label className="block text-xs text-white/60 uppercase tracking-wide mb-3">Theme</label>
+                  <label className="block text-xs text-slate-600 dark:text-white/60 uppercase tracking-wide mb-3">Theme</label>
                   <ThemeToggleSegmented />
                 </div>
               </div>
             </div>
 
             {/* Security Section */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Security</h2>
+            <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Security</h2>
               <div className="space-y-4">
                 <ToggleItem
                   label="Two-factor authentication"
@@ -381,7 +357,7 @@ function FinancialSettingsPage() {
                 />
                 <button 
                   onClick={handleOpenRecoveryCodes}
-                  className="w-full px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-sm"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg transition-all text-sm hover:border-teal-400 hover:bg-teal-50 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-white/20"
                 >
                   View recovery codes
                 </button>
@@ -390,11 +366,11 @@ function FinancialSettingsPage() {
 
             {/* Account Section - Full Width */}
             <div className="lg:col-span-3">
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-                <h2 className="text-xl font-semibold text-white mb-4">Account</h2>
+              <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-white/10 rounded-xl p-6 shadow-sm dark:shadow-none">
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Account</h2>
                 <button
                   onClick={handleOpenLogout}
-                  className="w-full max-w-xs px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition-all"
+                  className="w-full max-w-xs px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition-all shadow-lg"
                 >
                   Log out
                 </button>
@@ -552,13 +528,13 @@ function FinancialSettingsPage() {
         {/* Recovery Codes Modal */}
         {showRecoveryCodesModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-brand-midnight/90 border border-white/10 rounded-2xl w-full max-w-md">
+            <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl dark:bg-brand-midnight/90 dark:border-white/10">
               {/* Modal Header */}
-              <div className="border-b border-white/10 p-6 flex justify-between items-center">
-                <h3 className="text-2xl font-bold text-white">Recovery Codes</h3>
+              <div className="border-b border-slate-200 p-6 flex justify-between items-center dark:border-white/10">
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Recovery Codes</h3>
                 <button
                   onClick={handleCloseRecoveryCodes}
-                  className="text-white/60 hover:text-white transition-colors"
+                  className="text-slate-500 hover:text-slate-900 transition-colors dark:text-white/60 dark:hover:text-white"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -568,14 +544,14 @@ function FinancialSettingsPage() {
 
               {/* Modal Body */}
               <div className="p-6">
-                <p className="text-white/60 text-sm mb-4">
+                <p className="text-slate-600 text-sm mb-4 dark:text-white/60">
                   Save these codes in a safe place. You can use them to access your account if you lose your authentication device.
                 </p>
                 
-                <div className="bg-brand-deep/60 border border-white/10 rounded-lg p-4 space-y-2">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2 dark:bg-brand-deep/60 dark:border-white/10">
                   {['ABCD-1234-EFGH', '5678-IJKL-9012', 'MNOP-3456-QRST', '7890-UVWX-YZAB', 'CDEF-1234-GHIJ', '5678-KLMN-OPQR'].map((code, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-white/5 rounded">
-                      <span className="font-mono text-white">{code}</span>
+                    <div key={index} className="flex items-center justify-between p-2 bg-white rounded dark:bg-white/5">
+                      <span className="font-mono text-slate-900 dark:text-white">{code}</span>
                       <button 
                         onClick={() => {
                           navigator.clipboard.writeText(code);
@@ -597,7 +573,7 @@ function FinancialSettingsPage() {
               </div>
 
               {/* Modal Footer */}
-              <div className="border-t border-white/10 p-6">
+              <div className="border-t border-slate-200 p-6 dark:border-white/10">
                 <button
                   onClick={handleCloseRecoveryCodes}
                   className="w-full px-6 py-3 bg-brand-aqua hover:bg-blue-500 text-white font-semibold rounded-lg transition-all"
@@ -617,11 +593,11 @@ function FinancialSettingsPage() {
 const ToggleItem = ({ label, checked, onChange }) => {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm text-white/80">{label}</span>
+      <span className="text-sm text-slate-700 dark:text-white/80">{label}</span>
       <button
         onClick={onChange}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          checked ? 'bg-brand-aqua' : 'bg-white/20'
+          checked ? 'bg-teal-500 dark:bg-brand-aqua' : 'bg-slate-200 dark:bg-white/20'
         }`}
       >
         <span

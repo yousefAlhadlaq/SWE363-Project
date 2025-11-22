@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import FinancialSidebar from '../Shared/FinancialSidebar';
 
 function FinancialAdvisorPage() {
@@ -12,31 +12,6 @@ function FinancialAdvisorPage() {
     message: '',
     attachments: []
   });
-
-  // Fix white bar by setting body background directly
-  useEffect(() => {
-    const originalBodyMargin = document.body.style.margin;
-    const originalBodyPadding = document.body.style.padding;
-    const originalBodyBackground = document.body.style.background;
-    const originalHtmlBackground = document.documentElement.style.background;
-
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-    document.body.style.background = 'linear-gradient(to bottom right, #0f172a, rgba(15, 23, 42, 0.7), #0f172a)';
-    document.body.style.backgroundAttachment = 'fixed';
-    document.body.style.minHeight = '100vh';
-
-    document.documentElement.style.background = 'linear-gradient(to bottom right, #0f172a, rgba(15, 23, 42, 0.7), #0f172a)';
-    document.documentElement.style.margin = '0';
-    document.documentElement.style.padding = '0';
-
-    return () => {
-      document.body.style.margin = originalBodyMargin;
-      document.body.style.padding = originalBodyPadding;
-      document.body.style.background = originalBodyBackground;
-      document.documentElement.style.background = originalHtmlBackground;
-    };
-  }, []);
 
   // Mock data - Changed to allow state updates
   const [pendingRequests, setPendingRequests] = useState([
@@ -392,19 +367,19 @@ function FinancialAdvisorPage() {
   // Thread View
   if (selectedThread) {
     return (
-      <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900">
+      <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
         {/* Decorative animated background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl"></div>
+          <div className="absolute top-20 left-10 w-72 h-72 bg-teal-400/15 dark:bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-400/15 dark:bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-300/10 dark:bg-purple-500/5 rounded-full blur-3xl"></div>
         </div>
 
         {/* Sidebar */}
         <FinancialSidebar />
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto p-6 relative">
+        <div className="flex-1 overflow-auto p-6 relative ml-64 pt-24">
         <div className="max-w-7xl mx-auto">
           {/* Back Button */}
           <button
@@ -420,11 +395,11 @@ function FinancialAdvisorPage() {
           {/* Header Card */}
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
-            <div className="relative bg-slate-800/70 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 mb-6 hover:border-slate-600/50 transition-all duration-300">
+            <div className="relative bg-white/90 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 mb-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-300 shadow-sm dark:shadow-none">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-3">{selectedThread.title}</h2>
-                  <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-400">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{selectedThread.title}</h2>
+                  <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-slate-600 dark:text-gray-400">
                     <span className="flex items-center gap-1">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -432,7 +407,7 @@ function FinancialAdvisorPage() {
                       {selectedThread.from}
                     </span>
                     <span>•</span>
-                    <span className="text-gray-300">{selectedThread.topic}</span>
+                    <span className="text-slate-800 dark:text-gray-300">{selectedThread.topic}</span>
                     <span>•</span>
                     <span>Urgency: <span className={`font-semibold ${getUrgencyColor(selectedThread.urgency)}`}>{selectedThread.urgency}</span></span>
                     <span>•</span>
@@ -476,32 +451,32 @@ function FinancialAdvisorPage() {
               {selectedThread.messages.map((message, index) => (
                 <div key={index} className="relative group">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 to-blue-500 rounded-xl opacity-0 group-hover:opacity-5 blur transition duration-300"></div>
-                  <div className="relative bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
+                  <div className="relative bg-white/90 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
                     <div className="flex items-start space-x-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-lg ring-2 ring-white/10">
                         {message.sender.charAt(0)}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-1">
-                          <span className="font-semibold text-white">{message.sender}</span>
-                          <span className="px-2 py-0.5 text-xs bg-slate-700/50 text-gray-400 rounded-full">{message.role}</span>
+                          <span className="font-semibold text-slate-900 dark:text-white">{message.sender}</span>
+                          <span className="px-2 py-0.5 text-xs bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-gray-400 rounded-full">{message.role}</span>
                         </div>
-                        <p className="text-sm text-gray-400 mb-3 flex items-center gap-1.5">
+                        <p className="text-sm text-slate-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           {message.timestamp}
                         </p>
-                        <p className="text-gray-200 leading-relaxed">{message.content}</p>
+                        <p className="text-slate-800 dark:text-gray-200 leading-relaxed">{message.content}</p>
                       
                         {message.attachments && message.attachments.length > 0 && (
                           <div className="mt-4 flex flex-wrap gap-2">
                             {message.attachments.map((file, idx) => (
-                              <div key={idx} className="flex items-center space-x-2 px-3 py-2 bg-slate-900/60 rounded-lg border border-slate-600/50 hover:border-teal-500/50 cursor-pointer transition-all group">
-                                <svg className="w-4 h-4 text-teal-400 group-hover:text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div key={idx} className="flex items-center space-x-2 px-3 py-2 bg-slate-100 rounded-lg border border-slate-200 dark:bg-slate-900/60 dark:border-slate-600/50 hover:border-teal-500/50 cursor-pointer transition-all group">
+                                <svg className="w-4 h-4 text-teal-500 group-hover:text-teal-600 dark:text-teal-400 dark:group-hover:text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                <span className="text-sm text-gray-300 group-hover:text-white">{file}</span>
+                                <span className="text-sm text-slate-700 group-hover:text-slate-900 dark:text-gray-300 dark:group-hover:text-white">{file}</span>
                               </div>
                             ))}
                           </div>
@@ -515,19 +490,19 @@ function FinancialAdvisorPage() {
               {/* Response Box */}
               <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl opacity-0 group-hover:opacity-5 blur transition duration-300"></div>
-                <div className="relative bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
-                  <label className="block text-sm font-semibold text-gray-200 mb-3 tracking-wide">
+                <div className="relative bg-white/90 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
+                  <label className="block text-sm font-semibold text-slate-800 dark:text-gray-200 mb-3 tracking-wide">
                     Your Professional Response
                   </label>
                   <textarea
                     rows="6"
                     value={responseText}
                     onChange={(e) => setResponseText(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-900/60 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none mb-4 transition-all duration-200"
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none mb-4 transition-all duration-200 dark:bg-slate-900/60 dark:border-slate-600 dark:text-white dark:placeholder-gray-500"
                     placeholder="Provide your professional advice, recommendations, or ask follow-up questions..."
                   />
-                  <div className="bg-teal-500/10 border border-teal-500/30 rounded-lg p-3 mb-4">
-                    <p className="text-xs text-teal-300 flex items-start gap-2">
+                  <div className="bg-teal-500/5 dark:bg-teal-500/10 border border-teal-200 dark:border-teal-500/30 rounded-lg p-3 mb-4">
+                    <p className="text-xs text-teal-700 dark:text-teal-300 flex items-start gap-2">
                       <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
@@ -561,92 +536,92 @@ function FinancialAdvisorPage() {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Client Info */}
-              <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-teal-500 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   Client Information
                 </h3>
-                <div className="flex items-center space-x-3 mb-4 p-3 bg-slate-900/40 rounded-lg border border-slate-700/30">
+                <div className="flex items-center space-x-3 mb-4 p-3 bg-slate-100 rounded-lg border border-slate-200 dark:bg-slate-900/40 dark:border-slate-700/30">
                   <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg ring-2 ring-white/10">
                     {selectedThread.from.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-semibold text-white">{selectedThread.from}</p>
-                    <p className="text-sm text-gray-400">Client</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">{selectedThread.from}</p>
+                    <p className="text-sm text-slate-600 dark:text-gray-400">Client</p>
                   </div>
                 </div>
                 <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center py-2 border-b border-slate-700/30">
-                    <span className="text-gray-400">Member since:</span>
-                    <span className="text-white font-medium">Jan 2024</span>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700/30">
+                    <span className="text-slate-600 dark:text-gray-400">Member since:</span>
+                    <span className="text-slate-900 dark:text-white font-medium">Jan 2025</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-700/30">
-                    <span className="text-gray-400">Total requests:</span>
-                    <span className="text-white font-medium">8</span>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700/30">
+                    <span className="text-slate-600 dark:text-gray-400">Total requests:</span>
+                    <span className="text-slate-900 dark:text-white font-medium">8</span>
                   </div>
                   <div className="flex justify-between items-center py-2">
-                    <span className="text-gray-400">Average rating:</span>
+                    <span className="text-slate-600 dark:text-gray-400">Average rating:</span>
                     <span className="text-yellow-400 font-medium">★★★★★ 4.9</span>
                   </div>
                 </div>
               </div>
 
               {/* Request Details */}
-              <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-teal-500 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                   Request Details
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-gray-400 mb-1">Submitted</p>
-                    <p className="text-white font-medium">{selectedThread.timestamp}</p>
+                    <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Submitted</p>
+                    <p className="text-slate-900 dark:text-white font-medium">{selectedThread.timestamp}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400 mb-2">Status</p>
+                    <p className="text-sm text-slate-600 dark:text-gray-400 mb-2">Status</p>
                     <span className={`inline-block px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(selectedThread.status)}`}>
                       {selectedThread.status}
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400 mb-1">Expected compensation</p>
+                    <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Expected compensation</p>
                     <p className="text-green-400 font-bold text-xl">{selectedThread.budget}</p>
                   </div>
                 </div>
               </div>
 
               {/* Quick Actions */}
-              <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-teal-500 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   Quick Actions
                 </h3>
                 <div className="space-y-2">
-                  <button className="w-full px-4 py-2.5 text-left bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all text-sm border border-slate-600/50 hover:border-teal-500/50 group">
+                  <button className="w-full px-4 py-2.5 text-left bg-white border border-slate-200 text-slate-900 rounded-lg transition-all text-sm hover-border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white dark:hover:border-teal-500/50 group">
                     <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-gray-400 group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-slate-500 group-hover:text-teal-500 dark:text-gray-400 dark:group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       View Client History
                     </span>
                   </button>
-                  <button className="w-full px-4 py-2.5 text-left bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all text-sm border border-slate-600/50 hover:border-teal-500/50 group">
+                  <button className="w-full px-4 py-2.5 text-left bg-white border border-slate-200 text-slate-900 rounded-lg transition-all text-sm hover-border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white dark:hover:border-teal-500/50 group">
                     <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-gray-400 group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-slate-500 group-hover:text-teal-500 dark:text-gray-400 dark:group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       Schedule Meeting
                     </span>
                   </button>
-                  <button className="w-full px-4 py-2.5 text-left bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all text-sm border border-slate-600/50 hover:border-teal-500/50 group">
+                  <button className="w-full px-4 py-2.5 text-left bg-white border border-slate-200 text-slate-900 rounded-lg transition-all text-sm hover-border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white dark:hover:border-teal-500/50 group">
                     <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-gray-400 group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-slate-500 group-hover:text-teal-500 dark:text-gray-400 dark:group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       Request More Info
@@ -656,16 +631,16 @@ function FinancialAdvisorPage() {
               </div>
 
               {/* Private Notes */}
-              <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 hover:border-slate-600/50 transition-all duration-200">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-teal-500 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   Private Notes
                 </h3>
                 <textarea
                   rows="4"
-                  className="w-full px-4 py-3 bg-slate-900/60 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none text-sm transition-all duration-200"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none text-sm transition-all duration-200 dark:bg-slate-900/60 dark:border-slate-600 dark:text-white dark:placeholder-gray-500"
                   placeholder="Add private notes about this request (not visible to client)..."
                 />
               </div>
@@ -679,42 +654,42 @@ function FinancialAdvisorPage() {
 
   // Main Dashboard View
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900">
+    <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
       {/* Decorative animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-400/15 dark:bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-400/15 dark:bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-300/10 dark:bg-purple-500/5 rounded-full blur-3xl"></div>
       </div>
 
       {/* Sidebar */}
       <FinancialSidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-6 relative">
+      <div className="flex-1 overflow-auto p-6 relative ml-64 pt-24">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center space-x-3">
             <h2 className="text-3xl font-bold bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent">Client Requests</h2>
             <span className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-slate-900 text-sm font-bold px-4 py-1.5 rounded-full shadow-lg">
-              {pendingRequests.length + activeRequests.length + completedRequests.length}
+              {pendingRequests.length}
             </span>
           </div>
 
           {/* Stats */}
           <div className="flex space-x-6">
-            <div className="text-center p-4 bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-700/30">
-              <p className="text-3xl font-bold text-yellow-400">{pendingRequests.length}</p>
-              <p className="text-sm text-gray-400 mt-1">Pending</p>
+            <div className="text-center p-4 bg-white shadow-sm dark:bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-slate-700/30">
+              <p className="text-3xl font-bold text-yellow-500 dark:text-yellow-400">{pendingRequests.length}</p>
+              <p className="text-sm text-slate-600 dark:text-gray-400 mt-1">Pending</p>
             </div>
-            <div className="text-center p-4 bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-700/30">
-              <p className="text-3xl font-bold text-blue-400">{activeRequests.length}</p>
-              <p className="text-sm text-gray-400 mt-1">Active</p>
+            <div className="text-center p-4 bg-white shadow-sm dark:bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-slate-700/30">
+              <p className="text-3xl font-bold text-blue-500 dark:text-blue-400">{activeRequests.length}</p>
+              <p className="text-sm text-slate-600 dark:text-gray-400 mt-1">Active</p>
             </div>
-            <div className="text-center p-4 bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-700/30">
-              <p className="text-3xl font-bold text-green-400">{completedRequests.length}</p>
-              <p className="text-sm text-gray-400 mt-1">Completed</p>
+            <div className="text-center p-4 bg-white shadow-sm dark:bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-slate-700/30">
+              <p className="text-3xl font-bold text-green-500 dark:text-green-400">{completedRequests.length}</p>
+              <p className="text-sm text-slate-600 dark:text-gray-400 mt-1">Completed</p>
             </div>
           </div>
         </div>
@@ -725,8 +700,8 @@ function FinancialAdvisorPage() {
             onClick={() => setActiveTab('pending')}
             className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all ${
               activeTab === 'pending'
-                ? 'bg-slate-800/70 backdrop-blur-xl text-white border border-slate-700/50 shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-slate-800/40 border border-transparent'
+                ? 'bg-white shadow-sm text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 border border-transparent hover:border-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -738,8 +713,8 @@ function FinancialAdvisorPage() {
             onClick={() => setActiveTab('active')}
             className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all ${
               activeTab === 'active'
-                ? 'bg-slate-800/70 backdrop-blur-xl text-white border border-slate-700/50 shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-slate-800/40 border border-transparent'
+                ? 'bg-white shadow-sm text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 border border-transparent hover:border-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -751,8 +726,8 @@ function FinancialAdvisorPage() {
             onClick={() => setActiveTab('completed')}
             className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all ${
               activeTab === 'completed'
-                ? 'bg-slate-800/70 backdrop-blur-xl text-white border border-slate-700/50 shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-slate-800/40 border border-transparent'
+                ? 'bg-white shadow-sm text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 border border-transparent hover:border-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -767,24 +742,24 @@ function FinancialAdvisorPage() {
           {getRequestsByTab().map((request) => (
             <div key={request.id} className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
-              <div className="relative bg-slate-800/70 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 hover:border-slate-600/50 transition-all duration-300">
+              <div className="relative bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-300 shadow-sm dark:shadow-none">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center flex-wrap gap-3 mb-3">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(request.status)}`}>
                         {request.status}
                       </span>
-                      <span className="text-sm text-gray-400 flex items-center gap-1.5">
+                      <span className="text-sm text-slate-600 dark:text-gray-400 flex items-center gap-1.5">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
-                        <span className="font-medium text-gray-300">{request.from}</span>
+                        <span className="font-medium text-slate-800 dark:text-gray-300">{request.from}</span>
                       </span>
                     </div>
 
-                    <h3 className="text-xl font-bold text-white mb-3">{request.title}</h3>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{request.title}</h3>
 
-                    <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-400 mb-3">
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-slate-600 dark:text-gray-400 mb-3">
                       <span className="flex items-center gap-1">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -792,14 +767,14 @@ function FinancialAdvisorPage() {
                         {request.timestamp}
                       </span>
                       <span>•</span>
-                      <span className="text-gray-300">{request.topic}</span>
+                      <span className="text-slate-800 dark:text-gray-300">{request.topic}</span>
                       <span>•</span>
                       <span>Urgency: <span className={`font-semibold ${getUrgencyColor(request.urgency)}`}>{request.urgency}</span></span>
                       <span>•</span>
                       <span>Budget: <span className="text-green-400 font-bold">{request.budget}</span></span>
                     </div>
 
-                    <p className="text-gray-200 leading-relaxed">{request.description}</p>
+                    <p className="text-slate-700 dark:text-gray-200 leading-relaxed">{request.description}</p>
                   </div>
                 
                   <div className="flex flex-col space-y-2 ml-4">
@@ -816,7 +791,7 @@ function FinancialAdvisorPage() {
                         </button>
                         <button
                           onClick={() => viewThread(request)}
-                          className="px-5 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all border border-slate-600/50"
+                          className="px-5 py-2.5 bg-white border border-slate-200 text-slate-900 font-medium rounded-lg transition-all hover:border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white"
                         >
                           View Details
                         </button>
@@ -834,7 +809,7 @@ function FinancialAdvisorPage() {
                       <>
                         <button
                           onClick={() => viewThread(request)}
-                          className="px-5 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all border border-slate-600/50"
+                          className="px-5 py-2.5 bg-white border border-slate-200 text-slate-900 font-medium rounded-lg transition-all hover:border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white"
                         >
                           View Thread
                         </button>
@@ -851,7 +826,7 @@ function FinancialAdvisorPage() {
                     ) : (
                       <button
                         onClick={() => viewThread(request)}
-                        className="px-5 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all border border-slate-600/50"
+                        className="px-5 py-2.5 bg-white border border-slate-200 text-slate-900 font-medium rounded-lg transition-all hover:border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white"
                       >
                         View Thread
                       </button>
@@ -876,13 +851,13 @@ function FinancialAdvisorPage() {
         {/* Reply Modal */}
         {showReplyModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl dark:bg-slate-800 dark:border-slate-700">
               {/* Modal Header */}
-              <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 flex justify-between items-center">
-                <h3 className="text-2xl font-bold text-white">Send Reply to Client</h3>
+              <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-center dark:bg-slate-800 dark:border-slate-700">
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">Send Reply to Client</h3>
                 <button
                   onClick={() => setShowReplyModal(false)}
-                  className="text-slate-400 hover:text-white transition-colors"
+                  className="text-slate-500 hover:text-slate-900 transition-colors dark:text-slate-400 dark:hover:text-white"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -892,73 +867,73 @@ function FinancialAdvisorPage() {
 
               {/* Modal Body */}
               <form onSubmit={handleReplyFormSubmit} className="p-6 space-y-6">
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   Compose your professional response to a client's financial request.
                 </p>
 
                 {/* Client Name */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Client Name</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Client Name</label>
                   <input
                     type="text"
                     name="clientName"
                     value={replyForm.clientName}
                     onChange={handleReplyFormChange}
                     placeholder="e.g., John Doe"
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:bg-slate-900/50 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                     required
                   />
                 </div>
 
                 {/* Subject */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Subject</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Subject</label>
                   <input
                     type="text"
                     name="subject"
                     value={replyForm.subject}
                     onChange={handleReplyFormChange}
                     placeholder="e.g., Re: Investment Strategy for Q4"
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:bg-slate-900/50 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                     required
                   />
                 </div>
 
                 {/* Message */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Your Professional Response</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Your Professional Response</label>
                   <textarea
                     name="message"
                     value={replyForm.message}
                     onChange={handleReplyFormChange}
                     rows="8"
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none dark:bg-slate-900/50 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                     placeholder="Provide your professional advice, recommendations, analysis, and actionable steps..."
                     required
                   />
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-500 mt-2">
                     Include detailed strategies, calculations if relevant, and explain your reasoning clearly.
                   </p>
                 </div>
 
                 {/* Attachments */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Attachments (optional)</label>
-                  <div className="border-2 border-dashed border-slate-700 rounded-lg p-6 text-center bg-slate-900/30 hover:border-slate-600 transition-colors">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Attachments (optional)</label>
+                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50 hover:border-teal-400 transition-colors dark:border-slate-700 dark:bg-slate-900/30 dark:hover:border-slate-600">
                     <input type="file" className="hidden" id="reply-file-upload" multiple />
                     <label htmlFor="reply-file-upload" className="cursor-pointer">
                       <svg className="w-8 h-8 text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      <span className="text-teal-400 hover:text-teal-300">Choose Files</span>
+                      <span className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">Choose Files</span>
                     </label>
                     <p className="text-xs text-slate-500 mt-2">PDF, Excel, or Images. Up to 10MB each.</p>
                   </div>
                 </div>
 
                 {/* Professional Tip */}
-                <div className="bg-teal-500/10 border border-teal-500/30 rounded-lg p-4">
-                  <p className="text-xs text-teal-300 flex items-start gap-2">
+                <div className="bg-teal-500/5 border border-teal-200 rounded-lg p-4 dark:bg-teal-500/10 dark:border-teal-500/30">
+                  <p className="text-xs text-teal-700 flex items-start gap-2 dark:text-teal-300">
                     <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
@@ -977,7 +952,7 @@ function FinancialAdvisorPage() {
                   <button
                     type="button"
                     onClick={() => setShowReplyModal(false)}
-                    className="px-6 py-3 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-all"
+                    className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg transition-all border border-slate-200 dark:bg-slate-700/50 dark:hover:bg-slate-700 dark:text-white dark:border-slate-600"
                   >
                     Cancel
                   </button>

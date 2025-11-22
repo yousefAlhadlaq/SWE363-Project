@@ -145,7 +145,7 @@ const ResetPasswordPage = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 overflow-auto">
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 overflow-auto">
       {/* Decorative animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>

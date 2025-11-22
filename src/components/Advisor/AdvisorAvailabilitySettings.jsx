@@ -96,10 +96,10 @@ function AdvisorAvailabilitySettings() {
   };
 
   return (
-    <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900">
+    <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
       <FinancialSidebar />
 
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-8 ml-64 pt-24">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">

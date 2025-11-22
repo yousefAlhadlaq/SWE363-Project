@@ -60,7 +60,7 @@
   /* Dark theme (default) */
   html.dark body,
   body {
-    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 text-slate-300;
+    @apply bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 text-slate-300;
   }
 
   /* Light theme */
@@ -113,7 +113,7 @@
   }
 
   html.dark .bg-page {
-    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+    @apply bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900;
   }
 
   html.light .bg-page {
@@ -125,7 +125,7 @@
   }
 
   html.dark .bg-page-centered {
-    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+    @apply bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900;
   }
 
   html.light .bg-page-centered {
@@ -137,7 +137,7 @@
   }
 
   html.dark .bg-section {
-    @apply bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900;
+    @apply bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900;
   }
 
   html.light .bg-section {

@@ -171,17 +171,17 @@ const ProfileSettings = () => {
   ];
 
   return (
-    <div className="flex min-h-full bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900">
+    <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-8 pt-24">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-            <p className="text-gray-300 text-sm">Manage your preferences</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Settings</h1>
+            <p className="text-slate-600 dark:text-gray-300 text-sm">Manage your preferences</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
