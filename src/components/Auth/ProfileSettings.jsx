@@ -6,6 +6,7 @@ import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import ThemeToggleSegmented from '../Shared/ThemeToggleSegmented';
+import { PASSWORD_REQUIREMENTS, isPasswordStrong } from '../../utils/passwordRules';
 
 const ProfileSettings = () => {
   const navigate = useNavigate();
@@ -101,8 +102,8 @@ const ProfileSettings = () => {
       errors.phoneNumber = 'Phone number is required';
     }
     
-    if (editForm.password && editForm.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
+    if (editForm.password && !isPasswordStrong(editForm.password)) {
+      errors.password = PASSWORD_REQUIREMENTS;
     }
     
     if (!editForm.address) {
@@ -481,6 +482,9 @@ const ProfileSettings = () => {
               onTogglePassword={() => setShowPassword(!showPassword)}
               disabled={saving}
             />
+            <p className="mt-1 text-xs text-gray-400">
+              {PASSWORD_REQUIREMENTS}
+            </p>
           </div>
 
           {/* Address */}

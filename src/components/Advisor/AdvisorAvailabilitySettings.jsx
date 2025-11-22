@@ -121,7 +121,7 @@ function AdvisorAvailabilitySettings() {
   };
 
   return (
-    <div className="relative flex min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="relative flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-16 left-10 w-72 h-72 bg-teal-200/40 rounded-full blur-3xl animate-pulse dark:bg-teal-500/10"></div>
         <div className="absolute bottom-20 right-16 w-96 h-96 bg-blue-200/40 rounded-full blur-3xl animate-pulse dark:bg-blue-500/10"></div>

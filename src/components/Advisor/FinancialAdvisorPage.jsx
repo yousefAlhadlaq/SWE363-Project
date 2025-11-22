@@ -68,39 +68,39 @@ function FinancialAdvisorPage() {
   ]);
 
   const advisorPrimaryButtonClasses =
-    'px-4 py-2.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-teal-500 to-emerald-400 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-400/40 hover:from-teal-400 hover:to-emerald-300 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400';
+    'px-4 py-2.5 text-sm font-semibold rounded-2xl bg-emerald-500 text-white shadow-[0_18px_30px_rgba(16,185,129,0.35)] hover:bg-emerald-400 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300';
 
   const advisorGhostButtonClasses =
-    'px-4 py-2.5 text-sm font-semibold rounded-lg border border-slate-600/60 bg-slate-800/50 text-slate-100 hover:border-teal-400/60 hover:bg-slate-700/70 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500';
+    'px-4 py-2.5 text-sm font-semibold rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 shadow-sm hover:border-slate-300 hover:bg-white hover:text-slate-900 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-200 dark:border-slate-600/60 dark:bg-slate-800/60 dark:text-slate-100 dark:hover:border-teal-400/60 dark:hover:bg-slate-700/70';
 
   const advisorDangerButtonClasses =
-    'px-4 py-2.5 text-sm font-semibold rounded-lg border border-red-500/50 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:border-red-400/70 shadow-[0_10px_25px_rgba(248,113,113,0.25)] transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400';
+    'px-4 py-2.5 text-sm font-semibold rounded-2xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:border-rose-300 shadow-[0_12px_30px_rgba(248,113,113,0.25)] transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 dark:border-red-500/50 dark:bg-red-500/15 dark:text-red-100 dark:hover:bg-red-500/25';
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'Pending':
-        return 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30';
+        return 'bg-amber-50 text-amber-700 border border-amber-100 dark:bg-yellow-500/10 dark:border-yellow-500/30 dark:text-yellow-200';
       case 'Accepted':
-        return 'bg-blue-500/10 text-blue-400 border border-blue-500/30';
+        return 'bg-sky-50 text-sky-700 border border-sky-100 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-200';
       case 'In Progress':
-        return 'bg-purple-500/10 text-purple-400 border border-purple-500/30';
+        return 'bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-purple-500/10 dark:border-purple-500/30 dark:text-purple-200';
       case 'Completed':
-        return 'bg-green-500/10 text-green-400 border border-green-500/30';
+        return 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-200';
       default:
-        return 'bg-slate-700/30 text-slate-400 border border-slate-600/30';
+        return 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-700/30 dark:text-slate-300 dark:border-slate-600/30';
     }
   };
 
   const getUrgencyColor = (urgency) => {
     switch (urgency) {
       case 'High':
-        return 'text-red-400';
+        return 'text-rose-600 dark:text-red-400';
       case 'Normal':
-        return 'text-blue-400';
+        return 'text-sky-600 dark:text-blue-400';
       case 'Low':
-        return 'text-white/60';
+        return 'text-emerald-600 dark:text-white/60';
       default:
-        return 'text-white/60';
+        return 'text-slate-500 dark:text-white/60';
     }
   };
 
@@ -420,7 +420,7 @@ function FinancialAdvisorPage() {
                     <span>•</span>
                     <span>Urgency: <span className={`font-semibold ${getUrgencyColor(selectedThread.urgency)}`}>{selectedThread.urgency}</span></span>
                     <span>•</span>
-                    <span>Budget: <span className="text-green-400 font-semibold">{selectedThread.budget}</span></span>
+                    <span>Budget: <span className="text-emerald-600 font-semibold dark:text-green-400">{selectedThread.budget}</span></span>
                   </div>
                 </div>
                 <span className={`px-4 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(selectedThread.status)}`}>
@@ -598,7 +598,7 @@ function FinancialAdvisorPage() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Expected compensation</p>
-                    <p className="text-green-400 font-bold text-xl">{selectedThread.budget}</p>
+                    <p className="text-emerald-600 font-bold text-xl dark:text-green-400">{selectedThread.budget}</p>
                   </div>
                 </div>
               </div>
@@ -678,97 +678,132 @@ function FinancialAdvisorPage() {
       <div className="flex-1 overflow-auto p-6 relative ml-64 pt-24">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center space-x-3">
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent">Client Requests</h2>
-            <span className="bg-gradient-to-r from-teal-500 to-emerald-400 text-white text-sm font-semibold px-4 py-1.5 rounded-full shadow-lg shadow-emerald-500/30">
-              {pendingRequests.length}
-            </span>
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between mb-10">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-emerald-500 font-semibold mb-3">Portfolio</p>
+            <h2 className="text-4xl font-semibold text-slate-900 tracking-tight">Client Requests</h2>
+            <p className="text-slate-500 mt-3 max-w-2xl">
+              Stay on top of new client outreach, prioritize urgent asks, and keep conversations moving in one clean workspace.
+            </p>
+            <div className="flex items-center gap-3 mt-4">
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-sm font-semibold shadow-sm">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                {pendingRequests.length} pending
+              </span>
+              <span className="text-xs text-slate-500">Auto-refreshes every few minutes</span>
+            </div>
           </div>
 
           {/* Stats */}
-          <div className="flex space-x-6">
-            <div className="text-center p-4 bg-white shadow-sm dark:bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-slate-700/30">
-              <p className="text-3xl font-bold text-yellow-500 dark:text-yellow-400">{pendingRequests.length}</p>
-              <p className="text-sm text-slate-600 dark:text-gray-400 mt-1">Pending</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full lg:w-auto">
+            <div className="p-4 rounded-2xl border border-amber-100 bg-amber-50 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Pending</p>
+              <p className="text-3xl font-bold text-amber-700 mt-2">{pendingRequests.length}</p>
+              <p className="text-xs text-amber-600/80 mt-1">Awaiting review</p>
             </div>
-            <div className="text-center p-4 bg-white shadow-sm dark:bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-slate-700/30">
-              <p className="text-3xl font-bold text-blue-500 dark:text-blue-400">{activeRequests.length}</p>
-              <p className="text-sm text-slate-600 dark:text-gray-400 mt-1">Active</p>
+            <div className="p-4 rounded-2xl border border-sky-100 bg-sky-50 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sky-600">Active</p>
+              <p className="text-3xl font-bold text-sky-700 mt-2">{activeRequests.length}</p>
+              <p className="text-xs text-sky-600/80 mt-1">In conversation</p>
             </div>
-            <div className="text-center p-4 bg-white shadow-sm dark:bg-slate-800/40 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-slate-700/30">
-              <p className="text-3xl font-bold text-green-500 dark:text-green-400">{completedRequests.length}</p>
-              <p className="text-sm text-slate-600 dark:text-gray-400 mt-1">Completed</p>
+            <div className="p-4 rounded-2xl border border-violet-100 bg-violet-50 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">Completed</p>
+              <p className="text-3xl font-bold text-violet-700 mt-2">{completedRequests.length}</p>
+              <p className="text-xs text-violet-600/80 mt-1">Wrapped up</p>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-3 mb-6">
+        <div className="flex flex-wrap gap-3 mb-8">
           <button
             onClick={() => setActiveTab('pending')}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+            className={`flex items-center gap-4 px-6 py-3 rounded-2xl text-sm font-semibold transition-all ${
               activeTab === 'pending'
-                ? 'bg-white shadow-sm text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 border border-transparent hover:border-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30'
+                ? 'bg-white shadow-xl text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
+                : 'text-slate-500 border border-transparent hover:border-slate-200 hover:bg-white/80 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30'
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Pending ({pendingRequests.length})</span>
+            <span className={`w-9 h-9 rounded-2xl flex items-center justify-center ${activeTab === 'pending' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-gray-300'}`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            <div className="text-left">
+              <p>Pending</p>
+              <p className="text-xs text-slate-500 dark:text-gray-400">{pendingRequests.length} requests</p>
+            </div>
+            <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600">
+              {pendingRequests.length}
+            </span>
           </button>
           <button
             onClick={() => setActiveTab('active')}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+            className={`flex items-center gap-4 px-6 py-3 rounded-2xl text-sm font-semibold transition-all ${
               activeTab === 'active'
-                ? 'bg-white shadow-sm text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 border border-transparent hover:border-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30'
+                ? 'bg-white shadow-xl text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
+                : 'text-slate-500 border border-transparent hover:border-slate-200 hover:bg-white/80 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30'
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <span>Active ({activeRequests.length})</span>
+            <span className={`w-9 h-9 rounded-2xl flex items-center justify-center ${activeTab === 'active' ? 'bg-sky-50 text-sky-600' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-gray-300'}`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </span>
+            <div className="text-left">
+              <p>Active</p>
+              <p className="text-xs text-slate-500 dark:text-gray-400">{activeRequests.length} requests</p>
+            </div>
+            <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-600">
+              {activeRequests.length}
+            </span>
           </button>
           <button
             onClick={() => setActiveTab('completed')}
-            className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+            className={`flex items-center gap-4 px-6 py-3 rounded-2xl text-sm font-semibold transition-all ${
               activeTab === 'completed'
-                ? 'bg-white shadow-sm text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 border border-transparent hover:border-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30'
+                ? 'bg-white shadow-xl text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
+                : 'text-slate-500 border border-transparent hover:border-slate-200 hover:bg-white/80 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30'
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Completed ({completedRequests.length})</span>
+            <span className={`w-9 h-9 rounded-2xl flex items-center justify-center ${activeTab === 'completed' ? 'bg-violet-50 text-violet-600' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-gray-300'}`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            <div className="text-left">
+              <p>Completed</p>
+              <p className="text-xs text-slate-500 dark:text-gray-400">{completedRequests.length} requests</p>
+            </div>
+            <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-50 text-violet-600">
+              {completedRequests.length}
+            </span>
           </button>
         </div>
 
         {/* Request Cards */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           {getRequestsByTab().map((request) => (
             <div key={request.id} className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
-              <div className="relative bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-300 shadow-sm dark:shadow-none">
-                <div className="flex justify-between items-start">
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-teal-200 via-blue-200 to-purple-200 opacity-0 group-hover:opacity-70 blur-3xl transition duration-500 pointer-events-none"></div>
+              <div className="relative bg-white rounded-3xl border border-slate-100 p-6 shadow-[0_35px_90px_rgba(15,23,42,0.08)] dark:bg-slate-800/70 dark:border-slate-700/50">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
                   <div className="flex-1">
                     <div className="flex items-center flex-wrap gap-3 mb-3">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(request.status)}`}>
                         {request.status}
                       </span>
-                      <span className="text-sm text-slate-600 dark:text-gray-400 flex items-center gap-1.5">
+                      <span className="text-sm text-slate-500 dark:text-gray-400 flex items-center gap-1.5">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
-                        <span className="font-medium text-slate-800 dark:text-gray-300">{request.from}</span>
+                        <span className="font-semibold text-slate-700 dark:text-gray-300">{request.from}</span>
                       </span>
                     </div>
 
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{request.title}</h3>
+                    <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-3">{request.title}</h3>
 
-                    <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-slate-600 dark:text-gray-400 mb-3">
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-gray-400 mb-3">
                       <span className="flex items-center gap-1">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -776,17 +811,17 @@ function FinancialAdvisorPage() {
                         {request.timestamp}
                       </span>
                       <span>•</span>
-                      <span className="text-slate-800 dark:text-gray-300">{request.topic}</span>
+                      <span className="text-slate-700 dark:text-gray-300">{request.topic}</span>
                       <span>•</span>
                       <span>Urgency: <span className={`font-semibold ${getUrgencyColor(request.urgency)}`}>{request.urgency}</span></span>
                       <span>•</span>
-                      <span>Budget: <span className="text-green-400 font-bold">{request.budget}</span></span>
+                      <span>Budget: <span className="text-emerald-600 font-bold dark:text-green-400">{request.budget}</span></span>
                     </div>
 
-                    <p className="text-slate-700 dark:text-gray-200 leading-relaxed">{request.description}</p>
+                    <p className="text-slate-600 dark:text-gray-200 leading-relaxed">{request.description}</p>
                   </div>
                 
-                  <div className="flex flex-col space-y-2 ml-4">
+                  <div className="flex flex-col space-y-2 lg:ml-6">
                     {activeTab === 'pending' ? (
                       <>
                         <button
@@ -850,9 +885,9 @@ function FinancialAdvisorPage() {
         {/* Floating Action Button */}
         <button
           onClick={() => setShowReplyModal(true)}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-teal-400 via-blue-500 to-purple-500 hover:from-teal-300 hover:to-blue-600 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-50 group"
+          className="fixed bottom-8 right-8 w-16 h-16 bg-amber-400 text-slate-900 hover:bg-amber-300 rounded-full shadow-[0_20px_45px_rgba(251,191,36,0.35)] flex items-center justify-center transition-all hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 z-50 group"
         >
-          <svg className="w-8 h-8 text-white group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+          <svg className="w-8 h-8 text-slate-900 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
         </button>

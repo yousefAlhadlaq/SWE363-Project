@@ -52,13 +52,13 @@ const defaultGoalsSeed = [
 ];
 
 const advisorPrimaryButtonClasses =
-  'px-4 py-2.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-teal-500 to-emerald-400 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-400/40 hover:from-teal-400 hover:to-emerald-300 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400';
+  'px-4 py-2.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-slate-900 shadow-lg shadow-amber-200/70 hover:shadow-amber-300/80 hover:from-amber-200 hover:to-amber-500 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 dark:from-teal-500 dark:via-teal-500 dark:to-emerald-400 dark:text-white dark:shadow-emerald-500/30 dark:hover:from-teal-400 dark:hover:to-emerald-300 dark:focus-visible:ring-teal-400';
 
 const advisorGhostButtonClasses =
-  'px-4 py-2.5 text-sm font-semibold rounded-lg border border-slate-600/60 bg-slate-800/50 text-slate-100 hover:border-teal-400/60 hover:bg-slate-700/70 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500';
+  'px-4 py-2.5 text-sm font-semibold rounded-lg border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:border-slate-600/60 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:border-teal-400/60 dark:hover:bg-slate-700/70 dark:focus-visible:ring-slate-500';
 
 const advisorDangerButtonClasses =
-  'px-4 py-2.5 text-sm font-semibold rounded-lg border border-red-500/50 bg-red-500/10 text-red-200 hover:bg-red-500/20 hover:border-red-400/70 shadow-[0_10px_25px_rgba(248,113,113,0.25)] transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400';
+  'px-4 py-2.5 text-sm font-semibold rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:border-red-300 shadow-[0_8px_25px_rgba(248,113,113,0.18)] transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20 dark:hover:border-red-400/70 dark:shadow-[0_10px_25px_rgba(248,113,113,0.25)] dark:focus-visible:ring-red-400';
 
 const normalizeCategories = (list = []) => {
   const source = Array.isArray(list) && list.length ? list : defaultCategoriesSeed;
@@ -593,12 +593,12 @@ function ExpensesPage() {
 
           <div className="grid gap-6 xl:grid-cols-[1.35fr,1fr] items-start">
             <div className="space-y-6">
-              <Card className="rounded-xl border border-slate-700/50 bg-slate-800/95 backdrop-blur-sm p-6 lg:p-8 shadow-xl">
+              <Card className="rounded-3xl lg:p-8">
                 <div className="flex flex-wrap items-start justify-between gap-6">
                   <div>
-                    <p className="text-sm text-slate-300">Total spent · This month</p>
-                    <p className="mt-2 text-4xl font-semibold text-white">{formatSar(totalSpent)}</p>
-                    <p className="mt-2 text-xs text-emerald-300/80">30d ▲ 3.9%</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-300">Total spent · This month</p>
+                    <p className="mt-2 text-4xl font-semibold text-slate-900 dark:text-white">{formatSar(totalSpent)}</p>
+                    <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-300/80">30d ▲ 3.9%</p>
                   </div>
                   <div className="relative w-32 h-32">
                     <svg viewBox="0 0 120 120" className="w-full h-full">
@@ -621,10 +621,12 @@ function ExpensesPage() {
                   </div>
                 </div>
                 <div className="mt-8 grid gap-4 lg:grid-cols-[1.8fr,1fr]">
-                  <div className="rounded-xl bg-slate-900/40 border border-slate-700/60 p-4">
-                    <div className="flex items-center justify-between text-xs text-slate-400 mb-4">
+                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-300">
+                    <div className="flex items-center justify-between text-xs mb-4">
                       <span>30d trend</span>
-                      <span>{remainingBudget > 0 ? `${formatSar(remainingBudget)} left` : 'Over budget'}</span>
+                      <span className="font-semibold text-slate-800 dark:text-white">
+                        {remainingBudget > 0 ? `${formatSar(remainingBudget)} left` : 'Over budget'}
+                      </span>
                     </div>
                     <div className="relative h-32">
                       <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
@@ -636,7 +638,7 @@ function ExpensesPage() {
                         </defs>
                         <g>
                           {[0, 20, 40, 60, 80, 100].map((y) => (
-                            <line key={y} x1="0" x2="100" y1={y / 2} y2={y / 2} stroke="#142228" strokeWidth="0.5" />
+                            <line key={y} x1="0" x2="100" y1={y / 2} y2={y / 2} stroke="rgba(148,163,184,0.4)" strokeWidth="0.5" />
                           ))}
                           <path d={sparklineAreaPath} fill="url(#trendFill)" stroke="none" opacity="0.6" />
                           <polyline
@@ -651,7 +653,7 @@ function ExpensesPage() {
                           ))}
                         </g>
                       </svg>
-                      <div className="absolute inset-x-0 bottom-1 flex justify-between text-[10px] text-slate-500">
+                      <div className="absolute inset-x-0 bottom-1 flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
                         {trendLabels.map((label) => (
                           <span key={label.label} style={{ transform: `translateX(calc(${label.x}% - 12px))` }}>
                             {label.label}
@@ -662,36 +664,42 @@ function ExpensesPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {showcaseMetrics.map((metric) => (
-                      <div key={metric.label} className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4">
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">{metric.label}</p>
-                        <p className="mt-2 text-xl font-semibold text-white">{metric.value}</p>
-                        <p className="text-xs text-emerald-300/80">{metric.helper}</p>
+                      <div
+                        key={metric.label}
+                        className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-white"
+                      >
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">{metric.label}</p>
+                        <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">{metric.value}</p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-300/80">{metric.helper}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               </Card>
-              <Card className="rounded-xl border border-slate-700/50 bg-slate-800/95 backdrop-blur-sm p-6 shadow-xl">
+              <Card className="rounded-3xl">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm text-slate-400">Goals</p>
-                    <h3 className="text-2xl font-semibold text-white">Saving progress</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Goals</p>
+                    <h3 className="text-2xl font-semibold text-slate-900 dark:text-white">Saving progress</h3>
                   </div>
-                  <span className="text-sm text-slate-400">{goalCompletionAverage}% average</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">{goalCompletionAverage}% average</span>
                 </div>
                 <div className="mt-6 space-y-4">
                   {goalsWithProgress.map((goal) => (
-                    <div key={goal.id} className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4 space-y-4">
+                    <div
+                      key={goal.id}
+                      className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 space-y-4 text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200"
+                    >
                       <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
-                          <p className="font-semibold text-white">{goal.name}</p>
-                          <p className="text-xs text-slate-400">
-                            Target: {formatSar(goal.targetAmount)} · Saved: {formatSar(goal.savedAmount)} · Remaining:{' '}
+                          <p className="font-semibold text-slate-900 dark:text-white">{goal.name}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Target: {formatSar(goal.targetAmount)} · Saved: {formatSar(goal.savedAmount)} · Remaining{' '}
                             {formatSar(Math.max(goal.targetAmount - goal.savedAmount, 0))}
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-semibold text-white">{Math.round(goal.progress)}%</span>
+                          <span className="text-sm font-semibold text-slate-900 dark:text-white">{Math.round(goal.progress)}%</span>
                           <div className="flex gap-2">
                             <Button
                               variant="secondary"
@@ -710,70 +718,78 @@ function ExpensesPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="h-2 rounded-full bg-[#1f2c31] overflow-hidden">
-                        <div className="h-full bg-[#8bd7c8]" style={{ width: `${goal.progress}%` }} />
+                      <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 dark:from-[#8bd7c8] dark:to-[#2dd4bf]"
+                          style={{ width: `${goal.progress}%` }}
+                        />
                       </div>
                     </div>
                   ))}
                   {goalsWithProgress.length === 0 && (
-                    <p className="text-sm text-slate-400">No goals yet. Use the yellow button to create one.</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">No goals yet. Use the yellow button to create one.</p>
                   )}
                 </div>
               </Card>
             </div>
 
-            <Card className="rounded-xl border border-slate-700/50 bg-slate-800/95 backdrop-blur-sm p-5 shadow-xl">
+            <Card className="rounded-3xl p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm text-slate-400">Categories</p>
-                  <h3 className="text-2xl font-semibold text-white">This month</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Categories</p>
+                  <h3 className="text-2xl font-semibold text-slate-900 dark:text-white">This month</h3>
                 </div>
-                <span className="text-sm text-slate-400">{activeCategories.length} active</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">{activeCategories.length} active</span>
               </div>
               <div className="mt-6 space-y-4">
                 {orderedCategories.map((category, index) => {
                   const showcaseNumber = String(index + 1).padStart(2, '0');
                   return (
-                    <div key={category.id} className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4 space-y-4">
+                    <div
+                      key={category.id}
+                      className="rounded-2xl border border-slate-200/80 bg-white/85 p-4 space-y-4 text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200"
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex items-start gap-4">
-                          <div className="w-14 h-14 rounded-2xl border border-slate-700/60 bg-slate-800/70 text-slate-200 font-semibold tracking-[0.3em] flex items-center justify-center text-sm">
+                          <div className="w-14 h-14 rounded-2xl border border-slate-200/80 bg-slate-50 text-slate-600 font-semibold tracking-[0.3em] flex items-center justify-center text-sm dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-200">
                             {showcaseNumber}
                           </div>
                           <div>
-                            <p className="font-semibold text-white">{category.name}</p>
-                            <p className="text-xs text-slate-400">
+                            <p className="font-semibold text-slate-900 dark:text-white">{category.name}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
                               {category.limit ? `budget ${formatSar(category.limit)}` : 'No budget set'}
                             </p>
                           </div>
                         </div>
                         <div className="text-right space-y-1">
-                          <p className="text-lg font-semibold text-white">{formatSar(category.spent)}</p>
+                          <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatSar(category.spent)}</p>
                           {category.statusTone === 'over' ? (
-                            <span className="inline-flex items-center rounded-full bg-[#51201b] px-2 py-0.5 text-xs font-semibold text-[#f8b4a0]">
+                            <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600 dark:bg-[#51201b] dark:text-[#f8b4a0]">
                               over by {formatSar(category.spent - (category.limit || 0))}
                             </span>
                           ) : (
-                            category.limit ? <span className="text-xs text-slate-500">{category.statusLabel}</span> : null
+                            category.limit ? (
+                              <span className="text-xs text-slate-500 dark:text-slate-400">{category.statusLabel}</span>
+                            ) : null
                           )}
                           {!category.enabled && (
-                            <span className="inline-flex items-center rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-xs font-semibold text-red-200">
+                            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
                               Disabled
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="h-2 rounded-full bg-slate-800/70 overflow-hidden">
+                      <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                         <div
                           className="h-full rounded-full"
                           style={{
                             width: `${Math.min(category.progress, 100)}%`,
-                            backgroundColor:
+                            background:
                               category.statusTone === 'over'
-                                ? '#f88379'
+                                ? 'linear-gradient(90deg,#f87171,#fb923c)'
                                 : category.statusTone === 'warning'
-                                ? '#fbbf24'
-                                : '#8bd7c8'
+                                ? 'linear-gradient(90deg,#fcd34d,#fbbf24)'
+                                : 'linear-gradient(90deg,#34d399,#22d3ee)'
                           }}
                         />
                       </div>
@@ -789,7 +805,11 @@ function ExpensesPage() {
                           type="button"
                           className={`text-xs px-3 py-2 ${
                             category.enabled ? advisorDangerButtonClasses : advisorGhostButtonClasses
-                          } ${category.enabled ? '' : 'text-emerald-300 border-emerald-500/40 hover:border-emerald-300/70'}`}
+                          } ${
+                            category.enabled
+                              ? ''
+                              : 'text-emerald-700 border-emerald-200 hover:border-emerald-300 dark:text-emerald-300 dark:border-emerald-500/40'
+                          }`}
                           onClick={() => handleToggleCategory(category.id)}
                         >
                           {category.enabled ? 'Disable' : 'Enable'}
@@ -799,7 +819,7 @@ function ExpensesPage() {
                   );
                 })}
                 {orderedCategories.length === 0 && (
-                  <p className="text-sm text-slate-400">No categories yet. Use the yellow button to add one.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">No categories yet. Use the yellow button to add one.</p>
                 )}
               </div>
             </Card>
@@ -816,14 +836,16 @@ function ExpensesPage() {
         subtitle="Manage categories or goals"
       >
         {modalMode === 'add' ? (
-          <div className="bg-[#1b2d36] rounded-full p-1 flex mb-6 border border-white/5">
+          <div className="bg-slate-100 rounded-full p-1 flex mb-6 border border-slate-200 dark:bg-[#1b2d36] dark:border-white/5">
             {['category', 'goal'].map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => handleTabChange(tab)}
                 className={`flex-1 py-2 rounded-full text-sm font-medium transition ${
-                  modalTab === tab ? 'bg-[#8bd7c8] text-slate-900' : 'text-slate-200'
+                  modalTab === tab
+                    ? 'bg-amber-100 text-amber-900 dark:bg-[#8bd7c8] dark:text-slate-900'
+                    : 'text-slate-500 dark:text-slate-200'
                 }`}
               >
                 {tab === 'category' ? 'Category' : 'Goal'}
@@ -831,7 +853,7 @@ function ExpensesPage() {
             ))}
           </div>
         ) : (
-          <div className="mb-6 inline-flex items-center rounded-full border border-white/10 bg-[#0f1e26] px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-200">
+          <div className="mb-6 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-white/10 dark:bg-[#0f1e26] dark:text-slate-200">
             {modalTab === 'category' ? 'Category' : 'Goal'}
           </div>
         )}
