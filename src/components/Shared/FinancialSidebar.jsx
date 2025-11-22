@@ -92,7 +92,7 @@ function FinancialSidebar() {
             <p className="text-xs text-slate-500 dark:text-gray-400 capitalize">{user?.role || 'Advisor'}</p>
           </div>
         </div>
-        <p className="text-xs text-slate-500 dark:text-gray-500 text-center">v1.0 • © Guroosh 2024</p>
+        <p className="text-xs text-slate-500 dark:text-gray-500 text-center">v1.0 • © Guroosh 2025</p>
       </div>
     </div>
   );

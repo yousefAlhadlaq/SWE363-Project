@@ -5,7 +5,8 @@ const navItems = [
   { label: 'Home', to: '/admin', exact: true },
   { label: 'Manage Users', to: '/admin/users' },
   { label: 'Notifications', to: '/admin/notifications' },
-  { label: 'Advisors', to: '/admin/advisors' }
+  { label: 'Advisors', to: '/admin/advisors' },
+  { label: 'Settings', to: '/admin/settings' }
 ];
 
 function AdminLayout({ title, description, children, accentLabel }) {
@@ -39,9 +40,8 @@ function AdminLayout({ title, description, children, accentLabel }) {
         </nav>
 
         <div className="text-xs text-gray-500">
-          Need help?{' '}
-          <span className="text-white">v1.0 • © Guroosh 2025</span>
-        </div>
+          {' '}
+<p className="text-xs text-slate-500 dark:text-gray-500 text-center">v1.0 • © Guroosh 2025</p>        </div>
       </aside>
 
       <main className="flex-1 bg-gradient-to-br from-slate-900 via-slate-900/70 to-slate-900 px-6 md:px-10 pt-24 pb-12">

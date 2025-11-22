@@ -36,6 +36,7 @@ import AdminDashboard from '../components/Admin/AdminDashboard';
 import NotificationsPanel from '../components/Admin/NotificationsPanel';
 import AdvisorAvailability from '../components/Admin/AdvisorAvailability';
 import UserManagement from '../components/Admin/UserManagement';
+import AdminSettings from '../components/Admin/AdminSettings';
 
 const clientRoles = ['client', 'user'];
 const clientAndAdvisorRoles = ['client', 'user', 'advisor'];
@@ -97,6 +98,7 @@ const adminRoutes = [
   { path: '/admin/notifications', element: createProtectedElement(NotificationsPanel, adminRoles) },
   { path: '/admin/advisors', element: createProtectedElement(AdvisorAvailability, adminRoles) },
   { path: '/admin/users', element: createProtectedElement(UserManagement, adminRoles) },
+  { path: '/admin/settings', element: createProtectedElement(AdminSettings, adminRoles) },
 ];
 
 const renderRoutes = (routes) =>
