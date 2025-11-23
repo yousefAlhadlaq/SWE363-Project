@@ -709,7 +709,7 @@ function DashboardPage() {
     <div className="flex min-h-screen bg-page text-white pt-20">
       <Sidebar />
       <div className="flex-1 ml-64 px-6 py-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className="max-w-6xl space-y-6">
           <header className="space-y-4">
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">

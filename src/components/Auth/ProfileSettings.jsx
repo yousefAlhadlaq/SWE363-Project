@@ -178,7 +178,7 @@ const ProfileSettings = () => {
 
       {/* Main Content */}
       <div className="ml-64 pt-20 px-4 md:px-6 pb-6 overflow-x-hidden min-h-screen">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-5xl">
           {/* Header */}
           <div className="mb-4">
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">Settings</h1>

@@ -719,7 +719,7 @@ function InvestmentsPage() {
         <Sidebar />
 
         <div className="flex-1 ml-64 px-5 py-6">
-          <div className="w-full max-w-5xl mx-auto space-y-5">
+          <div className="w-full max-w-5xl space-y-5">
           <header>
             <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">
               Portfolio
