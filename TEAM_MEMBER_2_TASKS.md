@@ -1,255 +1,154 @@
-# Team Member 2: Expense, Income & Category Management - 10-Day Task List
+# Team Member 2: Categories & Expenses - Simplified Course Project
 
-## Overview
-You are responsible for expense tracking, income management, and category features. This is **core functionality** for the finance app!
+## Your Role
+You handle **categories and expenses** - the core of any finance app!
 
-**Priority**: Second highest - Categories are needed by Team Member 3 for budgets
-
----
-
-## Your Role in the Team
-
-### What You're Building:
-- Category management (CRUD)
-- Expense tracking (CRUD + filtering + statistics)
-- Income tracking (CRUD + statistics)
-
-### Who Depends on You:
-- **Team Member 3**: ⚠️ Needs Categories for Budgets (Day 3)
-- **Team Member 4**: ⚠️ Needs Expense/Income data for Dashboard (Day 4+)
-
-### Your Dependencies:
-- **Team Member 1**: ⚠️ BLOCKED until auth middleware ready (Day 2)
-- **Team Member 4**: ⚠️ Need Express app setup (Day 1)
+**Good news**: Most database setup gets done on Day 1 with the whole team! After that, you build your features.
 
 ---
 
-## 10-Day Timeline
+## What You're Building (Simple!)
 
-### **Day 1: Setup (Morning with Team)**
-**Work together with team (2-3 hours):**
-- [ ] Create project structure
-- [ ] Install dependencies
+✅ Category CRUD (create, read, update, delete)
+✅ Expense CRUD (create, read, update, delete)
+✅ Basic expense filtering (by date, category)
+✅ Get expenses by category
+
+❌ NO advanced statistics
+❌ NO bulk operations
+❌ NO SMS parsing
+❌ NO recurring transactions
+❌ NO export functionality
+❌ NO complex aggregations
+
+---
+
+## 10-Day Simplified Timeline
+
+### **Day 1: Setup & Models (WITH ENTIRE TEAM - 4 hours)**
+
+**Work together with all 4 team members:**
+
+**Morning (Together):**
+- [ ] Set up project structure
+- [ ] Install dependencies:
+  ```bash
+  npm install express mongoose dotenv bcryptjs jsonwebtoken cors
+  npm install --save-dev nodemon
+  ```
 - [ ] Set up MongoDB Atlas
 - [ ] Create `.env` file
-- [ ] Test database connection
+- [ ] Create `server.js` and `app.js`
 
-**Your afternoon work:**
-- [ ] Create Category model (`models/Category.js`)
-  - [ ] Add userId, name, type (expense/income)
-  - [ ] Add color, icon, enabled fields
-  - [ ] Add compound unique index (userId + name + type)
-- [ ] Create Expense model (`models/Expense.js`)
-  - [ ] Add userId, categoryId, amount, title, description
-  - [ ] Add date, merchant, paymentMethod
-  - [ ] Add indexes for userId and date
-- [ ] Create Income model (`models/Income.js`)
-  - [ ] Add userId, categoryId (optional), amount, source
-  - [ ] Add date, description
+**Afternoon (Together):**
+- [ ] Everyone works on User model together (TM1 leads)
+- [ ] Create Category model:
+  ```javascript
+  // models/Category.js
+  {
+    userId: ObjectId,
+    name: String,
+    type: String ('expense' or 'income'),
+    color: String,
+    icon: String
+  }
+  ```
+- [ ] Create Expense model:
+  ```javascript
+  // models/Expense.js
+  {
+    userId: ObjectId,
+    categoryId: ObjectId,
+    amount: Number,
+    title: String,
+    description: String,
+    date: Date,
+    merchant: String
+  }
+  ```
+- [ ] Test: Everyone can connect to database!
 
-**End of Day Goal**: All 3 models complete ✅
+**End of Day 1**: Models created, database connected ✅
 
 ---
 
-### **Day 2: Controllers & Routes Setup**
-**Morning (Wait for TM1's auth middleware):**
-- [ ] Review TM1's auth middleware when ready
-- [ ] Create `controllers/categoryController.js`
-  - [ ] getAllCategories function (filter by userId)
-  - [ ] getCategoryById function
-- [ ] Create `controllers/expenseController.js`
-  - [ ] getAllExpenses function (basic)
-  - [ ] getExpenseById function
+### **Day 2: Category CRUD**
 
-**Afternoon (After TM1 shares auth):**
-- [ ] Create `routes/categoryRoutes.js`
-  - [ ] GET /api/categories (protected with auth)
+**Your solo work:**
+- [ ] Create `controllers/categoryController.js`:
+  - [ ] `getAllCategories` - Get all user's categories
+  - [ ] `getCategoryById` - Get single category
+  - [ ] `createCategory` - Create new category
+  - [ ] `updateCategory` - Update category
+  - [ ] `deleteCategory` - Delete category
+- [ ] Create `routes/categoryRoutes.js`:
+  - [ ] GET /api/categories (protected)
   - [ ] GET /api/categories/:id (protected)
   - [ ] POST /api/categories (protected)
-- [ ] Create `routes/expenseRoutes.js`
+  - [ ] PUT /api/categories/:id (protected)
+  - [ ] DELETE /api/categories/:id (protected)
+- [ ] Register routes in `app.js`
+- [ ] Test all category operations with Postman
+
+**End of Day 2**: Category CRUD works ✅
+
+---
+
+### **Day 3: Expense CRUD** ⚠️ IMPORTANT
+
+**Your work:**
+- [ ] Create `controllers/expenseController.js`:
+  - [ ] `getAllExpenses` - Get all user's expenses
+  - [ ] `getExpenseById` - Get single expense
+  - [ ] `createExpense` - Create new expense
+  - [ ] `updateExpense` - Update expense
+  - [ ] `deleteExpense` - Delete expense
+- [ ] Create `routes/expenseRoutes.js`:
   - [ ] GET /api/expenses (protected)
+  - [ ] GET /api/expenses/:id (protected)
   - [ ] POST /api/expenses (protected)
-- [ ] Test with Postman (using JWT token from TM1)
-
-**End of Day Goal**: Can retrieve and create categories/expenses ✅
-
----
-
-### **Day 3: Complete Category & Expense CRUD** ⚠️ IMPORTANT
-**Morning:**
-- [ ] Complete Category controller:
-  - [ ] createCategory (check for duplicates)
-  - [ ] updateCategory
-  - [ ] deleteCategory (check if in use)
-  - [ ] toggleCategoryStatus (enable/disable)
-- [ ] Add category routes:
-  - [ ] PUT /api/categories/:id
-  - [ ] DELETE /api/categories/:id
-  - [ ] PATCH /api/categories/:id/toggle
-- [ ] Test all category operations
-
-**Afternoon:**
-- [ ] Complete Expense controller:
-  - [ ] createExpense (validate category exists)
-  - [ ] updateExpense
-  - [ ] deleteExpense
-- [ ] Add expense routes:
-  - [ ] PUT /api/expenses/:id
-  - [ ] DELETE /api/expenses/:id
+  - [ ] PUT /api/expenses/:id (protected)
+  - [ ] DELETE /api/expenses/:id (protected)
 - [ ] **Notify TM3: "Categories ready for budgets!"** 🚨
+- [ ] Test all expense operations
 
-**End of Day Goal**: Category & Expense CRUD complete ✅
+**End of Day 3**: Expense CRUD complete, TM3 unblocked ✅
 
 ---
 
-### **Day 4: Expense Filtering & Income**
-**Morning:**
-- [ ] Add expense filtering to getAllExpenses:
+### **Day 4: Filtering & Polish**
+
+**Your work:**
+- [ ] Add filtering to getAllExpenses:
   - [ ] Filter by date range (?startDate=&endDate=)
   - [ ] Filter by category (?categoryId=)
-  - [ ] Filter by amount range (?minAmount=&maxAmount=)
-  - [ ] Search by merchant/description (?search=)
-  - [ ] Add pagination (?page=1&limit=20)
-- [ ] Test all filter combinations
-
-**Afternoon:**
-- [ ] Create `controllers/incomeController.js`
-  - [ ] getAllIncomes (with filtering)
-  - [ ] getIncomeById
-  - [ ] createIncome
-  - [ ] updateIncome
-  - [ ] deleteIncome
-- [ ] Create `routes/incomeRoutes.js`
-  - [ ] All CRUD routes (protected)
-- [ ] Test income endpoints
-
-**End of Day Goal**: Filtering works, Income CRUD complete ✅
-
----
-
-### **Day 5: Statistics & Analytics**
-**Morning:**
-- [ ] Implement getExpenseStatistics:
-  ```javascript
-  // GET /api/expenses/stats
-  // Total expenses
-  // Average expense
-  // Expenses by category (aggregation)
-  // Top merchants
-  ```
-- [ ] Use MongoDB aggregation pipeline
-- [ ] Test statistics endpoint
-
-**Afternoon:**
-- [ ] Implement getIncomeStatistics:
-  ```javascript
-  // GET /api/incomes/stats
-  // Total income
-  // Average income
-  // Income by source
-  ```
-- [ ] Implement getCategoryStatistics:
-  ```javascript
-  // GET /api/categories/stats
-  // Total spending per category
-  // Category usage count
-  ```
-- [ ] Test all statistics endpoints
-
-**End of Day Goal**: All statistics working ✅
-
----
-
-### **Day 6: Advanced Features & Polish**
-**Morning:**
-- [ ] Add bulk expense creation:
-  ```javascript
-  // POST /api/expenses/bulk
-  // Create multiple expenses at once
-  ```
-- [ ] Add expense search functionality
-- [ ] Add sorting options (by date, amount, merchant)
-
-**Afternoon:**
-- [ ] Add input validation to all endpoints:
+- [ ] Add `.populate('categoryId')` to expense queries
+- [ ] Add input validation:
   - [ ] Amount must be positive
   - [ ] Date required
   - [ ] Category must exist
-  - [ ] Required fields validation
 - [ ] Improve error messages
-- [ ] Test edge cases
+- [ ] Test all filter combinations
 
-**End of Day Goal**: Advanced features working, validation added ✅
-
----
-
-### **Day 7-8: Integration & Bug Fixes**
-**Work with team:**
-- [ ] Test category → expense relationship
-- [ ] Test category → budget relationship (with TM3)
-- [ ] Test expense data in dashboard (with TM4)
-- [ ] Fix any integration bugs
-- [ ] Add missing validation
-- [ ] Optimize queries (add .lean() where appropriate)
-
-**Specific tests:**
-- [ ] Create category → Create expense with that category
-- [ ] Delete category with expenses (should fail or handle gracefully)
-- [ ] Filter expenses by date range (last 30 days)
-- [ ] Get statistics for current month
-
-**End of Day Goal**: All integrations working ✅
+**End of Day 4**: Filtering works ✅
 
 ---
 
-### **Day 9: Documentation**
-- [ ] Document all endpoints in README:
+### **Days 5-10: Support & Integration**
 
-  **Categories:**
-  - [ ] GET /api/categories
-  - [ ] GET /api/categories/:id
-  - [ ] POST /api/categories
-  - [ ] PUT /api/categories/:id
-  - [ ] DELETE /api/categories/:id
-  - [ ] PATCH /api/categories/:id/toggle
-  - [ ] GET /api/categories/stats
+**Your role:**
+- [ ] Day 5: Help TM3 with any category-related issues
+- [ ] Day 6: Help TM4 with dashboard (expense data)
+- [ ] Days 7-8: Test integration, fix bugs
+- [ ] Days 9-10: Help with deployment
 
-  **Expenses:**
-  - [ ] GET /api/expenses (with all filters)
-  - [ ] GET /api/expenses/:id
-  - [ ] POST /api/expenses
-  - [ ] PUT /api/expenses/:id
-  - [ ] DELETE /api/expenses/:id
-  - [ ] GET /api/expenses/stats
-  - [ ] POST /api/expenses/bulk
-
-  **Incomes:**
-  - [ ] GET /api/incomes
-  - [ ] POST /api/incomes
-  - [ ] PUT /api/incomes/:id
-  - [ ] DELETE /api/incomes/:id
-  - [ ] GET /api/incomes/stats
-
-- [ ] Add examples for each endpoint
-- [ ] Add to team Postman collection
-
-**End of Day Goal**: Documentation complete ✅
+**You'll finish early - use your time to help the team!** ✅
 
 ---
 
-### **Day 10: Final Testing & Support**
-- [ ] Final testing of all endpoints
-- [ ] Test with frontend team
-- [ ] Fix any last-minute bugs
-- [ ] Verify data appears correctly in dashboard
+## Simple Code Examples
 
-**End of Day Goal**: Expense/Income system production-ready ✅
-
----
-
-## Code Examples
-
-### Category Model
+### Category Model (Minimal)
 ```javascript
 // models/Category.js
 const mongoose = require('mongoose');
@@ -263,9 +162,8 @@ const categorySchema = new mongoose.Schema({
   },
   name: {
     type: String,
-    required: [true, 'Category name is required'],
-    trim: true,
-    maxlength: [50, 'Name cannot exceed 50 characters']
+    required: true,
+    trim: true
   },
   type: {
     type: String,
@@ -276,11 +174,7 @@ const categorySchema = new mongoose.Schema({
     type: String,
     default: '#22d3ee'
   },
-  icon: String,
-  enabled: {
-    type: Boolean,
-    default: true
-  }
+  icon: String
 }, {
   timestamps: true
 });
@@ -291,7 +185,7 @@ categorySchema.index({ userId: 1, name: 1, type: 1 }, { unique: true });
 module.exports = mongoose.model('Category', categorySchema);
 ```
 
-### Expense Model
+### Expense Model (Minimal)
 ```javascript
 // models/Expense.js
 const mongoose = require('mongoose');
@@ -306,13 +200,12 @@ const expenseSchema = new mongoose.Schema({
   categoryId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
-    required: true,
-    index: true
+    required: true
   },
   amount: {
     type: Number,
     required: true,
-    min: [0, 'Amount cannot be negative']
+    min: 0
   },
   title: {
     type: String,
@@ -322,44 +215,138 @@ const expenseSchema = new mongoose.Schema({
   description: String,
   date: {
     type: Date,
-    required: true,
-    index: true
+    required: true
   },
-  merchant: String,
-  paymentMethod: {
-    type: String,
-    enum: ['cash', 'card', 'transfer', 'pos'],
-    default: 'cash'
-  }
+  merchant: String
 }, {
   timestamps: true
 });
 
-// Index for efficient date queries
+// Index for efficient queries
 expenseSchema.index({ userId: 1, date: -1 });
 
 module.exports = mongoose.model('Expense', expenseSchema);
 ```
 
-### Expense Controller with Filtering
+### Category Controller (Simple)
+```javascript
+// controllers/categoryController.js
+const Category = require('../models/Category');
+
+// Get all categories
+exports.getAllCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({ userId: req.userId });
+    res.json({ categories });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get single category
+exports.getCategoryById = async (req, res) => {
+  try {
+    const category = await Category.findOne({
+      _id: req.params.id,
+      userId: req.userId
+    });
+
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    res.json({ category });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Create category
+exports.createCategory = async (req, res) => {
+  try {
+    const { name, type, color, icon } = req.body;
+
+    // Check if category already exists
+    const existing = await Category.findOne({
+      userId: req.userId,
+      name,
+      type
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'Category already exists' });
+    }
+
+    const category = await Category.create({
+      userId: req.userId,
+      name,
+      type,
+      color,
+      icon
+    });
+
+    res.status(201).json({
+      message: 'Category created successfully',
+      category
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update category
+exports.updateCategory = async (req, res) => {
+  try {
+    const { name, color, icon } = req.body;
+
+    const category = await Category.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId },
+      { name, color, icon },
+      { new: true, runValidators: true }
+    );
+
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    res.json({
+      message: 'Category updated successfully',
+      category
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete category
+exports.deleteCategory = async (req, res) => {
+  try {
+    const category = await Category.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.userId
+    });
+
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    res.json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+```
+
+### Expense Controller (Simple)
 ```javascript
 // controllers/expenseController.js
 const Expense = require('../models/Expense');
 const Category = require('../models/Category');
 
-// Get all expenses with filters
+// Get all expenses with filtering
 exports.getAllExpenses = async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 20,
-      categoryId,
-      startDate,
-      endDate,
-      minAmount,
-      maxAmount,
-      search
-    } = req.query;
+    const { categoryId, startDate, endDate } = req.query;
 
     // Build query
     const query = { userId: req.userId };
@@ -374,46 +361,38 @@ exports.getAllExpenses = async (req, res) => {
       if (endDate) query.date.$lte = new Date(endDate);
     }
 
-    if (minAmount || maxAmount) {
-      query.amount = {};
-      if (minAmount) query.amount.$gte = parseFloat(minAmount);
-      if (maxAmount) query.amount.$lte = parseFloat(maxAmount);
-    }
-
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { merchant: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    // Execute query
     const expenses = await Expense.find(query)
       .populate('categoryId', 'name color type')
-      .sort({ date: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .lean();
+      .sort({ date: -1 });
 
-    const count = await Expense.countDocuments(query);
-
-    res.json({
-      expenses,
-      totalPages: Math.ceil(count / limit),
-      currentPage: parseInt(page),
-      totalExpenses: count
-    });
+    res.json({ expenses });
   } catch (error) {
-    console.error('Get expenses error:', error);
-    res.status(500).json({ error: 'Failed to retrieve expenses' });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get single expense
+exports.getExpenseById = async (req, res) => {
+  try {
+    const expense = await Expense.findOne({
+      _id: req.params.id,
+      userId: req.userId
+    }).populate('categoryId', 'name color type');
+
+    if (!expense) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    res.json({ expense });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
 // Create expense
 exports.createExpense = async (req, res) => {
   try {
-    const { categoryId, amount, title, description, date, merchant, paymentMethod } = req.body;
+    const { categoryId, amount, title, description, date, merchant } = req.body;
 
     // Verify category exists and belongs to user
     const category = await Category.findOne({
@@ -433,8 +412,7 @@ exports.createExpense = async (req, res) => {
       title,
       description,
       date,
-      merchant,
-      paymentMethod
+      merchant
     });
 
     await expense.populate('categoryId', 'name color type');
@@ -444,103 +422,117 @@ exports.createExpense = async (req, res) => {
       expense
     });
   } catch (error) {
-    console.error('Create expense error:', error);
-    res.status(500).json({ error: 'Failed to create expense' });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// Get expense statistics
-exports.getExpenseStatistics = async (req, res) => {
+// Update expense
+exports.updateExpense = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { categoryId, amount, title, description, date, merchant } = req.body;
 
-    const matchStage = { userId: req.userId };
+    // If categoryId provided, verify it exists
+    if (categoryId) {
+      const category = await Category.findOne({
+        _id: categoryId,
+        userId: req.userId,
+        type: 'expense'
+      });
 
-    if (startDate || endDate) {
-      matchStage.date = {};
-      if (startDate) matchStage.date.$gte = new Date(startDate);
-      if (endDate) matchStage.date.$lte = new Date(endDate);
+      if (!category) {
+        return res.status(404).json({ error: 'Category not found' });
+      }
     }
 
-    // Total and average
-    const totals = await Expense.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: '$amount' },
-          averageAmount: { $avg: '$amount' },
-          count: { $sum: 1 }
-        }
-      }
-    ]);
+    const expense = await Expense.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId },
+      { categoryId, amount, title, description, date, merchant },
+      { new: true, runValidators: true }
+    ).populate('categoryId', 'name color type');
 
-    // By category
-    const byCategory = await Expense.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: '$categoryId',
-          total: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $lookup: {
-          from: 'categories',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'category'
-        }
-      },
-      { $unwind: '$category' },
-      {
-        $project: {
-          categoryName: '$category.name',
-          color: '$category.color',
-          total: 1,
-          count: 1
-        }
-      },
-      { $sort: { total: -1 } }
-    ]);
-
-    // Top merchants
-    const topMerchants = await Expense.aggregate([
-      { $match: { ...matchStage, merchant: { $exists: true, $ne: '' } } },
-      {
-        $group: {
-          _id: '$merchant',
-          total: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { total: -1 } },
-      { $limit: 10 }
-    ]);
+    if (!expense) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
 
     res.json({
-      total: totals[0]?.totalAmount || 0,
-      average: totals[0]?.averageAmount || 0,
-      count: totals[0]?.count || 0,
-      byCategory,
-      topMerchants
+      message: 'Expense updated successfully',
+      expense
     });
   } catch (error) {
-    console.error('Get statistics error:', error);
-    res.status(500).json({ error: 'Failed to get statistics' });
+    res.status(500).json({ error: error.message });
   }
 };
+
+// Delete expense
+exports.deleteExpense = async (req, res) => {
+  try {
+    const expense = await Expense.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.userId
+    });
+
+    if (!expense) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    res.json({ message: 'Expense deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+```
+
+### Routes (Simple)
+```javascript
+// routes/categoryRoutes.js
+const express = require('express');
+const router = express.Router();
+const categoryController = require('../controllers/categoryController');
+const auth = require('../middleware/auth');
+
+router.get('/', auth, categoryController.getAllCategories);
+router.get('/:id', auth, categoryController.getCategoryById);
+router.post('/', auth, categoryController.createCategory);
+router.put('/:id', auth, categoryController.updateCategory);
+router.delete('/:id', auth, categoryController.deleteCategory);
+
+module.exports = router;
+```
+
+```javascript
+// routes/expenseRoutes.js
+const express = require('express');
+const router = express.Router();
+const expenseController = require('../controllers/expenseController');
+const auth = require('../middleware/auth');
+
+router.get('/', auth, expenseController.getAllExpenses);
+router.get('/:id', auth, expenseController.getExpenseById);
+router.post('/', auth, expenseController.createExpense);
+router.put('/:id', auth, expenseController.updateExpense);
+router.delete('/:id', auth, expenseController.deleteExpense);
+
+module.exports = router;
+```
+
+### Register Routes in app.js
+```javascript
+// app.js
+const categoryRoutes = require('./routes/categoryRoutes');
+const expenseRoutes = require('./routes/expenseRoutes');
+
+app.use('/api/categories', categoryRoutes);
+app.use('/api/expenses', expenseRoutes);
 ```
 
 ---
 
-## Manual Testing with Postman
+## Testing with Postman
 
 ### 1. Create Category
 ```
 POST http://localhost:5000/api/categories
-Authorization: Bearer <token>
+Authorization: Bearer <your-token>
 Content-Type: application/json
 
 {
@@ -555,7 +547,7 @@ Expected: 201, category object
 ### 2. Get All Categories
 ```
 GET http://localhost:5000/api/categories
-Authorization: Bearer <token>
+Authorization: Bearer <your-token>
 
 Expected: 200, array of categories
 ```
@@ -563,17 +555,16 @@ Expected: 200, array of categories
 ### 3. Create Expense
 ```
 POST http://localhost:5000/api/expenses
-Authorization: Bearer <token>
+Authorization: Bearer <your-token>
 Content-Type: application/json
 
 {
-  "categoryId": "65abc123...",
+  "categoryId": "673abc123...",
   "amount": 45.50,
   "title": "Lunch",
   "description": "Team lunch",
   "date": "2024-11-23",
-  "merchant": "Restaurant XYZ",
-  "paymentMethod": "card"
+  "merchant": "Restaurant XYZ"
 }
 
 Expected: 201, expense object with category populated
@@ -581,43 +572,76 @@ Expected: 201, expense object with category populated
 
 ### 4. Get Expenses with Filters
 ```
-GET http://localhost:5000/api/expenses?startDate=2024-11-01&endDate=2024-11-30&categoryId=65abc123
-Authorization: Bearer <token>
+GET http://localhost:5000/api/expenses?startDate=2024-11-01&endDate=2024-11-30
+Authorization: Bearer <your-token>
 
 Expected: 200, filtered expenses array
 ```
 
-### 5. Get Expense Statistics
+### 5. Get Expenses by Category
 ```
-GET http://localhost:5000/api/expenses/stats?startDate=2024-11-01&endDate=2024-11-30
-Authorization: Bearer <token>
+GET http://localhost:5000/api/expenses?categoryId=673abc123...
+Authorization: Bearer <your-token>
 
-Expected: 200, statistics object
+Expected: 200, expenses for that category
 ```
 
 ---
 
-## Critical Checklist
+## Checklist
 
-### By End of Day 1:
-- [ ] Category, Expense, Income models created
+### Day 1 (WITH TEAM):
+- [ ] Category model created
+- [ ] Expense model created
+- [ ] Database connected
 
-### By End of Day 2:
-- [ ] Can create and retrieve categories
-- [ ] Can create and retrieve expenses
+### Day 2:
+- [ ] Category CRUD complete
+- [ ] All category routes working
+- [ ] Tested with Postman
 
-### By End of Day 3 (IMPORTANT):
-- [ ] **All category CRUD complete** ⚠️
-- [ ] **Notify TM3 categories are ready**
+### Day 3:
 - [ ] Expense CRUD complete
+- [ ] All expense routes working
+- [ ] **Notified TM3 that categories are ready** 🚨
 
-### By End of Day 5:
-- [ ] Income CRUD complete
-- [ ] All statistics endpoints working
+### Day 4:
+- [ ] Filtering by date works
+- [ ] Filtering by category works
+- [ ] Input validation added
 
-### By End of Day 9:
-- [ ] All endpoints documented
-- [ ] Postman collection complete
+---
+
+## Common Issues
+
+### Category already exists error?
+Check the unique index - it's per user, name, AND type
+
+### Can't create expense?
+Make sure the category exists and is type='expense'
+
+### Expense not showing category?
+Use `.populate('categoryId', 'name color type')`
+
+### Filter not working?
+Check date format: `new Date(dateString)` in query
+
+---
+
+## Priority
+
+**P0 (Must Do):**
+- Category CRUD ✅ (blocks TM3!)
+- Expense CRUD ✅
+- Basic filtering ✅
+
+**P1 (Should Do):**
+- Input validation ✅
+- Error handling ✅
+
+**P2 (Nice to Have):**
+- Better error messages
+- Code comments
 
 ---
 
@@ -627,59 +651,44 @@ Expected: 200, statistics object
 ```
 "@TM3 Categories are ready! 🎉
 
-You can now link budgets to categories.
+You can now create budgets with categories.
 
-Endpoint: POST /api/categories
-Get all: GET /api/categories
+Endpoints:
+- GET /api/categories (get all your categories)
+- POST /api/categories (create new)
 
 Each category has:
 - _id (use this for budget.categoryId)
 - name
 - type ('expense' or 'income')
-- userId
+- color
 
-Example category ID: 65abc123...
-"
+Example: GET http://localhost:5000/api/categories
+Copy a category _id to use in your budget!"
 ```
 
 ---
 
-## Dependencies
+## Tips
 
-Already installed in main project, but you'll use:
-```javascript
-mongoose
-express-validator
-```
-
----
-
-## Priority Matrix
-
-**P0 (Critical - Must Do):**
-- Category CRUD ⚠️ Blocks TM3
-- Expense CRUD
-- Basic filtering
-- Income CRUD
-
-**P1 (High - Should Do):**
-- Expense statistics
-- Income statistics
-- Advanced filtering
-- Search functionality
-
-**P2 (Medium - Nice to Have):**
-- Bulk operations
-- Category statistics
-- Sorting options
-
-**P3 (Low - Skip if Needed):**
-- SMS parsing
-- Recurring transactions
-- Export functionality
+1. **Day 3 is critical** - Finish categories so TM3 can do budgets
+2. **Keep it simple** - Just basic CRUD, no fancy features
+3. **Test early** - Use Postman after each controller
+4. **Populate categories** - Always show category details with expenses
+5. **Help TM3 & TM4** - They need your data for their features
 
 ---
 
-**Remember**: Your categories block TM3's budget work. Prioritize getting categories done by Day 3! 🚨
+## Success = TM3 Can Use Categories
 
-**Your data powers the dashboard!** 📊
+Your work is successful if:
+- ✅ Categories can be created
+- ✅ Expenses can be created with categories
+- ✅ TM3 can fetch categories for budgets
+- ✅ TM4 can fetch expenses for dashboard
+
+**You're the data foundation - keep it simple and solid!** 📊
+
+---
+
+**Remember**: This is a course project. Simple working CRUD > Complex broken features! 🎓

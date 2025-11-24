@@ -1,391 +1,227 @@
-# Team Member 4: Dashboard, Integration & Deployment - 10-Day Task List
+# Team Member 4: Dashboard & Deployment - Simplified Course Project
 
-## Overview
-You are the **Integration Lead** and infrastructure specialist. You set up the foundation, build the dashboard, and bring everything together at the end!
+## Your Role
+You are the **Infrastructure Lead**! You set up the foundation that everyone needs, build a simple dashboard, and deploy everything at the end.
 
-**Priority**: HIGHEST on Days 1-2 (you block everyone), then HIGHEST again on Days 7-10 (integration)
-
----
-
-## Your Role in the Team
-
-### What You're Building:
-- **Phase 1 (Days 1-2)**: Express app + all middleware (blocks everyone)
-- **Phase 2 (Days 3-6)**: Dashboard analytics + Advisor features
-- **Phase 3 (Days 7-10)**: Integration + Deployment (blocks everyone)
-
-### Who Depends on You:
-- **EVERYONE**: ⚠️ Blocked until Express app ready (Day 1-2)
-- **EVERYONE**: ⚠️ Blocked during integration (Days 7-8)
-
-### Your Dependencies:
-- **Day 1-2**: None - you start first
-- **Day 3+**:
-  - **Team Member 1**: Need auth middleware
-  - **Team Member 2**: Need Expense/Income data for dashboard
-  - **Team Member 3**: Need Investment data for dashboard
+**Good news**: Infrastructure work is straightforward for a course project. Once set up, you help with dashboard and deployment!
 
 ---
 
-## 10-Day Timeline
+## What You're Building (Simple!)
 
-### **Day 1: Foundation Setup** ⚠️ CRITICAL - You Block Everyone!
-**Morning (Work with entire team - 2-3 hours):**
-- [ ] Lead team setup session
-- [ ] Create complete project structure together
-- [ ] Install all dependencies
+✅ Express app setup (server, middleware, routes)
+✅ Database connection
+✅ Basic dashboard (total income, expenses, net balance)
+✅ Recent transactions
+✅ Deployment to Railway/Heroku
+
+❌ NO complex analytics
+❌ NO advisor management
+❌ NO rate limiting
+❌ NO advanced middleware
+❌ NO complex aggregations
+❌ NO multi-currency support
+
+---
+
+## 10-Day Simplified Timeline
+
+### **Day 1: Foundation Setup (WITH ENTIRE TEAM - 4 hours)** ⚠️ CRITICAL
+
+**Work together with all 4 team members:**
+
+**Morning (Together - YOU LEAD THIS):**
+- [ ] Set up project structure:
+  ```bash
+  mkdir quroosh-backend
+  cd quroosh-backend
+  npm init -y
+  ```
+- [ ] Install dependencies:
+  ```bash
+  npm install express mongoose dotenv bcryptjs jsonwebtoken cors
+  npm install --save-dev nodemon
+  ```
 - [ ] Set up MongoDB Atlas (guide team through this)
-- [ ] Create `.env` file
-- [ ] Test database connection works
+- [ ] Create `.env` file:
+  ```
+  PORT=5000
+  MONGODB_URI=your_mongodb_uri
+  JWT_SECRET=your_secret_key
+  NODE_ENV=development
+  ```
+- [ ] Create basic folder structure:
+  ```
+  quroosh-backend/
+  ├── models/
+  ├── controllers/
+  ├── routes/
+  ├── middleware/
+  ├── config/
+  ├── .env
+  ├── server.js
+  ├── app.js
+  └── package.json
+  ```
 
-**Your afternoon work (SOLO - This is critical!):**
-- [ ] Create `config/database.js`
-  ```javascript
-  // MongoDB connection with Mongoose
-  // Error handling
-  // Connection events
-  ```
-- [ ] Create `server.js`
-  ```javascript
-  // Load environment variables
-  // Connect to database
-  // Start Express server
-  // Graceful shutdown
-  ```
-- [ ] Create basic `app.js`
-  ```javascript
-  // Initialize Express
-  // Basic middleware (body-parser, cors, helmet)
-  // Health check route
-  // Export app
-  ```
-- [ ] Test: Server runs on port 5000 ✅
+**Afternoon (Together):**
+- [ ] Create `config/database.js` (MongoDB connection)
+- [ ] Create `server.js` (starts the server)
+- [ ] Create `app.js` (Express app with basic middleware)
+- [ ] Test: Run `npm run dev` and see server running on port 5000
+- [ ] Everyone works on User model together (TM1 leads)
 
 **End of Day Actions:**
-- [ ] **Share server.js and app.js with team** 🚨
-- [ ] Send message: "Express app running, database connected!"
+- [ ] **Notify team: "Express app running, database connected!"** 🚨
 - [ ] Everyone should be able to run `npm run dev`
 
-**End of Day Goal**: Express app running, database connected ✅
+**End of Day 1**: Express app running, database connected ✅
 
 ---
 
-### **Day 2: Middleware Foundation** ⚠️ CRITICAL
-**Morning:**
-- [ ] Create `middleware/errorHandler.js`
-  ```javascript
-  // Global error handler
-  // Handle different error types (ValidationError, CastError, etc.)
-  // Development vs production errors
-  ```
-- [ ] Create `middleware/rateLimiter.js`
-  ```javascript
-  // General API rate limiter
-  // Stricter auth rate limiter
-  ```
-- [ ] Add all middleware to app.js:
-  - [ ] CORS (configured for frontend URL)
-  - [ ] Helmet (security headers)
-  - [ ] Body parser
-  - [ ] Rate limiter
-  - [ ] Error handler (MUST be last!)
+### **Day 2: Routes Setup**
 
-**Afternoon:**
-- [ ] Create route scaffolding in app.js:
+**Your solo work:**
+- [ ] Update `app.js` to register all routes:
   ```javascript
   app.use('/api/auth', require('./routes/authRoutes'));
-  app.use('/api/users', require('./routes/userRoutes'));
   app.use('/api/categories', require('./routes/categoryRoutes'));
   app.use('/api/expenses', require('./routes/expenseRoutes'));
-  app.use('/api/incomes', require('./routes/incomeRoutes'));
   app.use('/api/investments', require('./routes/investmentRoutes'));
-  app.use('/api/budgets', require('./routes/budgetRoutes'));
   app.use('/api/goals', require('./routes/goalRoutes'));
   app.use('/api/dashboard', require('./routes/dashboardRoutes'));
-  app.use('/api/advisors', require('./routes/advisorRoutes'));
   ```
-- [ ] Create 404 handler
-- [ ] Test error handling works
+- [ ] Add 404 handler
+- [ ] Test health check endpoint works
+- [ ] Notify team: "All routes registered in app.js!"
 
-**End of Day Actions:**
-- [ ] Commit and push all infrastructure code
-- [ ] Notify team: "All middleware ready, routes scaffolded"
-
-**End of Day Goal**: Complete Express infrastructure ready ✅
+**End of Day 2**: Routes scaffolded ✅
 
 ---
 
 ### **Day 3: Dashboard Overview**
-**Morning (Wait for TM1's auth, TM2's data):**
+
+**Your work (after TM2 has some data):**
 - [ ] Create `controllers/dashboardController.js`
 - [ ] Create `routes/dashboardRoutes.js`
-- [ ] Implement getOverview:
+- [ ] Implement `getOverview`:
   ```javascript
   // GET /api/dashboard/overview
-  // Total income (current month)
-  // Total expenses (current month)
-  // Net balance
-  // Total investments value
-  // Active budgets count
-  // Active goals count
+  // Calculate:
+  // - Total income (current month)
+  // - Total expenses (current month)
+  // - Net balance (income - expenses)
+  // - Total investments value
   ```
-- [ ] Use auth middleware to protect route
+- [ ] Test with Postman using some sample data
+- [ ] Ask TM2 to create sample expenses for testing
 
-**Afternoon:**
-- [ ] Test dashboard overview with sample data
-- [ ] Ask TM2 for sample expense/income
-- [ ] Ask TM3 for sample investment
-- [ ] Verify calculations are correct
-
-**End of Day Goal**: Dashboard overview working ✅
+**End of Day 3**: Dashboard overview works ✅
 
 ---
 
-### **Day 4: Dashboard Analytics**
-**Morning:**
-- [ ] Implement getFinancialStatus:
-  ```javascript
-  // GET /api/dashboard/financial-status
-  // Accept timeRange parameter (week, month, year)
-  // Income trends over time
-  // Expense trends over time
-  // Net cash flow
-  // Return time series data
-  ```
-- [ ] Test with different time ranges
+### **Day 4: Recent Transactions**
 
-**Afternoon:**
-- [ ] Implement getRecentTransactions:
+**Your work:**
+- [ ] Implement `getRecentTransactions`:
   ```javascript
   // GET /api/dashboard/recent-transactions
-  // Merge expenses and incomes
-  // Sort by date (newest first)
-  // Limit to 10-20 items
-  // Include category details
+  // Get last 10 expenses
+  // Get last 10 incomes
+  // Merge and sort by date
+  // Return with category details
   ```
-- [ ] Test recent transactions
+- [ ] Test recent transactions endpoint
+- [ ] Verify data shows correctly
 
-**End of Day Goal**: Financial status and recent transactions working ✅
+**End of Day 4**: Recent transactions works ✅
 
 ---
 
-### **Day 5: Dashboard Breakdown**
-**Morning:**
-- [ ] Implement getSpendingBreakdown:
-  ```javascript
-  // GET /api/dashboard/spending-breakdown
-  // Group expenses by category
-  // Calculate percentages
-  // Identify top categories
-  // Return breakdown data
-  ```
-- [ ] Use MongoDB aggregation
-- [ ] Test breakdown calculations
+### **Days 5-7: Help Team & Integration**
 
-**Afternoon:**
-- [ ] Implement getMonthlyComparison:
-  ```javascript
-  // GET /api/dashboard/monthly-comparison
-  // Compare current month vs previous month
-  // Income comparison
-  // Expense comparison
-  // Savings comparison
-  ```
-- [ ] Test monthly comparison
-
-**End of Day Goal**: All dashboard analytics complete ✅
-
----
-
-### **Day 6: Advisor Management**
-**Morning:**
-- [ ] Create Advisor model (`models/Advisor.js`)
-  - [ ] userId reference to User
-  - [ ] specialization array
-  - [ ] bio, rating, totalReviews
-  - [ ] availability object (days and hours)
-  - [ ] hourlyRate
-  - [ ] isActive boolean
-
-**Afternoon:**
-- [ ] Create `controllers/advisorController.js`
-  - [ ] getAllAdvisors (with filtering)
-  - [ ] getAdvisorById
-  - [ ] createAdvisorProfile (advisor role only)
-  - [ ] updateAdvisorProfile
-  - [ ] updateAvailability
-- [ ] Create `routes/advisorRoutes.js`
-- [ ] Test advisor endpoints
-
-**End of Day Goal**: Advisor management working ✅
-
----
-
-### **Day 7-8: Integration & Testing** ⚠️ YOU ARE THE LEAD!
-**Day 7 Morning:**
-- [ ] **Team coordination meeting**
-  - [ ] Check all routes are integrated in app.js
-  - [ ] Verify all controllers export correctly
-  - [ ] Test each route individually
-
-**Day 7 Afternoon:**
-- [ ] **Integration testing** (coordinate with team):
+**Your role:**
+- [ ] Day 5: Help teammates with any issues
+- [ ] Day 6: Test all routes together
+- [ ] Day 7: **Integration Day** - Lead team testing:
   - [ ] Test: Register → Login → Create expense → Dashboard shows it
-  - [ ] Test: Create category → Create expense → Filter by category
-  - [ ] Test: Create budget → Add expenses → Budget status updates
-  - [ ] Test: Create investment → Portfolio calculates correctly
-  - [ ] Fix any integration bugs
+  - [ ] Test: Create category → Create expense with category
+  - [ ] Test: Create investment → Dashboard shows total value
+  - [ ] Fix any bugs found during testing
 
-**Day 8 Morning:**
-- [ ] Add database indexes:
-  ```javascript
-  // In models, add indexes for:
-  // - userId on all models
-  // - date on expenses/incomes
-  // - categoryId on expenses/budgets
-  ```
-- [ ] Test query performance
-- [ ] Add input validation to all endpoints
-
-**Day 8 Afternoon:**
-- [ ] Security review:
-  - [ ] CORS configured correctly?
-  - [ ] Rate limiting working?
-  - [ ] Auth middleware on all protected routes?
-  - [ ] No sensitive data in responses?
-- [ ] Performance optimization:
-  - [ ] Add .lean() to read-only queries
-  - [ ] Use select() to limit fields
-  - [ ] Optimize aggregation pipelines
-
-**End of Day Goal**: All features integrated and working together ✅
+**End of Day 7**: All features integrated ✅
 
 ---
 
-### **Day 9: Documentation & Polish**
-**Morning:**
-- [ ] Create comprehensive README.md:
+### **Day 8-9: Documentation & Polish**
+
+**Your work:**
+- [ ] Create simple README.md:
   ```markdown
   # Quroosh Backend API
 
-  ## Setup Instructions
+  ## Setup
+  1. Clone repository
+  2. npm install
+  3. Create .env file
+  4. npm run dev
+
   ## Environment Variables
+  - PORT
+  - MONGODB_URI
+  - JWT_SECRET
+
   ## API Endpoints
-  ## Authentication
-  ## Error Handling
-  ## Deployment
+  [List all endpoints]
   ```
-- [ ] Document all dashboard endpoints
-- [ ] Document all advisor endpoints
-- [ ] Add example requests/responses
+- [ ] Test all endpoints one final time
+- [ ] Fix any remaining bugs
+- [ ] Help team prepare for deployment
 
-**Afternoon:**
-- [ ] Create Postman collection with ALL endpoints:
-  - [ ] Auth endpoints
-  - [ ] User endpoints
-  - [ ] Category endpoints
-  - [ ] Expense/Income endpoints
-  - [ ] Investment endpoints
-  - [ ] Budget/Goal endpoints
-  - [ ] Dashboard endpoints
-  - [ ] Advisor endpoints
-- [ ] Export and share with team
-- [ ] Final bug fixes
-
-**End of Day Goal**: Complete documentation ready ✅
+**End of Day 9**: Documentation complete ✅
 
 ---
 
-### **Day 10: Deployment & Launch** 🚀
+### **Day 10: Deployment** 🚀
+
 **Morning:**
-- [ ] Choose deployment platform (Railway recommended)
-- [ ] Deploy to Railway:
-  1. Sign up at railway.app
-  2. Connect GitHub repository
-  3. Add environment variables
-  4. Deploy
-- [ ] OR deploy to Heroku/Render if preferred
-- [ ] Verify production environment variables are set
-- [ ] Test deployment works
+- [ ] Sign up at railway.app (recommended) or render.com
+- [ ] Deploy backend:
+  1. Connect GitHub repository
+  2. Add environment variables
+  3. Deploy
+- [ ] Get production URL (e.g., https://quroosh-backend.up.railway.app)
+- [ ] Test production deployment
 
 **Afternoon:**
-- [ ] Update CORS to allow production frontend URL
-- [ ] Test all endpoints on production
-- [ ] Help frontend team integrate:
-  - [ ] Share production API URL
-  - [ ] Help debug any integration issues
-  - [ ] Verify frontend can register/login
-  - [ ] Verify frontend can create expenses
-  - [ ] Verify dashboard shows data
-- [ ] Final verification
+- [ ] Share production URL with team
+- [ ] Test all endpoints in production
+- [ ] Help frontend team connect to backend
+- [ ] Verify end-to-end works
 - [ ] Prepare demo
 
-**End of Day Goal**: Backend deployed and frontend connected ✅
+**End of Day 10**: Deployed and working! ✅
 
 ---
 
-## Code Examples
+## Simple Code Examples
 
-### Express App Setup
+### Database Configuration
 ```javascript
-// app.js
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const errorHandler = require('./middleware/errorHandler');
-const rateLimiter = require('./middleware/rateLimiter');
+// config/database.js
+const mongoose = require('mongoose');
 
-const app = express();
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`❌ Error: ${error.message}`);
+    process.exit(1);
+  }
+};
 
-// Security middleware
-app.use(helmet());
-
-// CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
-
-// Body parser
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Rate limiting
-app.use('/api', rateLimiter);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
-  });
-});
-
-// Routes
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/categories', require('./routes/categoryRoutes'));
-app.use('/api/expenses', require('./routes/expenseRoutes'));
-app.use('/api/incomes', require('./routes/incomeRoutes'));
-app.use('/api/investments', require('./routes/investmentRoutes'));
-app.use('/api/budgets', require('./routes/budgetRoutes'));
-app.use('/api/goals', require('./routes/goalRoutes'));
-app.use('/api/dashboard', require('./routes/dashboardRoutes'));
-app.use('/api/advisors', require('./routes/advisorRoutes'));
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `Cannot ${req.method} ${req.url}`
-  });
-});
-
-// Error handler (must be last!)
-app.use(errorHandler);
-
-module.exports = app;
+module.exports = connectDB;
 ```
 
 ### Server Setup
@@ -401,129 +237,66 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 // Start server
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error(`❌ Unhandled Rejection: ${err.message}`);
-  server.close(() => process.exit(1));
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('⚠️  SIGTERM received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('✅ Process terminated');
-  });
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 ```
 
-### Database Configuration
+### Express App (Simple)
 ```javascript
-// config/database.js
-const mongoose = require('mongoose');
+// app.js
+const express = require('express');
+const cors = require('cors');
 
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+const app = express();
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-    // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error(`❌ MongoDB connection error: ${err}`);
-    });
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Server is running' });
+});
 
-    mongoose.connection.on('disconnected', () => {
-      console.log('⚠️  MongoDB disconnected');
-    });
+// Routes
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/categories', require('./routes/categoryRoutes'));
+app.use('/api/expenses', require('./routes/expenseRoutes'));
+app.use('/api/investments', require('./routes/investmentRoutes'));
+app.use('/api/goals', require('./routes/goalRoutes'));
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
-  } catch (error) {
-    console.error(`❌ Error: ${error.message}`);
-    process.exit(1);
-  }
-};
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
 
-module.exports = connectDB;
+module.exports = app;
 ```
 
-### Error Handler Middleware
-```javascript
-// middleware/errorHandler.js
-const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
-  error.message = err.message;
-
-  // Log error for debugging
-  console.error(err);
-
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = 'Resource not found';
-    error = { message, statusCode: 404 };
-  }
-
-  // Mongoose duplicate key
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    const message = `Duplicate field value: ${field}. Please use another value.`;
-    error = { message, statusCode: 400 };
-  }
-
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(e => e.message).join(', ');
-    error = { message, statusCode: 400 };
-  }
-
-  // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    const message = 'Invalid token';
-    error = { message, statusCode: 401 };
-  }
-
-  if (err.name === 'TokenExpiredError') {
-    const message = 'Token expired';
-    error = { message, statusCode: 401 };
-  }
-
-  res.status(error.statusCode || 500).json({
-    success: false,
-    error: error.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-};
-
-module.exports = errorHandler;
-```
-
-### Dashboard Controller
+### Dashboard Controller (Simple)
 ```javascript
 // controllers/dashboardController.js
 const Expense = require('../models/Expense');
-const Income = require('../models/Income');
 const Investment = require('../models/Investment');
-const Budget = require('../models/Budget');
-const Goal = require('../models/Goal');
+const mongoose = require('mongoose');
 
 // Get dashboard overview
 exports.getOverview = async (req, res) => {
   try {
     const userId = req.userId;
+
+    // Get current month date range
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-    // Get total income for current month
-    const totalIncome = await Income.aggregate([
+    // Total expenses this month
+    const expenseResult = await Expense.aggregate([
       {
         $match: {
-          userId: mongoose.Types.ObjectId(userId),
+          userId: new mongoose.Types.ObjectId(userId),
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -535,56 +308,29 @@ exports.getOverview = async (req, res) => {
       }
     ]);
 
-    // Get total expenses for current month
-    const totalExpenses = await Expense.aggregate([
-      {
-        $match: {
-          userId: mongoose.Types.ObjectId(userId),
-          date: { $gte: startOfMonth, $lte: endOfMonth }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: '$amount' }
-        }
-      }
-    ]);
+    const totalExpenses = expenseResult[0]?.total || 0;
 
-    // Get total investments value
+    // Total investments value
     const investments = await Investment.find({ userId });
     let totalInvestments = 0;
+
     investments.forEach(inv => {
-      totalInvestments += inv.category === 'Real Estate'
-        ? inv.currentPrice
-        : inv.currentPrice * inv.amountOwned;
+      totalInvestments += inv.currentPrice * inv.amountOwned;
     });
 
-    // Get counts
-    const activeBudgets = await Budget.countDocuments({ userId });
-    const activeGoals = await Goal.countDocuments({
-      userId,
-      status: 'active'
-    });
-
-    const income = totalIncome[0]?.total || 0;
-    const expenses = totalExpenses[0]?.total || 0;
-    const netBalance = income - expenses;
+    // For now, set income to 0 (can be enhanced later)
+    const totalIncome = 0;
+    const netBalance = totalIncome - totalExpenses;
 
     res.json({
-      income,
-      expenses,
+      totalIncome,
+      totalExpenses,
       netBalance,
-      investments: totalInvestments,
-      activeBudgets,
-      activeGoals,
+      totalInvestments,
       period: 'current_month'
     });
   } catch (error) {
-    console.error('Get overview error:', error);
-    res.status(500).json({
-      error: 'Failed to get dashboard overview'
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -595,20 +341,12 @@ exports.getRecentTransactions = async (req, res) => {
 
     // Get recent expenses
     const expenses = await Expense.find({ userId: req.userId })
-      .populate('categoryId', 'name color type')
+      .populate('categoryId', 'name color')
       .sort({ date: -1 })
-      .limit(limit)
-      .lean();
+      .limit(limit);
 
-    // Get recent incomes
-    const incomes = await Income.find({ userId: req.userId })
-      .populate('categoryId', 'name color type')
-      .sort({ date: -1 })
-      .limit(limit)
-      .lean();
-
-    // Format and merge
-    const formattedExpenses = expenses.map(exp => ({
+    // Format expenses
+    const transactions = expenses.map(exp => ({
       id: exp._id,
       type: 'expense',
       amount: exp.amount,
@@ -619,146 +357,203 @@ exports.getRecentTransactions = async (req, res) => {
       merchant: exp.merchant
     }));
 
-    const formattedIncomes = incomes.map(inc => ({
-      id: inc._id,
-      type: 'income',
-      amount: inc.amount,
-      title: inc.source,
-      category: inc.categoryId?.name || 'Income',
-      categoryColor: inc.categoryId?.color,
-      date: inc.date
-    }));
-
-    // Merge and sort
-    const transactions = [...formattedExpenses, ...formattedIncomes]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, limit);
-
     res.json({ transactions });
   } catch (error) {
-    console.error('Get transactions error:', error);
-    res.status(500).json({
-      error: 'Failed to get recent transactions'
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 ```
 
----
+### Dashboard Routes (Simple)
+```javascript
+// routes/dashboardRoutes.js
+const express = require('express');
+const router = express.Router();
+const dashboardController = require('../controllers/dashboardController');
+const auth = require('../middleware/auth');
 
-## Deployment Guide
+router.get('/overview', auth, dashboardController.getOverview);
+router.get('/recent-transactions', auth, dashboardController.getRecentTransactions);
 
-### Option 1: Railway (Recommended - Easiest)
-
-1. **Sign up at railway.app**
-2. **New Project → Deploy from GitHub**
-3. **Connect your repository**
-4. **Add environment variables:**
-   - Click "Variables" tab
-   - Add all variables from `.env`:
-     ```
-     NODE_ENV=production
-     MONGODB_URI=your_mongodb_atlas_uri
-     JWT_SECRET=your_secret
-     JWT_EXPIRES_IN=7d
-     FRONTEND_URL=https://your-frontend.vercel.app
-     ```
-5. **Deploy automatically happens**
-6. **Get deployment URL** (e.g., `https://quroosh-backend.up.railway.app`)
-
-### Option 2: Heroku
-
-```bash
-# Install Heroku CLI
-# Login to Heroku
-heroku login
-
-# Create new app
-heroku create quroosh-backend
-
-# Add MongoDB addon OR use external MongoDB Atlas
-# Set environment variables
-heroku config:set NODE_ENV=production
-heroku config:set MONGODB_URI=your_uri
-heroku config:set JWT_SECRET=your_secret
-heroku config:set FRONTEND_URL=your_frontend_url
-
-# Deploy
-git push heroku main
-
-# View logs
-heroku logs --tail
+module.exports = router;
 ```
 
-### Option 3: Render
+### package.json Scripts
+```json
+{
+  "name": "quroosh-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^7.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}
+```
+
+---
+
+## Testing with Postman
+
+### 1. Health Check
+```
+GET http://localhost:5000/api/health
+
+Expected: 200, { "status": "OK" }
+```
+
+### 2. Dashboard Overview
+```
+GET http://localhost:5000/api/dashboard/overview
+Authorization: Bearer <your-token>
+
+Expected: 200, overview object with totals
+```
+
+### 3. Recent Transactions
+```
+GET http://localhost:5000/api/dashboard/recent-transactions
+Authorization: Bearer <your-token>
+
+Expected: 200, array of recent transactions
+```
+
+---
+
+## Deployment to Railway (Recommended)
+
+### Step-by-Step:
+
+1. **Sign up at railway.app**
+
+2. **New Project → Deploy from GitHub**
+   - Connect your GitHub account
+   - Select your backend repository
+
+3. **Add Environment Variables:**
+   ```
+   NODE_ENV=production
+   MONGODB_URI=your_mongodb_atlas_uri
+   JWT_SECRET=your_secret_key
+   PORT=5000
+   ```
+
+4. **Deploy**
+   - Railway will automatically detect Node.js
+   - It will run `npm install` and `npm start`
+   - Wait for deployment to complete
+
+5. **Get Your URL**
+   - Copy the deployment URL (e.g., `https://quroosh-backend.up.railway.app`)
+   - Share with frontend team
+
+6. **Test Production**
+   ```
+   GET https://quroosh-backend.up.railway.app/api/health
+   Expected: 200, { "status": "OK" }
+   ```
+
+---
+
+## Alternative: Deploy to Render
 
 1. Sign up at render.com
 2. New Web Service → Connect repository
 3. Configure:
-   - Build Command: `npm install`
-   - Start Command: `npm start`
-4. Add environment variables
-5. Deploy
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Environment**: Add all variables
+4. Deploy
+5. Get URL and test
 
 ---
 
-## Testing Checklist
+## Checklist
 
-### Day 1-2: Infrastructure
-- [ ] Server starts on port 5000
+### Day 1 (WITH TEAM):
+- [ ] Project structure created
+- [ ] Dependencies installed
+- [ ] MongoDB Atlas set up
+- [ ] Server runs on port 5000
 - [ ] Database connects successfully
+- [ ] **Team can run npm run dev** 🚨
+
+### Day 2:
+- [ ] All routes registered in app.js
+- [ ] 404 handler works
 - [ ] Health check endpoint works
-- [ ] All middleware loads without errors
 
-### Day 3-6: Features
-- [ ] Dashboard overview returns correct data
-- [ ] Recent transactions merge expenses and incomes
-- [ ] Spending breakdown calculates percentages
-- [ ] Advisor CRUD works
+### Day 3:
+- [ ] Dashboard overview endpoint works
+- [ ] Calculations are correct
 
-### Day 7-8: Integration
-- [ ] Complete user flow: Register → Login → Create expense → Dashboard
-- [ ] All routes return proper status codes
-- [ ] Error handling works for invalid data
-- [ ] CORS allows frontend requests
-- [ ] Rate limiting prevents abuse
+### Day 4:
+- [ ] Recent transactions endpoint works
+- [ ] Data format is correct
 
-### Day 9-10: Deployment
-- [ ] Production deployment successful
-- [ ] All environment variables set
-- [ ] Frontend can connect to backend
-- [ ] No CORS errors
-- [ ] All endpoints work in production
+### Day 7:
+- [ ] Integration testing complete
+- [ ] All endpoints work together
+- [ ] Bugs fixed
+
+### Day 10:
+- [ ] Backend deployed to production
+- [ ] Environment variables set
+- [ ] Frontend can connect
+- [ ] End-to-end works
 
 ---
 
-## Critical Checklist
+## Common Issues
 
-### By End of Day 1 (CRITICAL):
-- [ ] **Express app running** ⚠️
-- [ ] **Database connected** ⚠️
-- [ ] **Team can run `npm run dev`** ⚠️
+### Server won't start?
+Check: Is MongoDB Atlas IP allowlist set to 0.0.0.0/0 (allow all)?
 
-### By End of Day 2 (CRITICAL):
-- [ ] **All middleware ready** ⚠️
-- [ ] **Routes scaffolded in app.js** ⚠️
-- [ ] **Error handling works** ⚠️
+### Routes not working?
+Check: Did you register them in app.js?
 
-### By End of Day 6:
-- [ ] Dashboard complete
-- [ ] Advisor management working
+### Dashboard returns 0 for everything?
+Check: Do you have sample data in database?
 
-### By End of Day 8 (CRITICAL):
-- [ ] **All features integrated** ⚠️
-- [ ] **Team testing complete** ⚠️
+### CORS errors on frontend?
+Check: Is cors middleware added in app.js?
 
-### By End of Day 10 (CRITICAL):
-- [ ] **Deployed to production** ⚠️
-- [ ] **Frontend connected** ⚠️
+### Deployment failing?
+Check: Are all environment variables set in Railway/Render?
 
 ---
 
-## Communication Protocol
+## Priority
+
+**P0 (Must Do):**
+- Express app setup ✅ (Day 1)
+- Database connection ✅ (Day 1)
+- Routes registration ✅ (Day 2)
+- Dashboard overview ✅ (Day 3)
+- Deployment ✅ (Day 10)
+
+**P1 (Should Do):**
+- Recent transactions ✅
+- Integration testing ✅
+- Documentation ✅
+
+**P2 (Nice to Have):**
+- Better error messages
+- Additional dashboard features
+
+---
+
+## Communication
 
 ### Day 1 End:
 ```
@@ -766,12 +561,12 @@ heroku logs --tail
 
 ✅ Server running on port 5000
 ✅ Database connected
-✅ Health check: GET http://localhost:5000/api/health
+✅ Test: GET http://localhost:5000/api/health
 
 Everyone can now:
 1. git pull
 2. npm install
-3. Add .env file
+3. Add .env file with your MongoDB URI
 4. npm run dev
 
 Start building your routes!"
@@ -779,66 +574,54 @@ Start building your routes!"
 
 ### Day 2 End:
 ```
-"@team Infrastructure complete! 🎉
+"@team All routes are registered in app.js! 🎉
 
-✅ All middleware ready
-✅ Error handling setup
-✅ CORS configured
-✅ All routes scaffolded in app.js
+You can now create your route files:
+- routes/authRoutes.js (TM1)
+- routes/categoryRoutes.js (TM2)
+- routes/expenseRoutes.js (TM2)
+- routes/investmentRoutes.js (TM3)
+- routes/goalRoutes.js (TM3)
 
-You can now create your route files and they'll automatically work!"
+They'll automatically work!"
 ```
 
-### Day 7:
+### Day 10:
 ```
-"@team Integration Day! 🚀
+"@team Backend is LIVE! 🚀
 
-Please test:
-1. All your endpoints work
-2. Error handling is consistent
-3. No missing validation
-4. CORS allows frontend
+Production URL: https://quroosh-backend.up.railway.app
 
-Let's meet at 2 PM to test together."
+Frontend team can now:
+1. Update API base URL to production URL
+2. Test all features
+3. Let me know if anything breaks!
+
+Great work everyone!"
 ```
 
 ---
 
-## Priority Matrix
+## Tips
 
-**P0 (Critical - Must Do):**
-- Express app setup ⚠️ Day 1
-- All middleware ⚠️ Day 2
-- Dashboard overview
-- Integration ⚠️ Days 7-8
-- Deployment ⚠️ Day 10
-
-**P1 (High - Should Do):**
-- Dashboard analytics
-- Recent transactions
-- Error handling polish
-- Documentation
-
-**P2 (Medium - Nice to Have):**
-- Advisor management
-- Monthly comparison
-- Advanced analytics
-
-**P3 (Low - Skip if Needed):**
-- Advisor ratings
-- Complex reporting
-- Extra statistics
+1. **Day 1 is critical** - Make sure everyone can run the server
+2. **Keep it simple** - No fancy middleware for course project
+3. **Test early** - Health check endpoint first
+4. **Help others** - You're the integration lead
+5. **Document as you go** - Makes deployment easier
 
 ---
 
-## Final Notes
+## Success = Deployed Backend
 
-**Remember**:
-- You block everyone on Day 1-2 - be fast and clear!
-- You coordinate integration on Days 7-8 - be organized!
-- You handle deployment on Day 10 - be thorough!
-- **Communication is critical** - keep team updated!
+Your work is successful if:
+- ✅ Everyone can run the server on Day 1
+- ✅ Dashboard shows correct data
+- ✅ Backend is deployed to production
+- ✅ Frontend can connect and work
 
-**Your role is to make everyone else successful!** 🚀
+**You're the foundation - keep it simple and solid!** 🚀
 
-**You're the glue that holds the project together!** 💪
+---
+
+**Remember**: This is a course project. Working deployment > Complex features! 🎓

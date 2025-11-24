@@ -1,261 +1,112 @@
-# Team Member 1: Authentication & User Management - 10-Day Task List
+# Team Member 1: Authentication - Simplified Course Project
 
-## Overview
-You are responsible for building the authentication system and user management features. This is the **MOST CRITICAL** module - everyone depends on you!
+## Your Role
+You handle **user authentication** - register, login, and protecting routes with JWT.
 
-**⚠️ CRITICAL**: Your auth middleware is the bottleneck. Prioritize getting it done by Day 2!
-
----
-
-## Your Role in the Team
-
-### What You're Building:
-- User registration & login
-- JWT authentication middleware
-- User profile management
-- Password reset (basic)
-
-### Who Depends on You:
-- **Team Member 2**: ⚠️ BLOCKED until auth middleware ready
-- **Team Member 3**: ⚠️ BLOCKED until auth middleware ready
-- **Team Member 4**: ⚠️ BLOCKED until auth middleware ready
-
-### Your Dependencies:
-- **Team Member 4**: Need Express app setup first (Day 1)
+**Good news**: Most of this gets done on Day 1 with the whole team! After that, you just polish and help others.
 
 ---
 
-## 10-Day Timeline
+## What You're Building (Simple!)
 
-### **Day 1: Setup (Morning with Team)**
-**Work together with team (2-3 hours):**
-- [ ] Create project structure
-- [ ] Install dependencies
+✅ User registration
+✅ User login
+✅ JWT authentication middleware
+✅ Get current user endpoint
+✅ Basic error handling
+
+❌ NO email verification
+❌ NO password reset
+❌ NO refresh tokens
+❌ NO rate limiting
+❌ NO admin features
+
+---
+
+## 10-Day Simplified Timeline
+
+### **Day 1: Auth Setup (WITH ENTIRE TEAM - 4 hours)**
+
+**Work together with all 4 team members:**
+
+**Morning (Together):**
+- [ ] Set up project structure
+- [ ] Install dependencies:
+  ```bash
+  npm install express mongoose dotenv bcryptjs jsonwebtoken cors
+  npm install --save-dev nodemon
+  ```
 - [ ] Set up MongoDB Atlas
 - [ ] Create `.env` file
-- [ ] Test database connection
+- [ ] Create `server.js` and `app.js`
 
-**Your afternoon work:**
-- [ ] Create User model (`models/User.js`)
-  - [ ] Add all fields (fullName, email, password, phoneNumber, address)
-  - [ ] Add role field (user, advisor, admin)
-  - [ ] Add preferences object
-  - [ ] Add password hashing pre-save hook
-  - [ ] Add comparePassword method
-- [ ] Test User model creation
+**Afternoon (Together):**
+- [ ] User model
+- [ ] Auth controller (register, login)
+- [ ] Auth middleware (JWT)
+- [ ] Test: Everyone can register and login
 
-**End of Day Goal**: User model complete ✅
+**Details:**
+- Create simple User model (`models/User.js`):
+  ```javascript
+  {
+    fullName: String,
+    email: String (unique),
+    password: String (hashed),
+    role: String (default: 'user')
+  }
+  ```
+- Create auth controller with `register` and `login` functions
+- Create JWT middleware (`middleware/auth.js`)
+
+**End of Day 1**: Basic auth working for everyone ✅
 
 ---
 
-### **Day 2: Authentication Core** ⚠️ CRITICAL DAY
-**This is your most important day - everyone is waiting for you!**
+### **Day 2: Polish & Error Handling**
 
-**Morning (Priority 1):**
-- [ ] Create `utils/tokenGenerator.js`
-  - [ ] generateAccessToken(userId)
-  - [ ] generateRefreshToken(userId)
-- [ ] Create `middleware/auth.js` ⚠️ **MOST CRITICAL**
-  ```javascript
-  // This is what everyone needs!
-  const auth = async (req, res, next) => {
-    // Get token from header
-    // Verify JWT
-    // Add req.userId
-    // next()
-  };
-  ```
-- [ ] Test auth middleware works
+**Your solo work:**
+- [ ] Add `GET /api/auth/me` endpoint (get current user)
+- [ ] Improve error messages:
+  - [ ] "Email already exists" for duplicate registration
+  - [ ] "Invalid credentials" for wrong login
+  - [ ] "No token provided" for missing auth
+  - [ ] "Invalid token" for bad token
+- [ ] Test all error scenarios with Postman
+- [ ] Make sure passwords are hashing correctly
 
-**Afternoon (Priority 2):**
-- [ ] Create `controllers/authController.js`
-  - [ ] register function (create user, hash password, return JWT)
-  - [ ] login function (check credentials, return JWT)
-- [ ] Create `routes/authRoutes.js`
-  - [ ] POST /api/auth/register
-  - [ ] POST /api/auth/login
-- [ ] Test with Postman:
-  - [ ] Register new user
-  - [ ] Login with credentials
-  - [ ] Receive JWT token
-
-**End of Day Actions:**
-- [ ] **Share auth middleware file with team** 🚨
-- [ ] Send message: "Auth middleware ready in middleware/auth.js"
-- [ ] Share example of how to use it
-
-**End of Day Goal**: Auth middleware ready, register/login working ✅
+**End of Day 2**: Auth is polished ✅
 
 ---
 
-### **Day 3: User Profile**
+### **Day 3: Help Others**
 
-**Morning:**
-- [ ] Create `controllers/userController.js`
-- [ ] Implement getCurrentUser
-  ```javascript
-  // GET /api/auth/me
-  // Uses auth middleware
-  // Returns current user data
-  ```
-- [ ] Implement getUserProfile
-  ```javascript
-  // GET /api/users/profile
-  // Returns user profile
-  ```
-- [ ] Test with Postman using JWT token
+**Your work:**
+- [ ] Review your code, add comments
+- [ ] Help Team Member 2 with any auth middleware issues
+- [ ] Help Team Member 3 with any auth middleware issues
+- [ ] Help Team Member 4 with any auth middleware issues
+- [ ] Test that all routes are properly protected
 
-**Afternoon:**
-- [ ] Implement updateUserProfile
-  ```javascript
-  // PUT /api/users/profile
-  // Update name, email, phone, address
-  // Handle password change separately
-  ```
-- [ ] Add validation for profile updates
-- [ ] Test profile update
-
-**End of Day Goal**: User profile CRUD complete ✅
+**End of Day 3**: Everyone's routes are protected ✅
 
 ---
 
-### **Day 4: Password Management**
+### **Days 4-10: Support & Integration**
 
-**Morning:**
-- [ ] Implement forgotPassword
-  ```javascript
-  // POST /api/auth/forgot-password
-  // Generate reset token
-  // Save to user (skip email for now)
-  // Return token in response (for testing)
-  ```
-- [ ] Implement resetPassword
-  ```javascript
-  // POST /api/auth/reset-password
-  // Verify reset token
-  // Update password
-  ```
-- [ ] Test password reset flow
+**Your role:**
+- [ ] Day 4: Help with integration testing
+- [ ] Days 5-6: Help with dashboard if needed
+- [ ] Days 7-8: Help with documentation
+- [ ] Days 9-10: Help with deployment
 
-**Afternoon:**
-- [ ] Create `middleware/adminAuth.js`
-  ```javascript
-  // Check if user.role === 'admin'
-  ```
-- [ ] Add input validation to all endpoints
-  - [ ] Email format
-  - [ ] Password strength (min 8 chars, uppercase, lowercase, number)
-  - [ ] Required fields
-- [ ] Test validation errors
-
-**End of Day Goal**: Password reset working, validation added ✅
+**You're done early - use your time to help the team!** ✅
 
 ---
 
-### **Day 5: User Preferences & Admin**
+## Simple Code Examples
 
-**Morning:**
-- [ ] Implement updatePreferences
-  ```javascript
-  // PUT /api/users/preferences
-  // Update currency, language, theme, notifications
-  ```
-- [ ] Test preferences update
-
-**Afternoon:**
-- [ ] Implement admin endpoints:
-  - [ ] getAllUsers (admin only)
-    ```javascript
-    // GET /api/users (admin)
-    // Pagination: ?page=1&limit=20
-    ```
-  - [ ] updateUserRole (admin only)
-    ```javascript
-    // PUT /api/users/:id/role
-    // Update user role
-    ```
-- [ ] Use adminAuth middleware
-- [ ] Test with admin user
-
-**End of Day Goal**: Preferences and admin endpoints working ✅
-
----
-
-### **Day 6: Polish & Edge Cases**
-
-**Morning:**
-- [ ] Add rate limiting to auth routes
-  ```javascript
-  // 5 login attempts per 15 minutes
-  ```
-- [ ] Improve error messages
-- [ ] Add account lockout after failed logins (optional)
-
-**Afternoon:**
-- [ ] Test edge cases:
-  - [ ] Register with existing email
-  - [ ] Login with wrong password
-  - [ ] Access protected route without token
-  - [ ] Access with expired token
-  - [ ] Access admin route as regular user
-- [ ] Fix any bugs found
-
-**End of Day Goal**: All edge cases handled ✅
-
----
-
-### **Day 7-8: Integration & Bug Fixes**
-
-**Work with team:**
-- [ ] Help others test their protected routes
-- [ ] Fix any auth-related bugs
-- [ ] Test complete user flow:
-  - [ ] Register → Login → Update profile → Logout
-- [ ] Add any missing validation
-- [ ] Review security:
-  - [ ] Passwords properly hashed? ✅
-  - [ ] JWT secret secure? ✅
-  - [ ] No sensitive data in responses? ✅
-
-**End of Day Goal**: Auth system fully integrated ✅
-
----
-
-### **Day 9: Documentation**
-
-- [ ] Document all auth endpoints in README:
-  - [ ] POST /api/auth/register
-  - [ ] POST /api/auth/login
-  - [ ] GET /api/auth/me
-  - [ ] POST /api/auth/forgot-password
-  - [ ] POST /api/auth/reset-password
-  - [ ] PUT /api/users/profile
-  - [ ] PUT /api/users/preferences
-  - [ ] GET /api/users (admin)
-  - [ ] PUT /api/users/:id/role (admin)
-
-- [ ] Create example requests for each endpoint
-- [ ] Document how to use auth middleware
-- [ ] Add your endpoints to team Postman collection
-
-**End of Day Goal**: Documentation complete ✅
-
----
-
-### **Day 10: Final Testing & Support**
-
-- [ ] Final testing of all auth endpoints
-- [ ] Help team with frontend integration
-- [ ] Fix any last-minute auth bugs
-- [ ] Verify deployment works with auth
-
-**End of Day Goal**: Auth system production-ready ✅
-
----
-
-## Code Examples
-
-### User Model
+### User Model (Minimal)
 ```javascript
 // models/User.js
 const mongoose = require('mongoose');
@@ -264,47 +115,21 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   fullName: {
     type: String,
-    required: [true, 'Full name is required'],
-    trim: true,
-    minlength: [2, 'Name must be at least 2 characters']
+    required: true
   },
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: true,
     unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    lowercase: true
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters'],
-    select: false
+    required: true
   },
-  phoneNumber: String,
-  address: String,
   role: {
     type: String,
-    enum: ['user', 'advisor', 'admin'],
     default: 'user'
-  },
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  resetPasswordToken: String,
-  resetPasswordExpires: Date,
-  preferences: {
-    currency: { type: String, default: 'USD' },
-    language: { type: String, default: 'English' },
-    theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
-    notifications: {
-      transactionAlerts: { type: Boolean, default: true },
-      budgetReminders: { type: Boolean, default: true },
-      investmentUpdates: { type: Boolean, default: true },
-      marketingEmails: { type: Boolean, default: false }
-    }
   }
 }, {
   timestamps: true
@@ -313,173 +138,124 @@ const userSchema = new mongoose.Schema({
 // Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
 });
 
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
-};
-
-// Remove sensitive data from JSON
-userSchema.methods.toJSON = function() {
-  const user = this.toObject();
-  delete user.password;
-  delete user.resetPasswordToken;
-  delete user.resetPasswordExpires;
-  return user;
+// Compare password
+userSchema.methods.comparePassword = async function(password) {
+  return await bcrypt.compare(password, this.password);
 };
 
 module.exports = mongoose.model('User', userSchema);
 ```
 
-### Auth Middleware (CRITICAL!)
-```javascript
-// middleware/auth.js
-const jwt = require('jsonwebtoken');
-
-const auth = async (req, res, next) => {
-  try {
-    // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
-    if (!token) {
-      return res.status(401).json({
-        error: 'Access denied. No token provided.'
-      });
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Add user ID to request
-    req.userId = decoded.userId;
-
-    next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
-    }
-    res.status(500).json({ error: 'Authentication failed' });
-  }
-};
-
-module.exports = auth;
-```
-
-### Auth Controller
+### Auth Controller (Simple)
 ```javascript
 // controllers/authController.js
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
-};
-
-// Register new user
+// Register
 exports.register = async (req, res) => {
   try {
-    const { fullName, email, password, phoneNumber, address } = req.body;
+    const { fullName, email, password } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already registered' });
+      return res.status(400).json({ error: 'Email already exists' });
     }
 
     // Create user
-    const user = await User.create({
-      fullName,
-      email,
-      password,
-      phoneNumber,
-      address
-    });
+    const user = await User.create({ fullName, email, password });
 
     // Generate token
-    const token = generateToken(user._id);
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
 
     res.status(201).json({
-      message: 'Registration successful',
       token,
-      user
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email
+      }
     });
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// Login user
+// Login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user with password
-    const user = await User.findOne({ email }).select('+password');
-
+    // Find user
+    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Compare password
+    // Check password
     const isMatch = await user.comparePassword(password);
-
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Generate token
-    const token = generateToken(user._id);
-
-    // Remove password from response
-    user.password = undefined;
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
 
     res.json({
-      message: 'Login successful',
       token,
-      user
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email
+      }
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: error.message });
   }
 };
 
 // Get current user
 exports.getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.userId);
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
+    const user = await User.findById(req.userId).select('-password');
     res.json({ user });
   } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ error: 'Failed to get user data' });
+    res.status(500).json({ error: error.message });
   }
 };
 ```
 
-### Routes
+### Auth Middleware (Simple)
+```javascript
+// middleware/auth.js
+const jwt = require('jsonwebtoken');
+
+module.exports = (req, res, next) => {
+  try {
+    // Get token from header
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+
+    next();
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+```
+
+### Routes (Simple)
 ```javascript
 // routes/authRoutes.js
 const express = require('express');
@@ -496,22 +272,20 @@ module.exports = router;
 
 ---
 
-## Manual Testing with Postman
+## Testing with Postman
 
-### 1. Register User
+### 1. Register
 ```
 POST http://localhost:5000/api/auth/register
 Content-Type: application/json
 
 {
   "fullName": "John Doe",
-  "email": "john@example.com",
-  "password": "SecurePass123!",
-  "phoneNumber": "+1234567890",
-  "address": "123 Main St"
+  "email": "john@test.com",
+  "password": "password123"
 }
 
-Expected: 201 status, token, user object
+Expected: 201, token + user object
 ```
 
 ### 2. Login
@@ -520,125 +294,109 @@ POST http://localhost:5000/api/auth/login
 Content-Type: application/json
 
 {
-  "email": "john@example.com",
-  "password": "SecurePass123!"
+  "email": "john@test.com",
+  "password": "password123"
 }
 
-Expected: 200 status, token, user object
+Expected: 200, token + user object
 ```
 
-### 3. Get Current User (Protected Route)
+### 3. Get Current User (Protected)
 ```
 GET http://localhost:5000/api/auth/me
 Authorization: Bearer <your-token-here>
 
-Expected: 200 status, user object
+Expected: 200, user object
 ```
 
 ### 4. Test Without Token (Should Fail)
 ```
 GET http://localhost:5000/api/auth/me
 
-Expected: 401 status, "No token provided"
+Expected: 401, "No token provided"
 ```
 
 ---
 
-## Critical Checklist
+## Checklist
 
-### By End of Day 2 (MUST COMPLETE):
-- [ ] User model created and working
-- [ ] Register endpoint working
-- [ ] Login endpoint working
-- [ ] JWT tokens generated correctly
-- [ ] **Auth middleware exported and shared with team** ⚠️
+### Day 1 (WITH TEAM):
+- [ ] User model created
+- [ ] Register endpoint works
+- [ ] Login endpoint works
+- [ ] JWT tokens generated
+- [ ] Auth middleware works
+- [ ] **Everyone on team can register/login**
 
-### By End of Day 4:
-- [ ] User profile endpoints working
-- [ ] Password reset working
-- [ ] Input validation added
+### Day 2:
+- [ ] GET /api/auth/me works
+- [ ] Good error messages
+- [ ] Tested all scenarios
 
-### By End of Day 6:
-- [ ] Admin endpoints working
-- [ ] All edge cases handled
-- [ ] Security reviewed
-
-### By End of Day 9:
-- [ ] All endpoints documented
-- [ ] Postman collection created
-- [ ] Team can integrate with auth
-
----
-
-## Communication
-
-### Share with Team (End of Day 2):
-```
-"@team Auth middleware is ready! 🎉
-
-File: middleware/auth.js
-
-Usage:
-const auth = require('./middleware/auth');
-router.get('/protected', auth, controller.method);
-
-The middleware adds req.userId to the request.
-
-Example in routes/authRoutes.js
-
-Test token: [paste a test token]
-"
-```
-
----
-
-## Dependencies
-
-```bash
-npm install bcryptjs jsonwebtoken
-```
+### Day 3:
+- [ ] Helped others protect their routes
+- [ ] All routes use auth middleware
+- [ ] Code is commented
 
 ---
 
 ## Common Issues
 
-### Issue: JWT Token Invalid
-**Solution**: Check JWT_SECRET is set in `.env`
+### Password not hashing?
+Check the `pre('save')` hook in User model
 
-### Issue: Password Not Hashing
-**Solution**: Check pre-save hook in User model
+### Token invalid?
+Make sure JWT_SECRET is set in `.env`
 
-### Issue: Can't Login After Register
-**Solution**: Make sure password is being hashed, check comparePassword method
+### Can't login after register?
+Check that password comparison works
 
----
-
-## Priority Matrix
-
-**P0 (Critical - Must Do):**
-- User model
-- Register/Login
-- Auth middleware ⚠️ MOST IMPORTANT
-- Get current user
-
-**P1 (High - Should Do):**
-- User profile updates
-- Password reset
-- Input validation
-
-**P2 (Medium - Nice to Have):**
-- Admin endpoints
-- User preferences
-- Rate limiting
-
-**P3 (Low - Skip if Needed):**
-- Email verification
-- Account lockout
-- Social auth
+### Routes not protected?
+Make sure to use `auth` middleware:
+```javascript
+router.get('/protected', auth, controller.method);
+```
 
 ---
 
-**Remember**: You're on the critical path. If you fall behind, everyone falls behind. Communicate early if you're stuck! 🚨
+## Priority
 
-**Your success = Team's success!** 💪
+**P0 (Must Do):**
+- Register ✅
+- Login ✅
+- JWT middleware ✅
+- Get current user ✅
 
+**P1 (Should Do):**
+- Error handling ✅
+- Help teammates ✅
+
+**P2 (Nice to Have):**
+- Code comments
+- Extra validation
+
+---
+
+## Tips
+
+1. **Day 1 is critical** - Make sure everyone understands auth
+2. **Keep it simple** - Don't over-engineer
+3. **Test early** - Use Postman after each endpoint
+4. **Help others** - You'll finish before others, so help!
+5. **Document** - Add comments explaining JWT flow
+
+---
+
+## Success = Everyone Can Auth
+
+Your work is successful if:
+- ✅ Any team member can register
+- ✅ Any team member can login
+- ✅ Any team member can protect their routes
+- ✅ Tokens work correctly
+
+**You're the foundation - keep it simple and solid!** 🔐
+
+---
+
+**Remember**: This is a course project. Simple working auth > Complex broken auth! 🎓
