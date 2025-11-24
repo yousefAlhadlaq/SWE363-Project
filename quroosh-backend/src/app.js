@@ -17,14 +17,15 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/categories', require('./routes/categoryRoutes'));
-app.use('/api/expenses', require('./routes/expenseRoutes'));
-app.use('/api/incomes', require('./routes/incomeRoutes'));
-app.use('/api/investments', require('./routes/investmentRoutes'));
-app.use('/api/budgets', require('./routes/budgetRoutes'));
-app.use('/api/goals', require('./routes/goalRoutes'));
-app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+// Routes Implement when routes are ready
+// app.use('/api/auth', require('./routes/authRoutes'));
+// app.use('/api/categories', require('./routes/categoryRoutes'));
+// app.use('/api/expenses', require('./routes/expenseRoutes'));
+// app.use('/api/incomes', require('./routes/incomeRoutes'));
+// app.use('/api/investments', require('./routes/investmentRoutes'));
+// app.use('/api/budgets', require('./routes/budgetRoutes'));
+// app.use('/api/goals', require('./routes/goalRoutes'));
+// app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
 // Basic 404 handler
 app.use((req, res) => {
