@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FinancialSidebar from '../Shared/FinancialSidebar';
 import Button from '../Shared/Button';
@@ -9,9 +9,6 @@ import { useAuth } from '../../context/AuthContext';
 import { PASSWORD_REQUIREMENTS, isPasswordStrong } from '../../utils/passwordRules';
 
 function FinancialSettingsPage() {
-  const navigate = useNavigate();
-  const { user, logout, updateProfile } = useAuth();
-
   // Modal states
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -19,10 +16,10 @@ function FinancialSettingsPage() {
   
   // Profile state
   const [profile, setProfile] = useState({
-    fullName: user?.fullName || 'Alex Morgan',
-    email: user?.email || 'alex.morgan@example.com',
-    phoneNumber: user?.phoneNumber || '+1 555 123 7890',
-    address: user?.address || '123 Market Street, San Francisco, CA',
+    fullName: 'Alex Morgan',
+    email: 'alex.morgan@example.com',
+    phoneNumber: '+1 555 123 7890',
+    address: '123 Market Street, San Francisco, CA',
   });
 
   // Temporary profile for editing
@@ -57,16 +54,8 @@ function FinancialSettingsPage() {
     twoFactor: true
   });
 
-  useEffect(() => {
-    if (user) {
-      setProfile({
-        fullName: user.fullName || '',
-        email: user.email || '',
-        phoneNumber: user.phoneNumber || '',
-        address: user.address || '',
-      });
-    }
-  }, [user]);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleNotificationToggle = (key) => {
     setNotifications({ ...notifications, [key]: !notifications[key] });
@@ -135,32 +124,19 @@ function FinancialSettingsPage() {
 
     setSaving(true);
     try {
-      setEditErrors({});
-
-      const payload = {
-        fullName: editForm.fullName,
-        phoneNumber: editForm.phoneNumber,
-        address: editForm.address,
-      };
-
-      const result = await updateProfile(payload);
-
-      if (!result?.success) {
-        throw new Error(result?.error || 'Failed to update profile. Please try again.');
-      }
-
-      const updatedUser = result.user || user;
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
       setProfile({
-        fullName: updatedUser?.fullName || editForm.fullName,
-        email: updatedUser?.email || editForm.email,
-        phoneNumber: updatedUser?.phoneNumber || editForm.phoneNumber,
-        address: updatedUser?.address || editForm.address,
+        fullName: editForm.fullName,
+        email: editForm.email,
+        phoneNumber: editForm.phoneNumber,
+        address: editForm.address,
       });
 
       setShowEditProfileModal(false);
+      // TODO: integrate API call for persistence
     } catch (err) {
-      setEditErrors({ general: err.message || 'Failed to update profile. Please try again.' });
+      setEditErrors({ general: 'Failed to update profile. Please try again.' });
     } finally {
       setSaving(false);
     }

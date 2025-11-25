@@ -53,17 +53,17 @@ const SignUpPage = () => {
 
   const statusOptions = [
     { value: '', label: 'Select status' },
-    { value: 'Employed', label: 'Employed' },
-    { value: 'Self-Employed', label: 'Self-Employed' },
-    { value: 'Student', label: 'Student' },
-    { value: 'Unemployed', label: 'Unemployed' },
-    { value: 'Retired', label: 'Retired' },
+    { value: 'employed', label: 'Employed' },
+    { value: 'self-employed', label: 'Self-Employed' },
+    { value: 'student', label: 'Student' },
+    { value: 'unemployed', label: 'Unemployed' },
+    { value: 'retired', label: 'Retired' },
   ];
 
   const userTypeOptions = [
     { value: '', label: 'Select user type' },
-    { value: 'Regular User', label: 'Regular User' },
-    { value: 'Financial Advisor', label: 'Financial Advisor' },
+    { value: 'user', label: 'Regular User' },
+    { value: 'advisor', label: 'Financial Advisor' },
   ];
 
   const handleInputChange = (e) => {

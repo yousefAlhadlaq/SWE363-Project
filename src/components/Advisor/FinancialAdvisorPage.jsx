@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import FinancialSidebar from '../Shared/FinancialSidebar';
-import requestService from '../../services/requestService';
 
 function FinancialAdvisorPage() {
   const [activeTab, setActiveTab] = useState('pending');
@@ -13,13 +12,60 @@ function FinancialAdvisorPage() {
     message: '',
     attachments: []
   });
-  const [loadingRequests, setLoadingRequests] = useState(false);
-  const [threadLoading, setThreadLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [activeRequests, setActiveRequests] = useState([]);
-  const [completedRequests, setCompletedRequests] = useState([]);
+  // Mock data - Changed to allow state updates
+  const [pendingRequests, setPendingRequests] = useState([
+    {
+      id: 1,
+      status: 'Pending',
+      title: 'Retirement portfolio rebalancing',
+      from: 'Sarah Johnson',
+      timestamp: '1h ago',
+      topic: 'Portfolio',
+      urgency: 'High',
+      description: 'Need help rebalancing my retirement portfolio with focus on risk reduction...',
+      budget: '$300.00'
+    },
+    {
+      id: 2,
+      status: 'Pending',
+      title: 'Estate planning for large inheritance',
+      from: 'Michael Chen',
+      timestamp: '3h ago',
+      topic: 'Planning',
+      urgency: 'Normal',
+      description: 'Recently inherited $500k and need guidance on tax-efficient strategies...',
+      budget: '$450.00'
+    }
+  ]);
+
+  const [activeRequests, setActiveRequests] = useState([
+    {
+      id: 3,
+      status: 'Accepted',
+      title: 'Investment strategy for Q4',
+      from: 'John Doe',
+      timestamp: '2h ago',
+      topic: 'Portfolio',
+      urgency: 'Normal',
+      description: 'Looking for a conservative approach balancing ETFs and cash equivalents...',
+      budget: '$250.00'
+    }
+  ]);
+
+  const [completedRequests, setCompletedRequests] = useState([
+    {
+      id: 4,
+      status: 'Completed',
+      title: 'College savings plan',
+      from: 'David Kim',
+      timestamp: 'Sep 18',
+      topic: 'Planning',
+      urgency: 'Normal',
+      description: 'Evaluate 529 vs. brokerage for 10-12 year horizon...',
+      budget: '$150.00'
+    }
+  ]);
 
   const advisorPrimaryButtonClasses =
     'px-4 py-2.5 text-sm font-semibold rounded-2xl bg-emerald-500 text-white shadow-[0_18px_30px_rgba(16,185,129,0.35)] hover:bg-emerald-400 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300';
@@ -58,108 +104,6 @@ function FinancialAdvisorPage() {
     }
   };
 
-  const normalizeRequest = (request) => ({
-    id: request._id,
-    status: request.status,
-    title: request.title,
-    from: request.client?.fullName || 'Client',
-    timestamp: new Date(request.createdAt).toLocaleString(),
-    topic: request.topic,
-    urgency: request.urgency,
-    description: request.description,
-    budget: request.budget || '—',
-    raw: request,
-  });
-
-  const fetchAdvisorRequests = async () => {
-    setLoadingRequests(true);
-    setError(null);
-    try {
-      const response = await requestService.getAllRequests();
-      const requests = response.requests || [];
-      const normalized = requests.map(normalizeRequest);
-
-      const pending = normalized.filter((req) => req.status === 'Pending');
-      const active = normalized.filter((req) =>
-        ['Accepted', 'In Progress'].includes(req.status)
-      );
-      const completed = normalized.filter((req) => req.status === 'Completed');
-
-      setPendingRequests(pending);
-      setActiveRequests(active);
-      setCompletedRequests(completed);
-    } catch (err) {
-      setError(err.message || 'Failed to load advisor requests.');
-    } finally {
-      setLoadingRequests(false);
-    }
-  };
-
-  const loadThread = async (requestId, { silent } = {}) => {
-    if (!silent) {
-      setThreadLoading(true);
-    }
-    setError(null);
-
-    try {
-      const [requestRes, messagesRes] = await Promise.all([
-        requestService.getRequestById(requestId),
-        requestService.getRequestMessages(requestId),
-      ]);
-
-      const requestData = requestRes.request;
-      const messages = (messagesRes.messages || []).map((msg) => ({
-        id: msg._id,
-        sender: msg.sender?.fullName || 'User',
-        role: msg.senderRole || 'Participant',
-        timestamp: new Date(msg.createdAt).toLocaleString(),
-        content: msg.content,
-        attachments: (msg.attachments || []).map(
-          (file) => file.fileName || 'Attachment'
-        ),
-      }));
-
-      setSelectedThread({
-        id: requestData._id,
-        status: requestData.status,
-        title: requestData.title,
-        from: requestData.client?.fullName || 'Client',
-        topic: requestData.topic,
-        urgency: requestData.urgency,
-        budget: requestData.budget || '—',
-        description: requestData.description,
-        timestamp: new Date(requestData.createdAt).toLocaleString(),
-        attachments: requestData.attachments || [],
-        participants: {
-          client: requestData.client,
-          advisor: requestData.advisor,
-        },
-        messages,
-      });
-
-      requestService.markMessagesAsRead(requestId).catch(() => {});
-    } catch (err) {
-      setError(err.message || 'Failed to load conversation.');
-    } finally {
-      if (!silent) {
-        setThreadLoading(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    fetchAdvisorRequests();
-  }, []);
-
-  useEffect(() => {
-    if (!selectedThread) return;
-    const interval = setInterval(() => {
-      loadThread(selectedThread.id, { silent: true });
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [selectedThread]);
-
   const getRequestsByTab = () => {
     switch (activeTab) {
       case 'pending':
@@ -174,63 +118,127 @@ function FinancialAdvisorPage() {
   };
 
   const viewThread = (request) => {
-    loadThread(request.id);
+    setSelectedThread({
+      ...request,
+      messages: [
+        {
+          sender: request.from,
+          role: 'Client',
+          timestamp: 'Submitted • 2 hours ago',
+          content: request.description,
+          attachments: ['financial_statement.pdf', 'current_portfolio.xlsx']
+        }
+      ]
+    });
     setResponseText('');
   };
 
-  const handleAcceptRequest = async (requestId) => {
-    try {
-      await requestService.acceptRequest(requestId);
-      await fetchAdvisorRequests();
-      setActiveTab('active');
-      if (selectedThread?.id === requestId) {
-        await loadThread(requestId);
+  const handleAcceptRequest = (requestId) => {
+    // Find the request in pending
+    const request = pendingRequests.find(req => req.id === requestId);
+    if (request) {
+      // Update status and move to active
+      const acceptedRequest = { ...request, status: 'Accepted' };
+      setActiveRequests([...activeRequests, acceptedRequest]);
+      setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
+      
+      // Update selected thread if it's open
+      if (selectedThread && selectedThread.id === requestId) {
+        setSelectedThread({ ...selectedThread, status: 'Accepted' });
       }
-    } catch (err) {
-      setError(err.message || 'Failed to accept request.');
+      
+      console.log('Request accepted:', requestId);
+      alert('Request accepted successfully!');
     }
   };
 
-  const handleDeclineRequest = async (requestId) => {
-    if (!window.confirm('Are you sure you want to decline this request?')) return;
-    try {
-      await requestService.declineRequest(requestId);
-      await fetchAdvisorRequests();
-      if (selectedThread?.id === requestId) {
+  const handleDeclineRequest = (requestId) => {
+    if (window.confirm('Are you sure you want to decline this request?')) {
+      // Remove from pending requests
+      setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
+      
+      // Close thread if it's open
+      if (selectedThread && selectedThread.id === requestId) {
         setSelectedThread(null);
       }
-    } catch (err) {
-      setError(err.message || 'Failed to decline request.');
+      
+      console.log('Request declined:', requestId);
+      alert('Request declined');
     }
   };
 
   const handleDeleteCompleted = (requestId) => {
-    if (!window.confirm('Are you sure you want to remove this completed request?')) return;
-    requestService.updateRequestStatus(requestId, 'Cancelled')
-      .then(() => {
-        fetchAdvisorRequests();
-        if (selectedThread?.id === requestId) {
-          loadThread(requestId);
-        }
-      })
-      .catch((err) => setError(err.message || 'Failed to update request.'));
+    if (window.confirm('Are you sure you want to delete this completed request? This action cannot be undone.')) {
+      // Remove from completed requests
+      setCompletedRequests(completedRequests.filter(req => req.id !== requestId));
+      
+      // Close thread if it's open
+      if (selectedThread && selectedThread.id === requestId) {
+        setSelectedThread(null);
+      }
+      
+      console.log('Completed request deleted:', requestId);
+      alert('Request deleted successfully');
+    }
   };
 
-  const handleSendResponse = async () => {
+  const handleSendResponse = () => {
     if (!responseText.trim()) {
       alert('Please enter a response before sending');
       return;
     }
 
-    try {
-      await requestService.sendMessage(selectedThread.id, responseText);
-      await loadThread(selectedThread.id);
-      await fetchAdvisorRequests();
+    // Add the response to the thread
+    const newMessage = {
+      sender: 'You (Advisor)',
+      role: 'Advisor',
+      timestamp: 'Just now',
+      content: responseText,
+      attachments: []
+    };
+
+    const updatedThread = {
+      ...selectedThread,
+      messages: [...selectedThread.messages, newMessage]
+    };
+
+    // OPTIMISTIC UPDATE: Move request to Active if it's currently Pending
+    if (selectedThread.status === 'Pending') {
+      // Update status to Accepted
+      updatedThread.status = 'Accepted';
+
+      // Remove from pending requests
+      setPendingRequests(pendingRequests.filter(req => req.id !== selectedThread.id));
+
+      // Add to active requests
+      const activeRequest = {
+        ...selectedThread,
+        status: 'Accepted',
+        messages: updatedThread.messages
+      };
+      setActiveRequests([...activeRequests, activeRequest]);
+
+      // Switch to Active tab to show the request
       setActiveTab('active');
-      setResponseText('');
-    } catch (err) {
-      setError(err.message || 'Failed to send response.');
+
+      console.log('Request moved to Active:', selectedThread.id);
+    } else if (selectedThread.status === 'Accepted' || selectedThread.status === 'In Progress') {
+      // If already active, just update the messages in active requests
+      setActiveRequests(activeRequests.map(req =>
+        req.id === selectedThread.id
+          ? { ...req, messages: updatedThread.messages }
+          : req
+      ));
     }
+
+    // Update the selected thread
+    setSelectedThread(updatedThread);
+
+    // Clear the response text
+    setResponseText('');
+
+    console.log('Response sent:', responseText);
+    alert('Response sent successfully! Request moved to Active tab.');
   };
 
   const handleSaveDraft = () => {
@@ -251,7 +259,7 @@ function FinancialAdvisorPage() {
     });
   };
 
-  const handleReplyFormSubmit = async (e) => {
+  const handleReplyFormSubmit = (e) => {
     e.preventDefault();
 
     if (!replyForm.message.trim()) {
@@ -259,32 +267,114 @@ function FinancialAdvisorPage() {
       return;
     }
 
-    if (!selectedThread) {
-      alert('Open a request thread first to reply.');
-      return;
+    // CASE 1: If there's a selected thread, add the reply to it
+    if (selectedThread) {
+      const newMessage = {
+        sender: 'You (Advisor)',
+        role: 'Advisor',
+        timestamp: 'Just now',
+        content: replyForm.message,
+        attachments: replyForm.attachments || []
+      };
+
+      const updatedThread = {
+        ...selectedThread,
+        messages: [...selectedThread.messages, newMessage]
+      };
+
+      // OPTIMISTIC UPDATE: Move request to Active if it's currently Pending
+      if (selectedThread.status === 'Pending') {
+        // Update status to Accepted
+        updatedThread.status = 'Accepted';
+
+        // Remove from pending requests
+        setPendingRequests(pendingRequests.filter(req => req.id !== selectedThread.id));
+
+        // Add to active requests
+        const activeRequest = {
+          ...selectedThread,
+          status: 'Accepted',
+          messages: updatedThread.messages
+        };
+        setActiveRequests([...activeRequests, activeRequest]);
+
+        // Switch to Active tab to show the request
+        setActiveTab('active');
+
+        console.log('Request moved to Active via modal:', selectedThread.id);
+      } else if (selectedThread.status === 'Accepted' || selectedThread.status === 'In Progress') {
+        // If already active, just update the messages in active requests
+        setActiveRequests(activeRequests.map(req =>
+          req.id === selectedThread.id
+            ? { ...req, messages: updatedThread.messages }
+            : req
+        ));
+      }
+
+      // Update the selected thread
+      setSelectedThread(updatedThread);
+
+      console.log('Reply added to existing thread:', replyForm);
+      alert('Reply sent successfully! Request moved to Active tab.');
+    }
+    // CASE 2: No selected thread - create a NEW request
+    else {
+      // Validate required fields for new request
+      if (!replyForm.clientName.trim() || !replyForm.subject.trim()) {
+        alert('Please enter both client name and subject for a new request');
+        return;
+      }
+
+      // Generate new unique ID
+      const allIds = [
+        ...activeRequests.map(r => r.id),
+        ...pendingRequests.map(r => r.id),
+        ...completedRequests.map(r => r.id)
+      ];
+      const newId = allIds.length > 0 ? Math.max(...allIds) + 1 : 1;
+
+      // Create new request object
+      const newRequest = {
+        id: newId,
+        status: 'Accepted',
+        title: replyForm.subject,
+        from: replyForm.clientName,
+        timestamp: 'Just now',
+        topic: 'General',
+        urgency: 'Normal',
+        description: replyForm.message,
+        budget: 'TBD',
+        messages: [{
+          sender: 'You (Advisor)',
+          role: 'Advisor',
+          timestamp: 'Just now',
+          content: replyForm.message,
+          attachments: replyForm.attachments || []
+        }]
+      };
+
+      // Add to active requests (at the beginning)
+      setActiveRequests([newRequest, ...activeRequests]);
+
+      // Switch to Active tab to show the new request
+      setActiveTab('active');
+
+      console.log('New request created:', newId);
+      alert('New request created and added to Active tab!');
     }
 
-    try {
-      await requestService.sendMessage(selectedThread.id, replyForm.message);
-      await loadThread(selectedThread.id);
-      await fetchAdvisorRequests();
-      setActiveTab('active');
-      setShowReplyModal(false);
-      setReplyForm({
-        clientName: '',
-        subject: '',
-        message: '',
-        attachments: []
-      });
-    } catch (err) {
-      setError(err.message || 'Failed to send reply.');
-    }
+    // Close modal and reset form
+    setShowReplyModal(false);
+    setReplyForm({
+      clientName: '',
+      subject: '',
+      message: '',
+      attachments: []
+    });
   };
 
   // Thread View
   if (selectedThread) {
-    const clientInfo = selectedThread.participants?.client;
-
     return (
       <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
         {/* Decorative animated background elements */}
@@ -310,18 +400,6 @@ function FinancialAdvisorPage() {
             </svg>
             <span className="font-medium">Back to Requests</span>
           </button>
-
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
-              {error}
-            </div>
-          )}
-
-          {threadLoading && (
-            <div className="mb-4 rounded-lg border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-700/50 dark:bg-slate-800/70 dark:text-slate-200">
-              Loading conversation...
-            </div>
-          )}
 
           {/* Header Card */}
           <div className="relative group">
@@ -476,7 +554,7 @@ function FinancialAdvisorPage() {
                 </h3>
                 <div className="flex items-center space-x-3 mb-4 p-3 bg-slate-100 rounded-lg border border-slate-200 dark:bg-slate-900/40 dark:border-slate-700/30">
                   <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg ring-2 ring-white/10">
-                    {(selectedThread.from || 'C').charAt(0)}
+                    {selectedThread.from.charAt(0)}
                   </div>
                   <div>
                     <p className="font-semibold text-slate-900 dark:text-white">{selectedThread.from}</p>
@@ -484,24 +562,18 @@ function FinancialAdvisorPage() {
                   </div>
                 </div>
                 <div className="space-y-3 text-sm">
-                  {clientInfo?.email && (
-                    <div className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700/30">
-                      <span className="text-slate-600 dark:text-gray-400">Email</span>
-                      <span className="text-slate-900 dark:text-white font-medium">{clientInfo.email}</span>
-                    </div>
-                  )}
-                  {clientInfo?.phoneNumber && (
-                    <div className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700/30">
-                      <span className="text-slate-600 dark:text-gray-400">Phone</span>
-                      <span className="text-slate-900 dark:text-white font-medium">{clientInfo.phoneNumber}</span>
-                    </div>
-                  )}
-                  {clientInfo?.address && (
-                    <div className="flex justify-between items-start py-2">
-                      <span className="text-slate-600 dark:text-gray-400">Address</span>
-                      <span className="text-slate-900 dark:text-white font-medium text-right">{clientInfo.address}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700/30">
+                    <span className="text-slate-600 dark:text-gray-400">Member since:</span>
+                    <span className="text-slate-900 dark:text-white font-medium">Jan 2025</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700/30">
+                    <span className="text-slate-600 dark:text-gray-400">Total requests:</span>
+                    <span className="text-slate-900 dark:text-white font-medium">8</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-slate-600 dark:text-gray-400">Average rating:</span>
+                    <span className="text-yellow-400 font-medium">★★★★★ 4.9</span>
+                  </div>
                 </div>
               </div>
 
@@ -528,24 +600,6 @@ function FinancialAdvisorPage() {
                     <p className="text-sm text-slate-600 dark:text-gray-400 mb-1">Expected compensation</p>
                     <p className="text-emerald-600 font-bold text-xl dark:text-green-400">{selectedThread.budget}</p>
                   </div>
-                  {selectedThread.attachments && selectedThread.attachments.length > 0 && (
-                    <div>
-                      <p className="text-sm text-slate-600 dark:text-gray-400 mb-2">Attachments</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedThread.attachments.map((file, idx) => (
-                          <span
-                            key={file._id || idx}
-                            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 dark:border-slate-600/50 dark:bg-white/5 dark:text-white"
-                          >
-                            <svg className="w-4 h-4 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            {file.fileName || 'Attachment'}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -660,12 +714,6 @@ function FinancialAdvisorPage() {
           </div>
         </div>
 
-        {error && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
-            {error}
-          </div>
-        )}
-
         {/* Tabs */}
         <div className="flex flex-wrap gap-3 mb-8">
           <button
@@ -735,16 +783,6 @@ function FinancialAdvisorPage() {
 
         {/* Request Cards */}
         <div className="space-y-5">
-          {loadingRequests && (
-            <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 text-slate-600 shadow-sm dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-200">
-              Loading requests...
-            </div>
-          )}
-          {!loadingRequests && getRequestsByTab().length === 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 text-slate-600 shadow-sm dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-200">
-              No requests in this view yet.
-            </div>
-          )}
           {getRequestsByTab().map((request) => (
             <div key={request.id} className="relative group">
               <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-teal-200 via-blue-200 to-purple-200 opacity-0 group-hover:opacity-70 blur-3xl transition duration-500 pointer-events-none"></div>
@@ -787,7 +825,7 @@ function FinancialAdvisorPage() {
                     {activeTab === 'pending' ? (
                       <>
                         <button
-                          onClick={() => handleAcceptRequest(request.id)}
+                          onClick={() => viewThread(request)}
                           className={`${advisorPrimaryButtonClasses} w-full flex items-center justify-center gap-2`}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

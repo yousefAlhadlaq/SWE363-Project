@@ -4,7 +4,6 @@ import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 import logo from '../../assets/images/logo.png';
 import { PASSWORD_REQUIREMENTS, isPasswordStrong } from '../../utils/passwordRules';
-import authService from '../../services/authService';
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
@@ -91,37 +90,30 @@ const ResetPasswordPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    
     if (!validateForm()) {
       return;
     }
 
     setLoading(true);
-
+    
     try {
-      // Call actual API
-      const response = await authService.resetPassword(
-        emailFromState,
-        formData.verificationCode,
-        formData.newPassword
-      );
-
-      if (response.success) {
-        // Success - navigate to login
-        navigate('/login', {
-          state: {
-            message: 'Password reset successful! Please login with your new password.'
-          }
-        });
-      } else {
-        setErrors({
-          verificationCode: response.error || 'Invalid code or password reset failed'
-        });
-      }
-
+      // TODO: Replace with actual API call
+      // Simulated API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      console.log('Resetting password with code:', formData.verificationCode);
+      
+      // Success - navigate to login
+      navigate('/login', { 
+        state: { 
+          message: 'Password reset successful! Please login with your new password.' 
+        } 
+      });
+      
     } catch (err) {
-      setErrors({
-        verificationCode: err.message || 'Invalid code or password reset failed'
+      setErrors({ 
+        verificationCode: err.message || 'Invalid code or password reset failed' 
       });
     } finally {
       setLoading(false);
@@ -131,25 +123,20 @@ const ResetPasswordPage = () => {
   const handleResendCode = async () => {
     setResendLoading(true);
     setResendSuccess(false);
-
+    
     try {
-      // Call actual API
-      const response = await authService.resendResetCode(emailFromState);
-
-      if (response.success) {
-        setResendSuccess(true);
-
-        // Hide success message after 3 seconds
-        setTimeout(() => setResendSuccess(false), 3000);
-      } else {
-        setErrors({
-          verificationCode: response.error || 'Failed to resend code. Please try again.'
-        });
-      }
-
+      // TODO: Replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('Resending code to:', emailFromState);
+      setResendSuccess(true);
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => setResendSuccess(false), 3000);
+      
     } catch (err) {
-      setErrors({
-        verificationCode: err.message || 'Failed to resend code. Please try again.'
+      setErrors({ 
+        verificationCode: 'Failed to resend code. Please try again.' 
       });
     } finally {
       setResendLoading(false);
