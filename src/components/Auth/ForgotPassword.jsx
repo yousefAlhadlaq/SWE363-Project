@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 import logo from '../../assets/images/logo.png';
+import authService from '../../services/authService';
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -51,28 +52,28 @@ const ForgotPasswordPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateEmail()) {
       return;
     }
 
     setLoading(true);
-    
+
     try {
-      // TODO: Replace with actual API call
-      // Simulated API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock success - replace with actual API
-      console.log('Sending reset code to:', email);
-      
-      setSuccess(true);
-      
-      // Navigate to reset password page after 2 seconds
-      setTimeout(() => {
-        navigate('/reset-password', { state: { email } });
-      }, 2000);
-      
+      // Call actual API
+      const response = await authService.forgotPassword(email);
+
+      if (response.success) {
+        setSuccess(true);
+
+        // Navigate to reset password page after 2 seconds
+        setTimeout(() => {
+          navigate('/reset-password', { state: { email } });
+        }, 2000);
+      } else {
+        setError(response.error || 'Failed to send reset code. Please try again.');
+      }
+
     } catch (err) {
       setError(err.message || 'Failed to send reset code. Please try again.');
     } finally {
