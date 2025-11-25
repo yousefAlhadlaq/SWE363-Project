@@ -1,0 +1,55 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const path = require('path');
+
+const app = express();
+
+// Middleware
+app.use(helmet()); // Security headers
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Routes
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/advisors', require('./routes/advisorRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
+app.use('/api/requests', require('./routes/requestRoutes'));
+app.use('/api/messages', require('./routes/messageRoutes'));
+app.use('/api/meetings', require('./routes/meetingRoutes'));
+app.use('/api/notes', require('./routes/noteRoutes'));
+app.use('/api/categories', require('./routes/categoryRoutes'));
+app.use('/api/expenses', require('./routes/expenseRoutes'));
+
+// Test route
+app.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Server is running!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 handler
+app.use((req, res, next) => {
+  res.status(404).json({
+    error: 'Route not found'
+  });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    error: 'Something went wrong!' 
+  });
+});
+
+module.exports = app;

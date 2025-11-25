@@ -1,13 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../Shared/Button';
 import InputField from '../Shared/InputField';
 import Sidebar from '../Shared/Sidebar';
+import requestService from '../../services/requestService';
+import advisorService from '../../services/advisorService';
+import { useAuth } from '../../context/AuthContext';
 
 function FinancialAdvicePage() {
+  const { isAdvisor } = useAuth();
   const [activeTab, setActiveTab] = useState('sent');
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedThread, setSelectedThread] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // State starts EMPTY - no mock data
+  const [sentRequests, setSentRequests] = useState([]);
+  const [receivedRequests, setReceivedRequests] = useState([]);
+  const [availableAdvisors, setAvailableAdvisors] = useState([]);
 
   const [request, setRequest] = useState({
     topic: '',
@@ -19,39 +30,97 @@ function FinancialAdvicePage() {
     consent: false
   });
 
-  // Mock data
-  const [sentRequests, setSentRequests] = useState([
-    {
-      id: 1,
-      status: 'Pending',
-      title: 'Investment strategy for Q4',
-      timestamp: '2h ago',
-      topic: 'Portfolio',
-      description: 'Looking for a conservative approach balancing ETFs and cash equivalents...',
-      budget: '$250.00'
-    },
-    {
-      id: 2,
-      status: 'Answered',
-      title: 'College savings plan',
-      timestamp: 'Sep 18',
-      topic: 'Planning',
-      description: 'Evaluate 529 vs. brokerage for 10-12 year horizon...',
-      budget: '$150.00'
-    }
-  ]);
+  // Load requests and advisors from backend on component mount
+  useEffect(() => {
+    loadRequests();
+    loadAdvisors();
+  }, []);
 
-  const [receivedRequests] = useState([
-    {
-      id: 3,
-      status: 'Accepted',
-      title: 'Tax planning for bonuses',
-      timestamp: 'Yesterday',
-      topic: 'Tax',
-      description: 'Need guidance on RSU liquidation and withholding impacts...',
-      from: 'Alex Morgan'
+  // Function to load all requests from backend
+  const loadRequests = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await requestService.getAllRequests();
+
+      if (response.success && response.requests) {
+        // Filter out cancelled requests - we only want active requests
+        const activeRequests = response.requests.filter(req => req.status !== 'Cancelled');
+
+        // Backend already filters requests based on user role:
+        // - For clients: returns requests where client = currentUser (all are "sent")
+        // - For advisors: returns requests where advisor = currentUser (all are "received")
+        if (isAdvisor()) {
+          // If user is advisor, all returned requests are received (assigned to them)
+          setSentRequests([]);
+          setReceivedRequests(activeRequests);
+        } else {
+          // If user is client, all returned requests are sent (created by them)
+          setSentRequests(activeRequests);
+          setReceivedRequests([]);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading requests:', err);
+      setError(err.message || 'Failed to load requests');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  // Function to load available advisors
+  const loadAdvisors = async () => {
+    try {
+      const response = await advisorService.getAllAdvisors();
+      if (response.success && response.advisors) {
+        setAvailableAdvisors(response.advisors);
+      }
+    } catch (err) {
+      console.error('Error loading advisors:', err);
+      // Don't show error for advisor loading, it's optional
+    }
+  };
+
+  // Function to load single request details with messages
+  const loadRequestDetails = async (requestId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Load request details
+      const requestResponse = await requestService.getRequestById(requestId);
+
+      if (!requestResponse.success || !requestResponse.request) {
+        throw new Error(requestResponse.error || 'Failed to load request details');
+      }
+
+      // Load messages for this request
+      const messagesResponse = await requestService.getRequestMessages(requestId);
+
+      if (!messagesResponse.success) {
+        console.warn('Failed to load messages:', messagesResponse.error);
+        // Still show the request even if messages fail
+      }
+
+      // Combine request details with messages
+      const threadData = {
+        ...requestResponse.request,
+        messages: messagesResponse.messages || []
+      };
+      setSelectedThread(threadData);
+
+      // Mark messages as read (don't block on this)
+      requestService.markMessagesAsRead(requestId).catch(err => {
+        console.warn('Failed to mark messages as read:', err);
+      });
+
+    } catch (err) {
+      console.error('Error loading request details:', err);
+      setError(err.message || 'Failed to load request details');
+      alert('Error loading request: ' + (err.message || 'Failed to load request details'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -61,101 +130,139 @@ function FinancialAdvicePage() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Create a new request object with current timestamp and status
-    const newRequest = {
-      id: Date.now(), // Generate a unique ID
-      status: 'Pending',
-      title: request.subject,
-      timestamp: 'Just now',
-      topic: request.topic,
-      description: request.description,
-      budget: request.budget ? `$${request.budget}` : 'Not specified',
-      urgency: request.urgency,
-      preferredAdvisor: request.preferredAdvisor
-    };
 
-    // Add the new request to sent requests
-    setSentRequests(prevRequests => [newRequest, ...prevRequests]);
+    setLoading(true);
+    setError(null);
 
-    // Show success message
-    alert('Request submitted successfully!');
+    try {
+      // Create request via backend API
+      // Only include preferredAdvisor if one was selected
+      const requestData = {
+        topic: request.topic,
+        urgency: request.urgency,
+        title: request.subject,
+        description: request.description,
+        budget: request.budget,
+      };
 
-    // Close modal and reset form
-    setShowRequestModal(false);
-    setRequest({
-      topic: '',
-      urgency: '',
-      subject: '',
-      description: '',
-      budget: '',
-      preferredAdvisor: '',
-      consent: false
-    });
-  };
-  const handleCancelRequest = (requestId) => {
-    // First, show a confirmation dialog
-    const confirmCancel = window.confirm('Are you sure you want to cancel this request?');
-    
-    if (confirmCancel) {
-      // In a real application, you would make an API call here
-      // For now, we'll update the local state
-      setSentRequests(prevRequests => 
-        prevRequests.filter(request => request.id !== requestId)
-      );
+      // Only add preferredAdvisor if it's not empty
+      if (request.preferredAdvisor) {
+        requestData.preferredAdvisor = request.preferredAdvisor;
+      }
 
-      // Show a success message
-      alert('Request cancelled successfully');
+      const response = await requestService.createRequest(requestData);
+
+      if (response.success) {
+        // Reload requests from backend to get fresh data
+        await loadRequests();
+
+        // Show success message
+        alert('Request submitted successfully!');
+
+        // Close modal and reset form
+        setShowRequestModal(false);
+        setRequest({
+          topic: '',
+          urgency: '',
+          subject: '',
+          description: '',
+          budget: '',
+          preferredAdvisor: '',
+          consent: false
+        });
+      } else {
+        setError(response.error || 'Failed to create request');
+        alert('Error: ' + (response.error || 'Failed to create request'));
+      }
+    } catch (err) {
+      console.error('Error creating request:', err);
+      setError(err.message || 'Failed to submit request');
+      alert('Error: ' + (err.message || 'Failed to submit request'));
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const handleSendReply = () => {
+  const handleCancelRequest = async (requestId) => {
+    const confirmCancel = window.confirm('Are you sure you want to cancel this request?');
+
+    if (confirmCancel) {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await requestService.cancelRequest(requestId);
+
+        if (response.success) {
+          // Reload requests from backend
+          await loadRequests();
+          alert('Request cancelled successfully');
+        } else {
+          setError(response.error || 'Failed to cancel request');
+          alert('Error: ' + (response.error || 'Failed to cancel request'));
+        }
+      } catch (err) {
+        console.error('Error cancelling request:', err);
+        setError(err.message || 'Failed to cancel request');
+        alert('Error: ' + (err.message || 'Failed to cancel request'));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleSendReply = async () => {
     if (!replyMessage.trim()) {
       alert('Please enter a message');
       return;
     }
 
-    // Create new message object
-    const newMessage = {
-      sender: 'You',
-      role: 'Requester',
-      timestamp: 'Just now',
-      content: replyMessage,
-      attachments: []
-    };
+    if (!selectedThread || !selectedThread._id) {
+      alert('No request selected');
+      return;
+    }
 
-    // Update the thread with the new message
-    setSelectedThread(prevThread => ({
-      ...prevThread,
-      messages: [...prevThread.messages, newMessage]
-    }));
+    setLoading(true);
+    setError(null);
 
-    // Clear the reply input
-    setReplyMessage('');
-  }
+    try {
+      // Send message via backend API
+      const response = await requestService.sendMessage(
+        selectedThread._id,
+        replyMessage,
+        [] // attachments - can be added later
+      );
 
-  const viewThread = (requestItem) => {
-    setSelectedThread({
-      ...requestItem,
-      messages: [
-        {
-          sender: 'You',
-          role: 'Requester',
-          timestamp: 'Submitted • 2 hours ago',
-          content: requestItem.description,
-          attachments: ['cashflow_Q3.csv', 'notes.pdf']
-        },
-        {
-          sender: 'Alex Morgan',
-          role: 'Advisor',
-          timestamp: 'Accepted • 1 hour ago',
-          content: "Accepted. I'll share an allocation with a cash ladder and short-duration bond sleeve. Expect a draft shortly.",
-          attachments: []
-        }
-      ]
-    });
+      if (response.success) {
+        // Reload request details to get updated messages from backend
+        await loadRequestDetails(selectedThread._id);
+
+        // Clear the reply input
+        setReplyMessage('');
+      } else {
+        setError(response.error || 'Failed to send message');
+        alert('Error: ' + (response.error || 'Failed to send message'));
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setError(err.message || 'Failed to send message');
+      alert('Error: ' + (err.message || 'Failed to send message'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const viewThread = async (requestItem) => {
+    if (!requestItem || !requestItem._id) {
+      console.error('Invalid request item:', requestItem);
+      alert('Error: Invalid request selected');
+      return;
+    }
+
+    // Load request details with messages from backend
+    await loadRequestDetails(requestItem._id);
   };
 
   const getStatusColor = (status) => {
@@ -165,7 +272,10 @@ function FinancialAdvicePage() {
       case 'Accepted':
         return 'bg-teal-500/10 text-teal-400 border border-teal-500/30';
       case 'Answered':
+      case 'Completed':
         return 'bg-green-500/10 text-green-400 border border-green-500/30';
+      case 'In Progress':
+        return 'bg-blue-500/10 text-blue-400 border border-blue-500/30';
       default:
         return 'bg-slate-700/30 text-slate-400 border border-slate-600/30';
     }
@@ -188,6 +298,13 @@ function FinancialAdvicePage() {
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-6 relative ml-64 pt-24">
         <div className="max-w-7xl mx-auto">
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
+              {error}
+            </div>
+          )}
+
           {/* Back Button */}
           <button
             onClick={() => setSelectedThread(null)}
@@ -223,36 +340,47 @@ function FinancialAdvicePage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Messages */}
             <div className="lg:col-span-2 space-y-4">
-              {selectedThread.messages.map((message, index) => (
-                <div key={index} className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 shadow-sm dark:shadow-none">
-                  <div className="flex items-start space-x-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                      {message.sender.charAt(0)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-1">
-                        <span className="font-semibold text-slate-900 dark:text-white">{message.sender}</span>
-                        <span className="text-sm text-slate-600 dark:text-slate-400">{message.role}</span>
+              {selectedThread.messages && selectedThread.messages.length > 0 ? (
+                selectedThread.messages.map((message, index) => (
+                  <div key={index} className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 shadow-sm dark:shadow-none">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                        {(() => {
+                          const senderName = message.sender?.fullName || message.sender?.email || message.senderName || 'Unknown';
+                          return senderName.charAt(0).toUpperCase();
+                        })()}
                       </div>
-                      <p className="text-sm text-slate-500 mb-3 dark:text-slate-400">{message.timestamp}</p>
-                      <p className="text-slate-800 leading-relaxed dark:text-slate-200">{message.content}</p>
-                      
-                      {message.attachments && message.attachments.length > 0 && (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {message.attachments.map((file, idx) => (
-                            <div key={idx} className="flex items-center space-x-2 px-3 py-2 bg-slate-100 rounded-lg border border-slate-200 dark:bg-slate-900/50 dark:border-slate-700">
-                              <svg className="w-4 h-4 text-teal-500 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                              <span className="text-sm text-slate-700 dark:text-slate-300">{file}</span>
-                            </div>
-                          ))}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-1">
+                          <span className="font-semibold text-slate-900 dark:text-white">
+                            {message.sender?.fullName || message.sender?.email || message.senderName || 'Unknown'}
+                          </span>
+                          <span className="text-sm text-slate-600 dark:text-slate-400">{message.role || message.senderRole || ''}</span>
                         </div>
-                      )}
+                        <p className="text-sm text-slate-500 mb-3 dark:text-slate-400">{message.timestamp || new Date(message.createdAt).toLocaleString()}</p>
+                        <p className="text-slate-800 leading-relaxed dark:text-slate-200">{message.content || message.message}</p>
+
+                        {message.attachments && message.attachments.length > 0 && (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {message.attachments.map((file, idx) => (
+                              <div key={idx} className="flex items-center space-x-2 px-3 py-2 bg-slate-100 rounded-lg border border-slate-200 dark:bg-slate-900/50 dark:border-slate-700">
+                                <svg className="w-4 h-4 text-teal-500 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span className="text-sm text-slate-700 dark:text-slate-300">{file}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 text-center text-slate-500 dark:text-slate-400">
+                  No messages yet. Start the conversation below.
                 </div>
-              ))}
+              )}
 
               {/* Reply Box */}
               <div className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 shadow-sm dark:shadow-none">
@@ -265,12 +393,14 @@ function FinancialAdvicePage() {
                   onChange={(e) => setReplyMessage(e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none mb-4 dark:bg-slate-900/50 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                   placeholder="Type your message or follow-up question..."
+                  disabled={loading}
                 />
-                <button 
+                <button
                   onClick={handleSendReply}
-                  className="px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white font-medium rounded-lg transition-colors"
+                  disabled={loading}
+                  className="px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Send Reply
+                  {loading ? 'Sending...' : 'Send Reply'}
                 </button>
               </div>
             </div>
@@ -290,15 +420,19 @@ function FinancialAdvicePage() {
                       <p className="text-sm text-slate-600 dark:text-slate-400">Requester</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
-                      A
+                  {selectedThread.advisor && (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
+                        {(selectedThread.advisor.fullName || selectedThread.advisor.email || 'A').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-slate-900 dark:text-white font-medium">
+                          {selectedThread.advisor.fullName || selectedThread.advisor.email || 'Unknown Advisor'}
+                        </p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Advisor</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-slate-900 dark:text-white font-medium">Alex Morgan</p>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Advisor</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -308,11 +442,11 @@ function FinancialAdvicePage() {
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">Created</p>
-                    <p className="text-slate-900 dark:text-white">Today • 09:12</p>
+                    <p className="text-slate-900 dark:text-white">{new Date(selectedThread.createdAt).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">Last activity</p>
-                    <p className="text-slate-900 dark:text-white">30 minutes ago</p>
+                    <p className="text-slate-900 dark:text-white">{new Date(selectedThread.updatedAt).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">Status</p>
@@ -356,6 +490,20 @@ function FinancialAdvicePage() {
           </div>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && !selectedThread && (
+          <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-400 text-center">
+            Loading...
+          </div>
+        )}
+
         {/* Toggle Tabs */}
         <div className="flex space-x-3 mb-6">
           <button
@@ -383,8 +531,9 @@ function FinancialAdvicePage() {
         {/* Request Cards */}
         <div className="space-y-4">
           {activeTab === 'sent' ? (
-            sentRequests.map((req) => (
-                <div key={req.id} className="relative group">
+            sentRequests.length > 0 ? (
+              sentRequests.map((req) => (
+                <div key={req._id} className="relative group">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
                   <div className="relative bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-300 shadow-sm dark:shadow-none">
                     <div className="flex items-start justify-between mb-3">
@@ -396,7 +545,7 @@ function FinancialAdvicePage() {
                           <h3 className="text-lg font-bold text-slate-900 dark:text-white">{req.title}</h3>
                         </div>
                         <p className="text-sm text-slate-600 mb-2 flex items-center gap-2 dark:text-gray-400">
-                          <span>Submitted • {req.timestamp} • Topic: <span className="text-slate-800 dark:text-gray-300">{req.topic}</span></span>
+                          <span>Submitted • {new Date(req.createdAt).toLocaleDateString()} • Topic: <span className="text-slate-800 dark:text-gray-300">{req.topic}</span></span>
                         </p>
                         <p className="text-slate-700 text-sm leading-relaxed dark:text-gray-200">{req.description}</p>
                       </div>
@@ -409,7 +558,7 @@ function FinancialAdvicePage() {
                         View
                       </button>
                       {req.status === 'Pending' && (
-                        <button className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-medium rounded-lg transition-all text-sm" onClick={() => handleCancelRequest(req.id)}>
+                        <button className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-medium rounded-lg transition-all text-sm" onClick={() => handleCancelRequest(req._id)}>
                           Cancel
                         </button>
                       )}
@@ -418,8 +567,14 @@ function FinancialAdvicePage() {
                 </div>
               ))
             ) : (
+              <div className="bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-12 text-center">
+                <p className="text-slate-500 dark:text-slate-400">No sent requests yet. Click the + button to create a new request.</p>
+              </div>
+            )
+          ) : (
+            receivedRequests.length > 0 ? (
               receivedRequests.map((req) => (
-                <div key={req.id} className="relative group">
+                <div key={req._id} className="relative group">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
                   <div className="relative bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-300 shadow-sm dark:shadow-none">
                     <div className="flex items-start justify-between mb-3">
@@ -431,7 +586,7 @@ function FinancialAdvicePage() {
                           <h3 className="text-lg font-bold text-slate-900 dark:text-white">{req.title}</h3>
                         </div>
                         <p className="text-sm text-slate-600 mb-2 dark:text-gray-400">
-                          Updated • {req.timestamp} • Topic: <span className="text-slate-800 dark:text-gray-300">{req.topic}</span>
+                          Updated • {new Date(req.updatedAt).toLocaleDateString()} • Topic: <span className="text-slate-800 dark:text-gray-300">{req.topic}</span>
                         </p>
                         <p className="text-slate-700 text-sm leading-relaxed dark:text-gray-200">{req.description}</p>
                       </div>
@@ -445,13 +600,19 @@ function FinancialAdvicePage() {
                   </div>
                 </div>
               ))
-            )}
-          </div>
+            ) : (
+              <div className="bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-12 text-center">
+                <p className="text-slate-500 dark:text-slate-400">No received requests yet.</p>
+              </div>
+            )
+          )}
+        </div>
 
         {/* Floating Action Button */}
         <button
           onClick={() => setShowRequestModal(true)}
-          className="fixed bottom-8 right-8 w-14 h-14 bg-yellow-500 hover:bg-yellow-400 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50"
+          disabled={loading}
+          className="fixed bottom-8 right-8 w-14 h-14 bg-yellow-500 hover:bg-yellow-400 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg className="w-7 h-7 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
@@ -563,29 +724,22 @@ function FinancialAdvicePage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Preferred Advisor (optional)</label>
-                    <input
-                      type="text"
+                    <select
                       name="preferredAdvisor"
                       value={request.preferredAdvisor}
                       onChange={handleChange}
-                      placeholder="Name or leave blank"
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:bg-slate-900/50 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Attachments */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Attachments (optional)</label>
-                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50 hover:border-teal-400 transition-colors dark:border-slate-700 dark:bg-slate-900/30 dark:hover:border-slate-600">
-                    <input type="file" className="hidden" id="file-upload" />
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <svg className="w-8 h-8 text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <span className="text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">Choose File</span>
-                    </label>
-                    <p className="text-xs text-slate-500 mt-2">PDF, CSV, or Images. Up to 10MB each.</p>
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-2 focus:ring-teal-500 focus:border-transparent dark:bg-slate-900/50 dark:border-slate-700 dark:text-white"
+                    >
+                      <option value="">Any available advisor</option>
+                      {availableAdvisors.map((advisor) => (
+                        <option key={advisor._id} value={advisor._id}>
+                          {advisor.fullName}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-600 dark:text-slate-500 mt-2">
+                      Leave as "Any available" to let any advisor respond
+                    </p>
                   </div>
                 </div>
 
@@ -608,9 +762,10 @@ function FinancialAdvicePage() {
                 <div className="flex space-x-4 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-semibold rounded-lg transition-all"
+                    disabled={loading}
+                    className="flex-1 px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Submit Request
+                    {loading ? 'Submitting...' : 'Submit Request'}
                   </button>
                   <button
                     type="button"

@@ -1,35 +1,60 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
-const Modal = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  subtitle, 
+const Modal = ({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
   children,
   showCloseButton = true,
   maxWidth = 'max-w-2xl'
 }) => {
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+
+      // Add modal-open class to body
+      document.body.classList.add('modal-open');
+      document.body.style.top = `-${scrollY}px`;
+
+      return () => {
+        // Remove modal-open class and restore scroll position
+        document.body.classList.remove('modal-open');
+        document.body.style.top = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
+      {/* Backdrop - Now with z-[9999] to sit above navbar (z-50) */}
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] transition-opacity animate-fadeIn"
         onClick={onClose}
+        aria-hidden="true"
       />
-      
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div 
-          className={`relative w-full ${maxWidth} bg-slate-800/95 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl`}
+
+      {/* Modal Container - z-[10000] to sit above backdrop */}
+      <div
+        className="fixed inset-0 z-[10000] flex items-center justify-center p-4 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className={`relative w-full ${maxWidth} bg-slate-800/95 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl animate-scaleIn`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-slate-700/50 hover:bg-slate-700 text-gray-400 hover:text-white transition-all"
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-slate-700/50 hover:bg-slate-700 text-gray-400 hover:text-white transition-all z-10"
+              aria-label="Close modal"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
