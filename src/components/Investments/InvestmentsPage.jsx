@@ -53,11 +53,28 @@ const formatSignedCurrency = (value, options) => {
   return `${value > 0 ? '+' : '-'}${formatCurrency(Math.abs(value), options)}`;
 };
 
+const formatDate = (value) => {
+  if (!value) return 'Not provided';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Not provided';
+  return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+const isValidDate = (value) => {
+  if (!value) return false;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const now = new Date();
+  const earliest = new Date('1900-01-01');
+  return parsed <= now && parsed >= earliest;
+};
+
 const initialInvestments = [
   {
     id: 1,
     name: 'S&P 500 ETF',
     category: 'Stock',
+    purchaseDate: '2024-01-15',
     amountOwned: 50,
     unitLabel: 'shares',
     buyPrice: 420,
@@ -68,6 +85,7 @@ const initialInvestments = [
     id: 2,
     name: 'Downtown Duplex',
     category: 'Real Estate',
+    purchaseDate: '2023-08-10',
     areaSqm: 320,
     buyPrice: 720000,
     currentPrice: 860000,
@@ -77,6 +95,7 @@ const initialInvestments = [
     id: 3,
     name: 'Bluechip Crypto Fund',
     category: 'Crypto',
+    purchaseDate: '2024-03-01',
     amountOwned: 2.4,
     unitLabel: 'BTC',
     buyPrice: 27000,
@@ -87,6 +106,7 @@ const initialInvestments = [
     id: 4,
     name: '24K Gold Bars',
     category: 'Gold',
+    purchaseDate: '2024-05-20',
     amountOwned: 12,
     unitLabel: 'oz',
     buyPrice: 1850,
@@ -98,6 +118,7 @@ const initialInvestments = [
 const initialFormState = {
   name: '',
   category: categoryOptions[0].value,
+  purchaseDate: '',
   amountOwned: '',
   buyPrice: '',
   currentPrice: '',
@@ -241,8 +262,8 @@ const getDynamicRangeLabels = (rangeKey) => {
   }
 };
 
-const buildTrendSeries = (rangeKey, currentTotal, purchaseTotal) => {
-  const labels = getDynamicRangeLabels(rangeKey);
+const buildTrendSeries = (rangeKey, currentTotal, purchaseTotal, customLabels) => {
+  const labels = customLabels && customLabels.length ? customLabels : getDynamicRangeLabels(rangeKey);
 
   if (!labels.length) return [];
 
@@ -632,22 +653,21 @@ function InvestmentsPage() {
     [selectedRange, totalValue, totalPurchaseValue]
   );
 
+  const categoryTotalsForSeries = useMemo(() => {
+    return categoryOptions.reduce((acc, { value }) => {
+      const categoryInvestments = investments.filter((inv) => inv.category === value);
+      const purchase = categoryInvestments.reduce((sum, inv) => sum + getPurchaseValue(inv), 0);
+      const current = categoryInvestments.reduce((sum, inv) => sum + getCurrentValue(inv), 0);
+      acc[value] = { current, purchase };
+      return acc;
+    }, {});
+  }, [investments]);
+
   const categorySeries = useMemo(() => {
-    if (!baseTrendData.length) {
-      return categoryOptions.map(({ value, label }) => ({
-        key: value,
-        label,
-        color: categoryLineColors[value] || '#2dd4bf',
-        data: [],
-      }));
-    }
+    const labels = getDynamicRangeLabels(selectedRange);
     return categoryOptions.map(({ value, label }) => {
-      const categoryValue = distribution[value] || 0;
-      const ratio = totalValue ? categoryValue / totalValue : 0;
-      const data = baseTrendData.map((point) => ({
-        label: point.label,
-        value: Number((point.value * ratio).toFixed(2)),
-      }));
+      const { current = 0, purchase = 0 } = categoryTotalsForSeries[value] || {};
+      const data = buildTrendSeries(selectedRange, current, purchase, labels);
       return {
         key: value,
         label,
@@ -655,7 +675,7 @@ function InvestmentsPage() {
         data,
       };
     });
-  }, [baseTrendData, distribution, totalValue]);
+  }, [selectedRange, categoryTotalsForSeries]);
 
   const trendStatsData = filteredCategory
     ? categorySeries.find((series) => series.key === filteredCategory)?.data || []
@@ -754,9 +774,13 @@ function InvestmentsPage() {
     const validationErrors = {};
     const trimmedName = form.name.trim();
     const isRealEstate = form.category === 'Real Estate';
+    const hasPurchaseDate = isValidDate(form.purchaseDate);
 
     if (!trimmedName) {
       validationErrors.name = 'Name is required';
+    }
+    if (!hasPurchaseDate) {
+      validationErrors.purchaseDate = 'Enter a valid purchase date (not in the future)';
     }
 
     const amountOwnedValue = parseFloat(form.amountOwned);
@@ -798,6 +822,7 @@ function InvestmentsPage() {
         id: Date.now(),
         name: trimmedName,
         category: 'Real Estate',
+        purchaseDate: form.purchaseDate,
         areaSqm: areaValue,
         buyPrice: buyPriceValue,
         currentPrice: currentPriceValue,
@@ -809,6 +834,7 @@ function InvestmentsPage() {
         id: Date.now(),
         name: trimmedName,
         category: form.category,
+        purchaseDate: form.purchaseDate,
         amountOwned: amountOwnedValue,
         unitLabel,
         buyPrice: buyPriceValue,
@@ -938,18 +964,25 @@ function InvestmentsPage() {
             />
           </section>
 
+          <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm uppercase tracking-widest text-gray-400">Zakah Calculator</p>
+                <p className="text-xs text-gray-400">Open to include/exclude categories and view 2.5% due.</p>
+              </div>
+              <Button
+                type="button"
+                variant="primary"
+                className="px-4"
+                onClick={() => setShowZakahModal(true)}
+              >
+                Calculate Zakah
+              </Button>
+            </div>
+          </section>
+
           </div>
         </div>
-      </div>
-
-      <div className="fixed bottom-8 right-28 z-50">
-        <button
-          type="button"
-          onClick={() => setShowZakahModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-teal-500/40 text-teal-200 text-sm font-semibold bg-slate-900/70 backdrop-blur hover:bg-teal-500/10 transition shadow-lg"
-        >
-          Zakah
-        </button>
       </div>
       <div className="fixed bottom-8 right-8 z-50">
         <button
@@ -997,6 +1030,16 @@ function InvestmentsPage() {
             ))}
           </select>
         </div>
+
+        <InputField
+          label="Purchase date"
+          type="date"
+          name="purchaseDate"
+          value={form.purchaseDate}
+          onChange={handleFormChange('purchaseDate')}
+          placeholder="Select purchase date"
+          error={errors.purchaseDate}
+        />
 
         {isRealEstateSelected ? (
           <>
@@ -1226,6 +1269,7 @@ function InvestmentsPage() {
                       <>
                         <p>Area: {investment.areaSqm ? `${formatHoldingsAmount(investment.areaSqm)} m²` : 'Not specified'}</p>
                         <p>Purchased at: {formatCurrency(investment.buyPrice)}</p>
+                        <p>Purchased on: {formatDate(investment.purchaseDate)}</p>
                         <p>Today: {formatCurrency(investment.currentPrice)}</p>
                         {pricePerSqm && (
                           <p className="text-xs text-gray-500 mt-1">
@@ -1238,6 +1282,7 @@ function InvestmentsPage() {
                         <p>
                           Holdings: {amountOwnedValue ?? '—'} {unitLabel}
                         </p>
+                        <p>Purchased on: {formatDate(investment.purchaseDate)}</p>
                         <p>Purchased @ {formatCurrency(investment.buyPrice, { fractionDigits: 2 })} / unit</p>
                         <p>Today @ {formatCurrency(investment.currentPrice, { fractionDigits: 2 })} / unit</p>
                       </>

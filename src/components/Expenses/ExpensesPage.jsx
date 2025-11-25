@@ -6,6 +6,7 @@ import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 import useLocalStorage from '../../hooks/useLocalStorage';
+import { useAuth } from '../../context/AuthContext';
 
 const colorPalette = ['#22d3ee', '#0ea5e9', '#14b8a6', '#2dd4bf', '#34d399', '#67e8f9'];
 
@@ -131,10 +132,17 @@ const normalizeGoals = (list = []) => {
 };
 
 function ExpensesPage() {
-  const [storedCategories, setStoredCategories] = useLocalStorage('qu_categories', defaultCategoriesSeed);
-  const [storedBudgets, setStoredBudgets] = useLocalStorage('qu_budgets', defaultBudgetsSeed);
-  const [storedExpenses] = useLocalStorage('qu_expenses', defaultExpensesSeed);
-  const [storedGoals, setStoredGoals] = useLocalStorage('qu_goals', defaultGoalsSeed);
+  const { user } = useAuth();
+  const storagePrefix = useMemo(() => {
+    if (!user) return 'qu_guest';
+    const identifier = user._id || user.id || user.email || 'guest';
+    return `qu_${identifier}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+  }, [user]);
+
+  const [storedCategories, setStoredCategories] = useLocalStorage(`${storagePrefix}_categories`, defaultCategoriesSeed);
+  const [storedBudgets, setStoredBudgets] = useLocalStorage(`${storagePrefix}_budgets`, defaultBudgetsSeed);
+  const [storedExpenses] = useLocalStorage(`${storagePrefix}_expenses`, defaultExpensesSeed);
+  const [storedGoals, setStoredGoals] = useLocalStorage(`${storagePrefix}_goals`, defaultGoalsSeed);
 
   const categories = useMemo(() => normalizeCategories(storedCategories), [storedCategories]);
   const budgets = useMemo(() => normalizeBudgets(storedBudgets, categories), [storedBudgets, categories]);
