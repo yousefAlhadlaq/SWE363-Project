@@ -177,63 +177,88 @@ const timeRangeOptions = [
   { key: 'allTime', label: 'All Time' },
 ];
 
-const timeSeriesData = {
-  day: [
-    { label: '9 AM', value: 96250 },
-    { label: '11 AM', value: 96900 },
-    { label: '1 PM', value: 97550 },
-    { label: '3 PM', value: 98200 },
-    { label: '5 PM', value: 98100 },
-  ],
-  threeDays: [
-    { label: 'Day 1', value: 94800 },
-    { label: 'Day 2', value: 95850 },
-    { label: 'Day 3', value: 98100 },
-  ],
-  week: [
-    { label: 'Mon', value: 93200 },
-    { label: 'Tue', value: 94050 },
-    { label: 'Wed', value: 95125 },
-    { label: 'Thu', value: 96780 },
-    { label: 'Fri', value: 97500 },
-    { label: 'Sat', value: 98100 },
-    { label: 'Sun', value: 98440 },
-  ],
-  month: [
-    { label: 'Week 1', value: 89400 },
-    { label: 'Week 2', value: 91550 },
-    { label: 'Week 3', value: 94100 },
-    { label: 'Week 4', value: 97200 },
-    { label: 'Week 5', value: 98100 },
-  ],
-  year: [
-    { label: 'Jan', value: 82500 },
-    { label: 'Mar', value: 84250 },
-    { label: 'May', value: 87500 },
-    { label: 'Jul', value: 90150 },
-    { label: 'Sep', value: 93500 },
-    { label: 'Nov', value: 96850 },
-    { label: 'Dec', value: 98100 },
-  ],
-  fiveYears: [
-    { label: '2019', value: 56200 },
-    { label: '2020', value: 60400 },
-    { label: '2021', value: 71200 },
-    { label: '2022', value: 78100 },
-    { label: '2023', value: 84250 },
-    { label: '2024', value: 98100 },
-  ],
-  allTime: [
-    { label: '2016', value: 42000 },
-    { label: '2017', value: 48500 },
-    { label: '2018', value: 51200 },
-    { label: '2019', value: 56200 },
-    { label: '2020', value: 60400 },
-    { label: '2021', value: 71200 },
-    { label: '2022', value: 78100 },
-    { label: '2023', value: 84250 },
-    { label: '2024', value: 98100 },
-  ],
+const formatTimeLabel = (date) =>
+  date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+const formatDayLabel = (date) =>
+  date.toLocaleDateString('en-US', { weekday: 'short' });
+const formatMonthLabel = (date) =>
+  date.toLocaleDateString('en-US', { month: 'short' });
+const formatDayMonthLabel = (date) =>
+  date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+const getDynamicRangeLabels = (rangeKey) => {
+  const now = new Date();
+
+  switch (rangeKey) {
+    case 'day': {
+      const points = 5;
+      const spanMinutes = 8 * 60; // last 8 hours
+      const step = spanMinutes / (points - 1 || 1);
+      return Array.from({ length: points }, (_, idx) => {
+        const date = new Date(now.getTime() - (points - 1 - idx) * step * 60 * 1000);
+        return formatTimeLabel(date);
+      });
+    }
+    case 'threeDays': {
+      return [2, 1, 0].map((offset) => {
+        const date = new Date(now);
+        date.setDate(now.getDate() - offset);
+        return formatDayLabel(date);
+      });
+    }
+    case 'week': {
+      return Array.from({ length: 7 }, (_, idx) => {
+        const date = new Date(now);
+        date.setDate(now.getDate() - (6 - idx));
+        return formatDayLabel(date);
+      });
+    }
+    case 'month': {
+      // last 5 weeks (approx, 7-day steps)
+      return Array.from({ length: 5 }, (_, idx) => {
+        const date = new Date(now);
+        date.setDate(now.getDate() - (4 - idx) * 7);
+        return formatDayMonthLabel(date);
+      });
+    }
+    case 'year': {
+      return Array.from({ length: 7 }, (_, idx) => {
+        const date = new Date(now);
+        date.setMonth(now.getMonth() - (6 - idx));
+        return formatMonthLabel(date);
+      });
+    }
+    case 'fiveYears': {
+      const year = now.getFullYear();
+      return Array.from({ length: 6 }, (_, idx) => `${year - (5 - idx)}`);
+    }
+    case 'allTime': {
+      const year = now.getFullYear();
+      return Array.from({ length: 9 }, (_, idx) => `${year - (8 - idx)}`);
+    }
+    default:
+      return ['Start', 'Now'];
+  }
+};
+
+const buildTrendSeries = (rangeKey, currentTotal, purchaseTotal) => {
+  const labels = getDynamicRangeLabels(rangeKey);
+
+  if (!labels.length) return [];
+
+  const startValue = purchaseTotal > 0 ? purchaseTotal : currentTotal * 0.9;
+  const endValue = currentTotal;
+
+  if (labels.length === 1) {
+    return [{ label: labels[0], value: endValue }];
+  }
+
+  const step = (endValue - startValue) / (labels.length - 1 || 1);
+
+  return labels.map((label, idx) => ({
+    label,
+    value: Number((startValue + step * idx).toFixed(2)),
+  }));
 };
 
 const InvestmentChart = ({
@@ -317,17 +342,21 @@ const InvestmentTrendChart = ({
 
   const width = 1000;
   const height = 240;
-  const paddingX = 26;
+  const labelSpace = 50; // reserve space for y-axis labels
+  const paddingX = 26 + labelSpace;
   const paddingY = 18;
 
-  const activeLabels =
-    labels.length ? labels : totalSeries.map((point) => point.label) || [];
-  const pointsCount = activeLabels.length || 1;
+  const selectedSeries =
+    filteredCategory && categorySeries.find((series) => series.key === filteredCategory);
+  const mainSeries = selectedSeries ? selectedSeries.data : (totalSeries.length ? totalSeries : []);
+  const pointsCount = mainSeries.length || 1;
 
-  const allValues = [
-    ...totalSeries.map((point) => point.value),
-    ...categorySeries.flatMap((series) => series.data.map((point) => point.value)),
-  ];
+  const allValues = selectedSeries
+    ? selectedSeries.data.map((point) => point.value)
+    : [
+        ...totalSeries.map((point) => point.value),
+        ...categorySeries.flatMap((series) => series.data.map((point) => point.value)),
+      ];
   const maxValue = Math.max(...allValues, 1);
   const minValue = Math.min(...allValues);
   const range = maxValue - minValue || maxValue * 0.05 || 1;
@@ -358,15 +387,20 @@ const InvestmentTrendChart = ({
 
   const gridLines = Array.from({ length: 4 }, (_, index) => ({
     y: paddingY + (index / 3) * usableHeight,
+    value: maxValue - (index / 3) * range
   }));
 
   const totalCoordinates = getCoordinates(totalSeries);
+  const axisCoordinates = getCoordinates(mainSeries);
   const totalLinePath = totalCoordinates
     .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
     .join(' ');
   const totalAreaPath = `${totalLinePath} L ${totalCoordinates[totalCoordinates.length - 1]?.x.toFixed(
     2
   )} ${height - paddingY} L ${totalCoordinates[0]?.x.toFixed(2)} ${height - paddingY} Z`;
+
+  const seriesToRender = selectedSeries ? [selectedSeries] : categorySeries;
+  const showTotalSeries = !selectedSeries;
 
   return (
     <div className="flex flex-col lg:flex-row gap-4">
@@ -377,17 +411,57 @@ const InvestmentTrendChart = ({
           role="img"
           aria-label="Investment performance chart"
         >
+
           {gridLines.map((line, index) => (
-            <line
-              // eslint-disable-next-line react/no-array-index-key
-              key={`grid-${index}`}
-              x1={paddingX}
-              x2={width - paddingX}
-              y1={line.y}
-              y2={line.y}
-              stroke="rgba(255,255,255,0.05)"
-              strokeWidth="1"
-            />
+            <g key={`grid-${index}`}>
+              <line
+                x1={paddingX}
+                x2={width - paddingX}
+                y1={line.y}
+                y2={line.y}
+                stroke="rgba(255,255,255,0.05)"
+                strokeWidth="1"
+              />
+              <text
+                x={paddingX - 12}
+                y={line.y + 4}
+                fill="#94a3b8"
+                fontSize="11"
+                textAnchor="end"
+              >
+            {formatCurrency(line.value, { fractionDigits: 0 })}
+          </text>
+        </g>
+      ))}
+
+          <line
+            x1={paddingX}
+            x2={width - paddingX}
+            y1={height - paddingY}
+            y2={height - paddingY}
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth="1.2"
+          />
+          {totalCoordinates.map((point) => (
+            <g key={`x-label-${point.label}`}>
+              <line
+                x1={point.x}
+                x2={point.x}
+                y1={height - paddingY}
+                y2={height - paddingY + 6}
+                stroke="rgba(255,255,255,0.2)"
+                strokeWidth="1"
+              />
+              <text
+                x={point.x}
+                y={height - paddingY + 18}
+                fill="#94a3b8"
+                fontSize="11"
+                textAnchor="middle"
+              >
+                {point.label}
+              </text>
+            </g>
           ))}
 
           <defs>
@@ -401,34 +475,40 @@ const InvestmentTrendChart = ({
             </linearGradient>
           </defs>
 
-          <path d={totalAreaPath} fill="url(#portfolioFill)" opacity={0.5} />
-          <path
-            d={totalLinePath}
-            fill="none"
-            stroke="url(#portfolioLine)"
-            strokeWidth="3.2"
-            strokeLinecap="round"
-          />
-          {totalCoordinates.map((point, index) => (
-            <circle
-              key={`total-${point.label}-${index}`}
-              cx={point.x}
-              cy={point.y}
-              r={3}
-              fill="#cbd5f5"
-              opacity={0.85}
-            />
-          ))}
+          {showTotalSeries && (
+            <>
+              <path d={totalAreaPath} fill="url(#portfolioFill)" opacity={0.5} />
+              <path
+                d={totalLinePath}
+                fill="none"
+                stroke="url(#portfolioLine)"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+              />
+              {totalCoordinates.map((point, index) => (
+                <circle
+                  key={`total-${point.label}-${index}`}
+                  cx={point.x}
+                  cy={point.y}
+                  r={3}
+                  fill="#cbd5f5"
+                  opacity={0.85}
+                />
+              ))}
+            </>
+          )}
 
-          {seriesPaths.map((series) => {
-            const isFocused = filteredCategory === series.key;
-            const strokeWidth = isFocused ? 3.5 : filteredCategory ? 1.8 : 2.3;
-            const opacity = isFocused ? 1 : filteredCategory ? 0.2 : 0.7;
-            return (
-              <g key={series.key}>
-                <path
-                  d={series.linePath}
-                  fill="none"
+          {seriesPaths
+            .filter((series) => seriesToRender.some((s) => s.key === series.key))
+            .map((series) => {
+              const isFocused = filteredCategory === series.key;
+              const strokeWidth = isFocused ? 3.5 : filteredCategory ? 1.8 : 2.3;
+              const opacity = selectedSeries ? 1 : isFocused ? 1 : filteredCategory ? 0.2 : 0.7;
+              return (
+                <g key={series.key}>
+                  <path
+                    d={series.linePath}
+                    fill="none"
                   stroke={series.color}
                   strokeWidth={strokeWidth}
                   strokeLinecap="round"
@@ -447,12 +527,38 @@ const InvestmentTrendChart = ({
               </g>
             );
           })}
-        </svg>
-        <div className="flex justify-between text-xs text-gray-400 px-1 mt-2">
-          {activeLabels.map((label) => (
-            <span key={label}>{label}</span>
+
+          {/* X-axis baseline and labels aligned to visible series */}
+          <line
+            x1={paddingX}
+            x2={width - paddingX}
+            y1={height - paddingY}
+            y2={height - paddingY}
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth="1.2"
+          />
+          {axisCoordinates.map((point) => (
+            <g key={`x-label-${point.label}`}>
+              <line
+                x1={point.x}
+                x2={point.x}
+                y1={height - paddingY}
+                y2={height - paddingY + 6}
+                stroke="rgba(255,255,255,0.2)"
+                strokeWidth="1"
+              />
+              <text
+                x={point.x}
+                y={height - paddingY + 18}
+                fill="#94a3b8"
+                fontSize="11"
+                textAnchor="middle"
+              >
+                {point.label}
+              </text>
+            </g>
           ))}
-        </div>
+        </svg>
       </div>
       <div className="flex flex-wrap lg:flex-col gap-2 lg:w-44">
         {categorySeries.map((series) => {
@@ -498,6 +604,10 @@ function InvestmentsPage() {
     () => investments.reduce((sum, investment) => sum + getCurrentValue(investment), 0),
     [investments]
   );
+  const totalPurchaseValue = useMemo(
+    () => investments.reduce((sum, investment) => sum + getPurchaseValue(investment), 0),
+    [investments]
+  );
 
   const distribution = useMemo(() => {
     const base = categoryOptions.reduce(
@@ -517,7 +627,10 @@ function InvestmentsPage() {
     return entries[0];
   }, [distribution]);
 
-  const baseTrendData = useMemo(() => timeSeriesData[selectedRange] || [], [selectedRange]);
+  const baseTrendData = useMemo(
+    () => buildTrendSeries(selectedRange, totalValue, totalPurchaseValue),
+    [selectedRange, totalValue, totalPurchaseValue]
+  );
 
   const categorySeries = useMemo(() => {
     if (!baseTrendData.length) {
@@ -815,13 +928,6 @@ function InvestmentsPage() {
               <div>
                 <p className="text-sm uppercase tracking-widest text-gray-400">Investment Allocation</p>
               </div>
-              <button
-                type="button"
-                onClick={handleSelectAllZakah}
-                className="text-xs px-3 py-1 rounded-full border border-slate-600 text-gray-400 hover:text-white hover:border-teal-400/60 transition"
-              >
-                Reset focus
-              </button>
             </div>
             <InvestmentChart
               distribution={distribution}

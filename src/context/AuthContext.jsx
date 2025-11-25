@@ -44,15 +44,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password, accountHolder) => {
+  const login = async (email, password) => {
     setLoading(true);
     setError(null);
 
     try {
       const response = await authService.login({
         email,
-        password,
-        accountHolder,
+        password
       });
 
       if (response.success && response.user) {

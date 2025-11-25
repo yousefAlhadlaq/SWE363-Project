@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
-import SelectMenu from '../Shared/SelectMenu';
 import { PASSWORD_REQUIREMENTS, isPasswordStrong } from '../../utils/passwordRules';
 
 
@@ -16,7 +15,6 @@ const LoginPage = () => {
   const { login, loading, error: authError } = useAuth();
   
   const [formData, setFormData] = useState({
-    accountHolder: '',
     email: '',
     password: '',
   });
@@ -52,13 +50,6 @@ const LoginPage = () => {
     };
   }, []);
 
-  const accountHolderOptions = [
-    { value: '', label: 'Select name' },
-    { value: 'user', label: 'Regular User' },
-    { value: 'advisor', label: 'Financial Advisor' },
-    { value: 'admin', label: 'Administrator' },
-  ];
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -75,10 +66,6 @@ const LoginPage = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formData.accountHolder) {
-      newErrors.accountHolder = 'Please select an account holder';
-    }
     
     if (!formData.email) {
       newErrors.email = 'Email is required';
@@ -104,7 +91,7 @@ const LoginPage = () => {
     }
 
     try {
-      const result = await login(formData.email, formData.password, formData.accountHolder);
+      const result = await login(formData.email, formData.password);
 
       if (result.success) {
         // Use the role from the login result
@@ -174,27 +161,6 @@ const LoginPage = () => {
               )}
 
               <form onSubmit={handleLogin} className="space-y-6">
-                {/* Account Holder Dropdown */}
-                <div className="space-y-2">
-                  <label className="block text-gray-200 text-sm font-semibold tracking-wide">
-                    Account Holder
-                  </label>
-                  <SelectMenu
-                    name="accountHolder"
-                    value={formData.accountHolder}
-                    onChange={handleInputChange}
-                    options={accountHolderOptions}
-                    error={errors.accountHolder}
-                    placeholder="Select name"
-                  />
-                  <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    Choose which profile to access
-                  </p>
-                </div>
-
                 {/* Email Input */}
                 <div className="space-y-2">
                   <label className="block text-gray-200 text-sm font-semibold tracking-wide">

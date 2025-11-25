@@ -26,6 +26,8 @@ app.use('/api/requests', require('./routes/requestRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/meetings', require('./routes/meetingRoutes'));
 app.use('/api/notes', require('./routes/noteRoutes'));
+app.use('/api/categories', require('./routes/categoryRoutes'));
+app.use('/api/expenses', require('./routes/expenseRoutes'));
 
 // Test route
 app.get('/test', (req, res) => {
