@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const advisorController = require('../controllers/advisorController');
-const auth = require('../middleware/auth');
+const { auth, adminAuth, advisorAuth } = require('../middleware/auth');
 
 // Public routes
 router.get('/', auth, advisorController.getAllAdvisors);

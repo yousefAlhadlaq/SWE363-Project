@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const settingsController = require('../controllers/settingsController');
-const auth = require('../middleware/auth');
+const { auth, adminAuth, advisorAuth } = require('../middleware/auth');
 
 // All routes are protected
 router.get('/', auth, settingsController.getSettings);
