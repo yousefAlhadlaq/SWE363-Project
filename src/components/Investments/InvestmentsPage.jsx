@@ -1,8 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Sidebar from '../Shared/Sidebar';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
+import investmentService from '../../services/investmentService';
+import StockSearchInput from './StockSearchInput';
+import MapSelector from './MapSelector';
 
 const categoryOptions = [
   { value: 'Stock', label: 'Stocks' },
@@ -30,7 +33,7 @@ const categoryLineColors = {
 
 const defaultUnitLabels = {
   Stock: 'shares',
-  Gold: 'oz',
+  Gold: 'grams',
   Crypto: 'coins',
 };
 
@@ -107,11 +110,11 @@ const initialInvestments = [
     name: '24K Gold Bars',
     category: 'Gold',
     purchaseDate: '2024-05-20',
-    amountOwned: 12,
-    unitLabel: 'oz',
-    buyPrice: 1850,
-    currentPrice: 1985,
-    amount: 12 * 1985,
+    amountOwned: 373.24, // ~12 oz converted to grams
+    unitLabel: 'grams',
+    buyPrice: 59.49,
+    currentPrice: 63.82,
+    amount: 373.24 * 63.82,
   },
 ];
 
@@ -123,6 +126,13 @@ const initialFormState = {
   buyPrice: '',
   currentPrice: '',
   areaSqm: '',
+  location: '',
+  latitude: null,
+  longitude: null,
+  propertyType: 'Villa',
+  yearBuilt: '',
+  bedrooms: '',
+  bathrooms: '',
 };
 
 const getCurrentValue = (investment) => {
@@ -609,7 +619,8 @@ const InvestmentTrendChart = ({
 };
 
 function InvestmentsPage() {
-  const [investments, setInvestments] = useState(initialInvestments);
+  const [investments, setInvestments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedRange, setSelectedRange] = useState('month');
   const [form, setForm] = useState(initialFormState);
   const [errors, setErrors] = useState({});
@@ -617,9 +628,74 @@ function InvestmentsPage() {
   const [showZakahModal, setShowZakahModal] = useState(false);
   const [categoryModal, setCategoryModal] = useState({ open: false, category: null });
   const [filteredCategory, setFilteredCategory] = useState(null);
+  const [cities, setCities] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
   const [zakahSelections, setZakahSelections] = useState(() =>
     categoryOptions.reduce((acc, { value }) => ({ ...acc, [value]: true }), {})
   );
+  const [selectedStock, setSelectedStock] = useState(null);
+  const [loadingStockQuote, setLoadingStockQuote] = useState(false);
+  const [loadingHistoricalPrice, setLoadingHistoricalPrice] = useState(false);
+
+  // Fetch investments from backend
+  useEffect(() => {
+    const fetchInvestments = async () => {
+      try {
+        setLoading(true);
+        const response = await investmentService.getAllInvestments();
+
+        if (response.success && response.investments) {
+          // Transform backend data to frontend format
+          const transformedInvestments = response.investments.map((inv) => ({
+            id: inv._id,
+            name: inv.name,
+            category: inv.category,
+            purchaseDate: inv.purchaseDate ? new Date(inv.purchaseDate).toISOString().split('T')[0] : '',
+            amountOwned: inv.amountOwned,
+            unitLabel: inv.unitLabel || getDefaultUnitLabel(inv.category),
+            buyPrice: inv.buyPrice,
+            currentPrice: inv.currentPrice,
+            amount: inv.currentPrice * (inv.amountOwned || 1),
+            notes: inv.notes,
+            areaSqm: inv.areaSqm,
+          }));
+
+          setInvestments(transformedInvestments);
+        }
+      } catch (error) {
+        console.error('Failed to fetch investments:', error);
+        // Keep empty array on error
+        setInvestments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInvestments();
+  }, []);
+
+  // Fetch cities for Real Estate dropdown
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        setLoadingCities(true);
+        const API_BASE_URL = 'http://localhost:5000/api';
+        const response = await fetch(`${API_BASE_URL}/cities`);
+        const data = await response.json();
+
+        if (data.success && data.cities) {
+          setCities(data.cities);
+        }
+      } catch (error) {
+        console.error('Failed to fetch cities:', error);
+        setCities([]);
+      } finally {
+        setLoadingCities(false);
+      }
+    };
+
+    fetchCities();
+  }, []);
 
   const totalValue = useMemo(
     () => investments.reduce((sum, investment) => sum + getCurrentValue(investment), 0),
@@ -765,11 +841,171 @@ function InvestmentsPage() {
       areaSqm: '',
       buyPrice: '',
       currentPrice: '',
+      location: '',
+      propertyType: 'Villa',
+      yearBuilt: '',
+      bedrooms: '',
+      bathrooms: '',
     }));
     setErrors({});
+    setSelectedStock(null);
   };
 
-  const handleAddInvestment = (event) => {
+  const handleStockSelected = async (stock) => {
+    setSelectedStock(stock);
+    setForm((prev) => ({
+      ...prev,
+      name: `${stock.name} (${stock.symbol})`,
+    }));
+
+    const API_BASE_URL = 'http://localhost:5000/api';
+
+    // Fetch current stock quote
+    try {
+      setLoadingStockQuote(true);
+      const response = await fetch(`${API_BASE_URL}/stocks/quote/${stock.symbol}`);
+      const data = await response.json();
+
+      if (data.success && data.quote) {
+        // Set current price from API
+        const price = data.quote.price.toString();
+        setForm((prev) => ({
+          ...prev,
+          currentPrice: price,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching stock quote:', error);
+    } finally {
+      setLoadingStockQuote(false);
+    }
+
+    // If purchase date is already set, fetch historical price
+    if (form.purchaseDate && isValidDate(form.purchaseDate)) {
+      try {
+        setLoadingHistoricalPrice(true);
+        const response = await fetch(
+          `${API_BASE_URL}/stocks/historical/${stock.symbol}/${form.purchaseDate}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.historical) {
+          // Use adjusted close to account for stock splits
+          setForm((prev) => ({
+            ...prev,
+            buyPrice: data.historical.adjustedClose.toString(),
+          }));
+          setErrors((prev) => ({ ...prev, buyPrice: '', purchaseDate: '' }));
+        } else {
+          setErrors((prev) => ({
+            ...prev,
+            purchaseDate: data.error || 'No historical data available for this date',
+          }));
+          setForm((prev) => ({ ...prev, buyPrice: '' }));
+        }
+      } catch (error) {
+        console.error('Error fetching historical price:', error);
+        setErrors((prev) => ({
+          ...prev,
+          purchaseDate: 'Could not fetch historical price for this date',
+        }));
+        setForm((prev) => ({ ...prev, buyPrice: '' }));
+      } finally {
+        setLoadingHistoricalPrice(false);
+      }
+    }
+  };
+
+  const handlePurchaseDateChange = async (event) => {
+    const purchaseDate = event.target.value;
+    setForm((prev) => ({ ...prev, purchaseDate }));
+
+    if (errors.purchaseDate) {
+      setErrors((prev) => ({ ...prev, purchaseDate: '' }));
+    }
+
+    const API_BASE_URL = 'http://localhost:5000/api';
+
+    // If stock is selected and date is valid, fetch historical price
+    if (selectedStock && purchaseDate && form.category === 'Stock' && isValidDate(purchaseDate)) {
+      try {
+        setLoadingHistoricalPrice(true);
+        const response = await fetch(
+          `${API_BASE_URL}/stocks/historical/${selectedStock.symbol}/${purchaseDate}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.historical) {
+          // Use adjusted close to account for stock splits
+          setForm((prev) => ({
+            ...prev,
+            buyPrice: data.historical.adjustedClose.toString(),
+          }));
+          // Clear any previous errors
+          setErrors((prev) => ({ ...prev, buyPrice: '', purchaseDate: '' }));
+        } else {
+          // Handle case where no data is available for this date
+          setErrors((prev) => ({
+            ...prev,
+            purchaseDate: data.error || 'No historical data available for this date',
+          }));
+          setForm((prev) => ({ ...prev, buyPrice: '' }));
+        }
+      } catch (error) {
+        console.error('Error fetching historical price:', error);
+        setErrors((prev) => ({
+          ...prev,
+          purchaseDate: 'Could not fetch historical price for this date',
+        }));
+        setForm((prev) => ({ ...prev, buyPrice: '' }));
+      } finally {
+        setLoadingHistoricalPrice(false);
+      }
+    }
+
+    // If Gold is selected and date is valid, fetch gold prices
+    if (purchaseDate && form.category === 'Gold' && isValidDate(purchaseDate)) {
+      try {
+        setLoadingHistoricalPrice(true);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/gold/prices`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ purchaseDate }),
+        });
+        const data = await response.json();
+
+        if (data.success && data.prices) {
+          setForm((prev) => ({
+            ...prev,
+            buyPrice: data.prices.purchasePrice.toString(),
+            currentPrice: data.prices.currentPrice.toString(),
+          }));
+          setErrors((prev) => ({ ...prev, buyPrice: '', currentPrice: '', purchaseDate: '' }));
+        } else {
+          setErrors((prev) => ({
+            ...prev,
+            purchaseDate: data.error || 'Could not fetch gold prices for this date',
+          }));
+          setForm((prev) => ({ ...prev, buyPrice: '', currentPrice: '' }));
+        }
+      } catch (error) {
+        console.error('Error fetching gold prices:', error);
+        setErrors((prev) => ({
+          ...prev,
+          purchaseDate: 'Could not fetch gold prices for this date',
+        }));
+        setForm((prev) => ({ ...prev, buyPrice: '', currentPrice: '' }));
+      } finally {
+        setLoadingHistoricalPrice(false);
+      }
+    }
+  };
+
+  const handleAddInvestment = async (event) => {
     event.preventDefault();
     const validationErrors = {};
     const trimmedName = form.name.trim();
@@ -787,26 +1023,52 @@ function InvestmentsPage() {
     const areaValue = parseFloat(form.areaSqm);
     const buyPriceValue = parseFloat(form.buyPrice);
     const currentPriceValue = parseFloat(form.currentPrice);
+    const yearBuiltValue = parseInt(form.yearBuilt);
+    const bedroomsValue = parseInt(form.bedrooms);
+    const bathroomsValue = parseInt(form.bathrooms);
 
     if (isRealEstate) {
+      if (!form.latitude || !form.longitude) {
+        validationErrors.location = 'Please select a location on the map';
+      }
       if (!areaValue || areaValue <= 0) {
         validationErrors.areaSqm = 'Area is required';
       }
-      if (!buyPriceValue || buyPriceValue <= 0) {
-        validationErrors.buyPrice = 'Enter purchase price';
+      if (!form.propertyType) {
+        validationErrors.propertyType = 'Property type is required';
       }
-      if (!currentPriceValue || currentPriceValue <= 0) {
-        validationErrors.currentPrice = "Enter today's price";
+      // Bedrooms and bathrooms are required for Apartments
+      if (form.propertyType === 'Apartment') {
+        if (!bedroomsValue || bedroomsValue <= 0) {
+          validationErrors.bedrooms = 'Number of bedrooms is required for apartments';
+        }
+        if (!bathroomsValue || bathroomsValue <= 0) {
+          validationErrors.bathrooms = 'Number of bathrooms is required for apartments';
+        }
       }
+      // Purchase price is optional for Real Estate
     } else {
       if (!amountOwnedValue || amountOwnedValue <= 0) {
         validationErrors.amountOwned = 'Enter the amount owned';
       }
       if (!buyPriceValue || buyPriceValue <= 0) {
-        validationErrors.buyPrice = 'Enter purchase price';
+        if (form.category === 'Stock') {
+          validationErrors.purchaseDate = 'Select a valid purchase date to fetch historical price';
+        } else if (form.category === 'Gold') {
+          validationErrors.purchaseDate = 'Select a purchase date to fetch gold prices';
+        } else {
+          validationErrors.buyPrice = 'Enter purchase price';
+        }
       }
       if (!currentPriceValue || currentPriceValue <= 0) {
-        validationErrors.currentPrice = "Enter today's price";
+        if (form.category === 'Gold') {
+          validationErrors.purchaseDate =
+            validationErrors.purchaseDate || 'Select a purchase date to fetch gold prices';
+        } else if (form.category === 'Stock') {
+          validationErrors.currentPrice = 'Search for a stock to fetch current price';
+        } else {
+          validationErrors.currentPrice = "Enter today's price";
+        }
       }
     }
 
@@ -815,41 +1077,104 @@ function InvestmentsPage() {
       return;
     }
 
-    let newInvestment;
+    // Prepare data for backend API
+    const investmentData = {
+      name: trimmedName,
+      category: form.category,
+      purchaseDate: form.purchaseDate,
+      notes: form.notes || '',
+    };
 
     if (isRealEstate) {
-      newInvestment = {
-        id: Date.now(),
-        name: trimmedName,
-        category: 'Real Estate',
-        purchaseDate: form.purchaseDate,
-        areaSqm: areaValue,
-        buyPrice: buyPriceValue,
-        currentPrice: currentPriceValue,
-        amount: currentPriceValue,
-      };
+      // Call Groq API via backend to get valuation
+      try {
+        const API_BASE_URL = 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+
+        const estimateResponse = await fetch(`${API_BASE_URL}/real-estate/evaluate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            latitude: form.latitude,
+            longitude: form.longitude,
+            propertyType: form.propertyType,
+            area: areaValue,
+            bedrooms: bedroomsValue || null,
+            bathrooms: bathroomsValue || null,
+            yearBuilt: yearBuiltValue || null,
+          }),
+        });
+
+        const estimateData = await estimateResponse.json();
+
+        if (!estimateData.success) {
+          throw new Error(estimateData.error || 'Failed to get property valuation');
+        }
+
+        const estimatedValue = estimateData.estimate.value;
+
+        investmentData.latitude = form.latitude;
+        investmentData.longitude = form.longitude;
+        investmentData.areaSqm = areaValue;
+        investmentData.propertyType = form.propertyType;
+        investmentData.yearBuilt = yearBuiltValue || null;
+        investmentData.bedrooms = bedroomsValue || null;
+        investmentData.bathrooms = bathroomsValue || null;
+        investmentData.amountOwned = 1; // Backend requires this field
+
+        // Store user's purchase price if provided; otherwise leave null
+        investmentData.buyPrice = buyPriceValue || null;
+        // Store Groq estimate as today's market value
+        investmentData.currentPrice = estimatedValue;
+      } catch (error) {
+        console.error('Error fetching real estate valuation:', error);
+        setErrors({ general: error.message || 'Failed to get property valuation. Please try again.' });
+        return;
+      }
     } else {
-      const unitLabel = getDefaultUnitLabel(form.category);
-      newInvestment = {
-        id: Date.now(),
-        name: trimmedName,
-        category: form.category,
-        purchaseDate: form.purchaseDate,
-        amountOwned: amountOwnedValue,
-        unitLabel,
-        buyPrice: buyPriceValue,
-        currentPrice: currentPriceValue,
-        amount: currentPriceValue * amountOwnedValue,
-      };
+      investmentData.amountOwned = amountOwnedValue;
+      investmentData.buyPrice = buyPriceValue;
+      investmentData.currentPrice = currentPriceValue;
     }
 
-    setInvestments((prev) => [...prev, newInvestment]);
-    setForm((prev) => ({
-      ...initialFormState,
-      category: prev.category,
-    }));
-    setErrors({});
-    setShowAddModal(false);
+    try {
+      // Save to backend
+      const response = await investmentService.createInvestment(investmentData);
+
+      if (response.success && response.investment) {
+        // Transform and add to local state
+        const inv = response.investment;
+        const transformedInvestment = {
+          id: inv._id,
+          name: inv.name,
+          category: inv.category,
+          purchaseDate: inv.purchaseDate ? new Date(inv.purchaseDate).toISOString().split('T')[0] : '',
+          amountOwned: inv.amountOwned,
+          unitLabel: getDefaultUnitLabel(inv.category),
+          buyPrice: inv.buyPrice,
+          currentPrice: inv.currentPrice,
+          amount: inv.currentPrice * (inv.amountOwned || 1),
+          notes: inv.notes,
+          areaSqm: inv.areaSqm,
+        };
+
+        setInvestments((prev) => [...prev, transformedInvestment]);
+        setForm((prev) => ({
+          ...initialFormState,
+          category: prev.category,
+        }));
+        setErrors({});
+        setShowAddModal(false);
+      } else {
+        setErrors({ general: response.error || 'Failed to create investment' });
+      }
+    } catch (error) {
+      console.error('Error creating investment:', error);
+      setErrors({ general: error.message || 'Failed to create investment. Please try again.' });
+    }
   };
 
   return (
@@ -1005,14 +1330,36 @@ function InvestmentsPage() {
       maxWidth="max-w-3xl"
     >
       <form className="space-y-4" onSubmit={handleAddInvestment}>
-        <InputField
-          label="Investment name"
-          name="name"
-          value={form.name}
-          onChange={handleFormChange('name')}
-          placeholder="e.g., Tech Growth ETF"
-          error={errors.name}
-        />
+        {form.category === 'Stock' ? (
+          <div className="space-y-4">
+            <StockSearchInput
+              onStockSelected={handleStockSelected}
+              initialValue={selectedStock ? selectedStock.symbol : ''}
+            />
+            {selectedStock && (
+              <InputField
+                label="Investment name"
+                name="name"
+                value={form.name}
+                onChange={handleFormChange('name')}
+                placeholder="e.g., Tech Growth ETF"
+                error={errors.name}
+              />
+            )}
+            {loadingStockQuote && (
+              <p className="text-sm text-teal-300">Fetching current stock price...</p>
+            )}
+          </div>
+        ) : (
+          <InputField
+            label="Investment name"
+            name="name"
+            value={form.name}
+            onChange={handleFormChange('name')}
+            placeholder="e.g., Tech Growth ETF"
+            error={errors.name}
+          />
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-1">
@@ -1036,42 +1383,121 @@ function InvestmentsPage() {
           type="date"
           name="purchaseDate"
           value={form.purchaseDate}
-          onChange={handleFormChange('purchaseDate')}
+          onChange={
+            form.category === 'Stock' || form.category === 'Gold'
+              ? handlePurchaseDateChange
+              : handleFormChange('purchaseDate')
+          }
           placeholder="Select purchase date"
           error={errors.purchaseDate}
         />
+        {loadingHistoricalPrice && (
+          <p className="text-sm text-teal-300">
+            {form.category === 'Gold'
+              ? `Fetching gold prices for ${form.purchaseDate}...`
+              : `Fetching historical stock price for ${form.purchaseDate}...`}
+          </p>
+        )}
+        {form.category === 'Gold' && (
+          <p className="text-xs text-gray-400">
+            Gold prices are auto-fetched after you pick a purchase date.
+          </p>
+        )}
 
         {isRealEstateSelected ? (
           <>
-            <InputField
-              label="Area (m²)"
-              type="number"
-              name="areaSqm"
-              value={form.areaSqm}
-              onChange={handleFormChange('areaSqm', true)}
-              placeholder="e.g., 320"
-              error={errors.areaSqm}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">
+                Select Property Location on Map <span className="text-red-400">*</span>
+              </label>
+              <MapSelector
+                onLocationSelect={(position) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    latitude: position.lat,
+                    longitude: position.lng,
+                  }));
+                  if (errors.location) {
+                    setErrors((prev) => ({ ...prev, location: '' }));
+                  }
+                }}
+                initialPosition={
+                  form.latitude && form.longitude
+                    ? { lat: form.latitude, lng: form.longitude }
+                    : null
+                }
+              />
+              {errors.location && (
+                <p className="text-sm text-red-400 mt-1">{errors.location}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">
+                Property Type
+              </label>
+              <select
+                value={form.propertyType}
+                onChange={handleFormChange('propertyType')}
+                className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="Villa">Villa</option>
+                <option value="Apartment">Apartment</option>
+                <option value="Townhouse">Townhouse</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Land">Land</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InputField
-                label="Purchase price"
+                label="Area (m²)"
                 type="number"
-                name="buyPrice"
-                value={form.buyPrice}
-                onChange={handleFormChange('buyPrice', true)}
-                placeholder="e.g., 720000"
-                error={errors.buyPrice}
+                name="areaSqm"
+                value={form.areaSqm}
+                onChange={handleFormChange('areaSqm', true)}
+                placeholder="e.g., 320"
+                error={errors.areaSqm}
               />
               <InputField
-                label="Today's price"
+                label="Year Built"
                 type="number"
-                name="currentPrice"
-                value={form.currentPrice}
-                onChange={handleFormChange('currentPrice', true)}
-                placeholder="e.g., 860000"
-                error={errors.currentPrice}
+                name="yearBuilt"
+                value={form.yearBuilt}
+                onChange={handleFormChange('yearBuilt', true)}
+                placeholder="e.g., 2015"
               />
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField
+                label="Bedrooms"
+                type="number"
+                name="bedrooms"
+                value={form.bedrooms}
+                onChange={handleFormChange('bedrooms', true)}
+                placeholder="e.g., 4"
+              />
+              <InputField
+                label="Bathrooms"
+                type="number"
+                name="bathrooms"
+                value={form.bathrooms}
+                onChange={handleFormChange('bathrooms', true)}
+                placeholder="e.g., 3"
+              />
+            </div>
+
+            <InputField
+              label="Purchase price (optional)"
+              type="number"
+              name="buyPrice"
+              value={form.buyPrice}
+              onChange={handleFormChange('buyPrice', true)}
+              placeholder="e.g., 720000 - Leave blank to use estimated value"
+              error={errors.buyPrice}
+            />
           </>
         ) : (
           <>
@@ -1084,26 +1510,43 @@ function InvestmentsPage() {
               placeholder={`Number of ${selectedUnitLabel}`}
               error={errors.amountOwned}
             />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <InputField
-                label="Purchase price / unit"
-                type="number"
-                name="buyPrice"
-                value={form.buyPrice}
-                onChange={handleFormChange('buyPrice', true)}
-                placeholder="e.g., 420"
-                error={errors.buyPrice}
-              />
-              <InputField
-                label="Today's price / unit"
-                type="number"
-                name="currentPrice"
-                value={form.currentPrice}
-                onChange={handleFormChange('currentPrice', true)}
-                placeholder="e.g., 465"
-                error={errors.currentPrice}
-              />
-            </div>
+
+            {form.category === 'Stock' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  Purchase price / unit (from API)
+                </label>
+                <div className="w-full px-3 py-2 bg-slate-700/30 border border-slate-600 rounded-md text-white">
+                  {form.buyPrice ? `$${parseFloat(form.buyPrice).toFixed(2)}` : 'Select purchase date to fetch price'}
+                </div>
+                {form.buyPrice && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Historical price automatically fetched from Yahoo Finance (adjusted for splits)
+                  </p>
+                )}
+              </div>
+            ) : form.category === 'Gold' ? null : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField
+                  label="Purchase price / unit"
+                  type="number"
+                  name="buyPrice"
+                  value={form.buyPrice}
+                  onChange={handleFormChange('buyPrice', true)}
+                  placeholder="e.g., 420"
+                  error={errors.buyPrice}
+                />
+                <InputField
+                  label="Today's price / unit"
+                  type="number"
+                  name="currentPrice"
+                  value={form.currentPrice}
+                  onChange={handleFormChange('currentPrice', true)}
+                  placeholder="e.g., 465"
+                  error={errors.currentPrice}
+                />
+              </div>
+            )}
           </>
         )}
 

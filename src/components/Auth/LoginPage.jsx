@@ -155,8 +155,18 @@ const LoginPage = () => {
             <div className="relative bg-slate-800/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-slate-700/50 hover:border-slate-600/50 transition-all duration-300">
               {/* Auth Error Message */}
               {(authError || errors.submit) && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm animate-shake">
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm animate-shake space-y-2">
                   <p className="text-sm text-red-300 font-medium">{authError || errors.submit}</p>
+                  {(authError === 'Please verify your email before logging in' || errors.submit === 'Please verify your email before logging in') && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => navigate('/verify-email', { state: { email: formData.email } })}
+                    >
+                      Go to verification
+                    </Button>
+                  )}
                 </div>
               )}
 
