@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run start:all:*)",
+      "Bash(node scripts/seedExternalData.js:*)",
+      "Bash(node -e:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill /F /PID 14588)",
+      "Bash(xargs:*)",
+      "Bash(taskkill //F //PID 14588)",
+      "Bash(python -m json.tool:*)",
+      "Bash(npm run dev:*)",
+      "Bash(cat:*)",
+      "Bash(taskkill:*)",
+      "Bash(node:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

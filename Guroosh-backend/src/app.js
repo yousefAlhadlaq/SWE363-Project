@@ -28,6 +28,13 @@ app.use('/api/meetings', require('./routes/meetingRoutes'));
 app.use('/api/notes', require('./routes/noteRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
+app.use('/api/investments', require('./routes/investmentRoutes'));
+app.use('/api/goals', require('./routes/goalRoutes'));
+app.use('/api/external', require('./routes/externalDataRoutes'));
+app.use('/api/cities', require('./routes/cityRoutes'));
+app.use('/api/stocks', require('./routes/stockRoutes'));
+app.use('/api/real-estate', require('./routes/realEstateRoutes'));
+app.use('/api/gold', require('./routes/goldRoutes'));
 
 // Test route
 app.get('/test', (req, res) => {

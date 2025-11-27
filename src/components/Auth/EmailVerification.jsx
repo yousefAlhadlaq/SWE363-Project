@@ -2,11 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Button from '../Shared/Button';
 import logo from '../../assets/images/logo.png';
+import { useAuth } from '../../context/AuthContext';
 
 const EmailVerification = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const emailFromState = location.state?.email || '';
+  const emailFromState = location.state?.email || new URLSearchParams(location.search).get('email') || '';
+  const [email, setEmail] = useState(emailFromState);
+  const { verifyEmail, resendVerificationCode, loading: authLoading, error: authError } = useAuth();
 
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
@@ -50,13 +53,6 @@ const EmailVerification = () => {
       return () => clearTimeout(timer);
     }
   }, [countdown]);
-
-  // Redirect if no email provided
-  useEffect(() => {
-    if (!emailFromState) {
-      navigate('/signup');
-    }
-  }, [emailFromState, navigate]);
 
   const handleInputChange = (index, value) => {
     // Only allow digits
@@ -102,6 +98,11 @@ const EmailVerification = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!email) {
+      setError('Please enter your email.');
+      return;
+    }
+
     const verificationCode = code.join('');
     if (verificationCode.length !== 6) {
       setError('Please enter the complete 6-digit code');
@@ -112,17 +113,17 @@ const EmailVerification = () => {
     setError('');
 
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await verifyEmail(email, verificationCode);
 
-      console.log('Verifying code:', verificationCode, 'for email:', emailFromState);
-
-      // Success - navigate to login
-      navigate('/login', {
-        state: {
-          message: 'Email verified successfully! Please login to continue.'
-        }
-      });
+      if (response.success) {
+        navigate('/login', {
+          state: {
+            message: 'Email verified successfully! Please login to continue.'
+          }
+        });
+      } else {
+        setError(response.error || 'Invalid verification code. Please try again.');
+      }
 
     } catch (err) {
       setError(err.message || 'Invalid verification code. Please try again.');
@@ -139,18 +140,20 @@ const EmailVerification = () => {
     setError('');
 
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await resendVerificationCode(email);
 
-      console.log('Resending code to:', emailFromState);
-      setResendSuccess(true);
-      setCountdown(60); // 60 second cooldown
+      if (response.success) {
+        setResendSuccess(true);
+        setCountdown(60); // 60 second cooldown
+      } else {
+        throw new Error(response.error || 'Failed to resend code');
+      }
 
       // Hide success message after 3 seconds
       setTimeout(() => setResendSuccess(false), 3000);
 
     } catch (err) {
-      setError('Failed to resend code. Please try again.');
+      setError(err.message || 'Failed to resend code. Please try again.');
     } finally {
       setResendLoading(false);
     }
@@ -187,7 +190,7 @@ const EmailVerification = () => {
               We sent a 6-digit code to
             </p>
             <p className="text-teal-300 font-semibold text-sm mt-1">
-              {emailFromState}
+              {email || 'your email'}
             </p>
           </div>
 
@@ -210,13 +213,29 @@ const EmailVerification = () => {
               )}
 
               {/* Error Message */}
-              {error && (
+              {(error || authError) && (
                 <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm animate-shake">
-                  <p className="text-sm text-red-300 font-medium">{error}</p>
+                  <p className="text-sm text-red-300 font-medium">{error || authError}</p>
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                {!email && (
+                  <div className="space-y-2">
+                    <label className="block text-gray-200 text-sm font-semibold tracking-wide">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-teal-400"
+                      placeholder="name@domain.com"
+                      required
+                    />
+                  </div>
+                )}
+
                 {/* Verification Code Inputs */}
                 <div className="space-y-2">
                   <label className="block text-gray-200 text-sm font-semibold tracking-wide text-center">

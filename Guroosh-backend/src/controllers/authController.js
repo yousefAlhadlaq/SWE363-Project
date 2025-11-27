@@ -1,5 +1,7 @@
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
+const centralBankService = require('../services/centralBankService');
+const emailService = require('../utils/emailService');
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -63,11 +65,20 @@ exports.register = async (req, res) => {
       isEmailVerified: false
     });
 
-    // TODO: Send verification email
-    // For now, log the code (in production, send via email)
+    // Send verification email
     console.log(`Verification code for ${email}: ${verificationCode}`);
 
-    // Generate token
+    // Send email asynchronously (don't wait for it to complete)
+    emailService.sendVerificationEmail(email, fullName, verificationCode)
+      .catch(error => {
+        console.error(`⚠️ Failed to send verification email to ${email}:`, error.message);
+        // Don't fail registration if email fails
+      });
+
+    // NOTE: Central Bank accounts will be created AFTER email verification
+    // This prevents resource allocation for unverified/fake emails
+
+    // Generate token (user can login but some features may be restricted until verified)
     const token = generateToken(user._id);
 
     res.status(201).json({
@@ -99,13 +110,17 @@ exports.register = async (req, res) => {
 // Verify email with code
 exports.verifyEmail = async (req, res) => {
   try {
-    const { email, code } = req.body;
+    let { email, code } = req.body;
 
     if (!email || !code) {
       return res.status(400).json({
         error: 'Email and verification code are required'
       });
     }
+
+    // Normalize inputs
+    email = email.toLowerCase().trim();
+    code = String(code).trim();
 
     // Find user
     const user = await User.findOne({ email });
@@ -122,8 +137,8 @@ exports.verifyEmail = async (req, res) => {
       });
     }
 
-    // Check if code matches
-    if (user.emailVerificationCode !== code) {
+    // Check if code matches (string compare)
+    if (String(user.emailVerificationCode) !== code) {
       return res.status(400).json({
         error: 'Invalid verification code'
       });
@@ -141,6 +156,20 @@ exports.verifyEmail = async (req, res) => {
     user.emailVerificationCode = null;
     user.emailVerificationExpires = null;
     await user.save();
+
+    // Now create Central Bank accounts after successful email verification
+    centralBankService.createUser(user._id.toString())
+      .then(result => {
+        console.log(`✅ Central Bank accounts created for verified user ${user._id}:`, {
+          accounts: result.data?.accounts?.length || 0,
+          stocks: result.data?.stocks?.length || 0
+        });
+      })
+      .catch(error => {
+        console.error(`⚠️ Failed to create Central Bank accounts for user ${user._id}:`, error.message);
+        // Don't fail verification if Central Bank is unavailable
+        // User can still use the app, Central Bank features will be limited
+      });
 
     res.json({
       success: true,
@@ -187,8 +216,15 @@ exports.resendVerificationCode = async (req, res) => {
     user.emailVerificationExpires = verificationExpires;
     await user.save();
 
-    // TODO: Send verification email
+    // Send verification email
     console.log(`New verification code for ${email}: ${verificationCode}`);
+
+    // Send email asynchronously (don't wait for it to complete)
+    emailService.sendVerificationEmail(email, user.fullName, verificationCode)
+      .catch(error => {
+        console.error(`⚠️ Failed to send verification email to ${email}:`, error.message);
+        // Don't fail the request if email fails
+      });
 
     res.json({
       success: true,
@@ -228,6 +264,13 @@ exports.login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         error: 'Invalid credentials'
+      });
+    }
+
+    // Enforce email verification before login
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        error: 'Please verify your email before logging in'
       });
     }
 
@@ -372,8 +415,15 @@ exports.forgotPassword = async (req, res) => {
     user.passwordResetExpires = resetExpires;
     await user.save();
 
-    // TODO: Send reset code via email
+    // Send password reset email
     console.log(`Password reset code for ${email}: ${resetCode}`);
+
+    // Send email asynchronously (don't wait for it to complete)
+    emailService.sendPasswordResetEmail(email, user.fullName, resetCode)
+      .catch(error => {
+        console.error(`⚠️ Failed to send password reset email to ${email}:`, error.message);
+        // Don't fail the request if email fails
+      });
 
     res.json({
       success: true,
@@ -485,8 +535,15 @@ exports.resendResetCode = async (req, res) => {
     user.passwordResetExpires = resetExpires;
     await user.save();
 
-    // TODO: Send reset code via email
+    // Send password reset email
     console.log(`New password reset code for ${email}: ${resetCode}`);
+
+    // Send email asynchronously (don't wait for it to complete)
+    emailService.sendPasswordResetEmail(email, user.fullName, resetCode)
+      .catch(error => {
+        console.error(`⚠️ Failed to send password reset email to ${email}:`, error.message);
+        // Don't fail the request if email fails
+      });
 
     res.json({
       success: true,

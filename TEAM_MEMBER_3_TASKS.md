@@ -136,17 +136,6 @@ You handle **investments and financial goals** - important for financial plannin
 
 ---
 
-### **Days 5-10: Support & Integration**
-
-**Your role:**
-- [ ] Day 5: Help TM4 with dashboard (investment data)
-- [ ] Days 6-7: Test integration, fix bugs
-- [ ] Days 8-9: Polish features, improve error messages
-- [ ] Day 10: Help with deployment
-
-**You'll finish early - use your time to help the team!** ✅
-
----
 
 ## Simple Code Examples
 
