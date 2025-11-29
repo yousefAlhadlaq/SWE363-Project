@@ -489,11 +489,6 @@ function ExpensesPage() {
 
   const handleSubmitCategory = async (event) => {
     event.preventDefault();
-    if (!user) {
-      setModalError('Sign in to manage categories');
-      return;
-    }
-
     const trimmedName = categoryForm.name.trim();
     const limitValue = Number(categoryForm.budget);
     if (!trimmedName) {
@@ -505,6 +500,68 @@ function ExpensesPage() {
     setModalSaving(true);
 
     try {
+      if (!user) {
+        if (limitValue && limitValue > 0 && categoryForm.period === 'custom') {
+          setModalError('Custom budgets require start and end dates. Please choose weekly, monthly, or yearly.');
+          setModalSaving(false);
+          return;
+        }
+        let categoryId = editingId;
+        if (modalMode === 'edit' && editingId) {
+          setStoredCategories((prev) =>
+            prev.map((category) =>
+              category.id === editingId
+                ? { ...category, name: trimmedName, color: categoryForm.color, icon: categoryForm.icon }
+                : category
+            )
+          );
+        } else {
+          categoryId = createId('cat');
+          setStoredCategories((prev) => [
+            ...prev,
+            {
+              id: categoryId,
+              name: trimmedName,
+              color: categoryForm.color,
+              icon: categoryForm.icon,
+              enabled: true,
+              type: 'expense'
+            }
+          ]);
+        }
+
+        if (categoryId) {
+          setStoredBudgets((prev) => {
+            const existingIndex = prev.findIndex((budget) => budget.categoryId === categoryId);
+            if (limitValue && limitValue > 0) {
+              const updatedBudget = {
+                id: existingIndex >= 0 ? prev[existingIndex].id : createId('budget'),
+                categoryId,
+                categoryName: trimmedName,
+                limit: limitValue,
+                period: categoryForm.period || 'monthly',
+                alertThreshold: prev[existingIndex]?.alertThreshold ?? 80,
+                isActive: true,
+                status: prev[existingIndex]?.status || null
+              };
+              if (existingIndex >= 0) {
+                const clone = [...prev];
+                clone[existingIndex] = updatedBudget;
+                return clone;
+              }
+              return [...prev, updatedBudget];
+            }
+            if (existingIndex >= 0) {
+              return prev.filter((budget) => budget.categoryId !== categoryId);
+            }
+            return prev;
+          });
+        }
+
+        closeModal();
+        return;
+      }
+
       let categoryId = editingId;
       if (modalMode === 'edit' && editingId) {
         await categoryService.updateCategory(editingId, {
@@ -558,11 +615,6 @@ function ExpensesPage() {
 
   const handleSubmitGoal = async (event) => {
     event.preventDefault();
-    if (!user) {
-      setModalError('Sign in to manage goals');
-      return;
-    }
-
     const trimmedName = goalForm.name.trim();
     const targetValue = Number(goalForm.targetAmount);
     const savedValue = Number(goalForm.savedAmount);
@@ -595,6 +647,25 @@ function ExpensesPage() {
         deadline: goalForm.deadline || undefined
       };
 
+      if (!user) {
+        if (modalMode === 'edit' && editingId) {
+          setStoredGoals((prev) =>
+            prev.map((goal) => (goal.id === editingId ? { ...goal, ...payload, deadline: goalForm.deadline || '' } : goal))
+          );
+        } else {
+          setStoredGoals((prev) => [
+            ...prev,
+            {
+              id: createId('goal'),
+              ...payload,
+              deadline: goalForm.deadline || ''
+            }
+          ]);
+        }
+        closeModal();
+        return;
+      }
+
       if (modalMode === 'edit' && editingId) {
         await goalService.updateGoal(editingId, payload);
       } else {
@@ -612,7 +683,16 @@ function ExpensesPage() {
   };
 
   const handleToggleCategory = async (categoryId) => {
-    if (!user) return;
+    if (!user) {
+      setStoredCategories((prev) =>
+        prev.map((category) => {
+          if (category.id !== categoryId) return category;
+          const wasEnabled = category.enabled !== false;
+          return { ...category, enabled: !wasEnabled };
+        })
+      );
+      return;
+    }
     try {
       await categoryService.toggleCategory(categoryId);
       await syncFromServer();
@@ -627,7 +707,10 @@ function ExpensesPage() {
   };
 
   const handleDeleteGoal = async (goalId) => {
-    if (!user) return;
+    if (!user) {
+      setStoredGoals((prev) => prev.filter((goal) => goal.id !== goalId));
+      return;
+    }
     try {
       await goalService.deleteGoal(goalId);
       await syncFromServer();
