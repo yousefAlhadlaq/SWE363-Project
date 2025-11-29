@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   ArrowUpCircle,
   Banknote,
@@ -27,41 +27,6 @@ const formatSR = (value = 0, digits = 2) =>
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   })}`;
-
-const heroStats = [
-  {
-    key: 'weekly-spend',
-    label: 'Weekly Spend',
-    amount: 0,
-    digits: 2,
-    icon: Wallet,
-    hint: 'Spent this week',
-  },
-  {
-    key: 'investments',
-    label: 'Investments',
-    amount: 0,
-    digits: 2,
-    icon: TrendingUp,
-    hint: 'Investments tracked',
-  },
-  {
-    key: 'current-account',
-    label: 'Current Account',
-    amount: 0.39,
-    digits: 2,
-    icon: Banknote,
-    hint: 'Cash on hand',
-  },
-  {
-    key: 'credit-card',
-    label: 'Credit Card',
-    amount: 0.84,
-    digits: 2,
-    icon: CreditCard,
-    hint: 'Due next week',
-  },
-];
 
 const financialStatusOptions = [
   { key: 'weekly', label: 'Weekly' },
@@ -136,22 +101,22 @@ const quickActions = [
   {
     id: 'link-account',
     title: 'Link a new account',
-    description: 'Connect a bank or card',
+    description: 'Connect a bank account',
     icon: Link2,
     accent: 'from-teal-400 to-emerald-500',
     submitLabel: 'Link Account',
     modalTitle: 'Link a New Account',
-    modalSubtitle: 'We keep your credentials encrypted and secure at all times.',
+    modalSubtitle: 'Select a bank to generate and link a new account',
   },
   {
     id: 'quick-deposit',
-    title: 'Quick deposit',
-    description: 'Record a deposit',
+    title: 'Transfer Funds',
+    description: 'Move money between accounts',
     icon: ArrowUpCircle,
     accent: 'from-cyan-400 to-blue-500',
-    submitLabel: 'Record Deposit',
-    modalTitle: 'Quick Deposit',
-    modalSubtitle: 'Choose where the funds are going and leave a short note.',
+    submitLabel: 'Transfer Funds',
+    modalTitle: 'Transfer Funds',
+    modalSubtitle: 'Move money between your accounts',
   },
   {
     id: 'manual-entry',
@@ -177,12 +142,12 @@ const quickActions = [
 
 const actionInitialValues = {
   'link-account': {
-    accountType: '',
-    institution: '',
-    accountNumber: '',
-    nickname: '',
+    bank: '',
+    initialDeposit: '',
+    accountName: '',
   },
   'quick-deposit': {
+    fromAccount: '',
     account: '',
     amount: '',
     date: '',
@@ -209,15 +174,18 @@ const accountTypeOptions = [
   { value: 'credit', label: 'Credit Card' },
 ];
 
-const linkedAccountOptions = [
-  { value: 'primary', label: 'Primary Account' },
-  { value: 'travel', label: 'Travel Wallet' },
-];
+// linkedAccountOptions will be dynamically generated from linkedAccounts state
+// This ensures we use real account IDs from the backend instead of hardcoded values
 
 const bankOptions = [
-  { value: 'guroosh', label: 'Guroosh Bank' },
-  { value: 'snb', label: 'SNB' },
-  { value: 'riyad', label: 'Riyad Bank' },
+  { value: '1', label: 'Al Rajhi Bank' },
+  { value: '2', label: 'National Commercial Bank' },
+  { value: '3', label: 'Riyad Bank' },
+  { value: '4', label: 'Saudi British Bank' },
+  { value: '5', label: 'Bank Albilad' },
+  { value: '6', label: 'Alinma Bank' },
+  { value: '7', label: 'Bank Al Jazira' },
+  { value: '8', label: 'Banque Saudi Fransi' },
 ];
 
 const transactionTypeOptions = [
@@ -293,6 +261,120 @@ function DashboardPage() {
   const [activeAction, setActiveAction] = useState(null);
   const [actionValues, setActionValues] = useState(actionInitialValues);
   const [latestUpdates, setLatestUpdates] = useState(initialLatestUpdates);
+  const [linkingAccount, setLinkingAccount] = useState(false);
+  const [linkAccountStep, setLinkAccountStep] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [linkedAccounts, setLinkedAccounts] = useState([]);
+
+  // Generate account options dynamically from linked accounts
+  // Always include a default "Main Account" option for users without linked accounts
+  // Use useMemo to ensure UI refreshes when balances change
+  const linkedAccountOptions = useMemo(() => {
+    const mainAccountOption = {
+      value: 'main',
+      label: `Main Account (Default) - ${formatSR(dashboardData?.totalCash || 0)}`,
+      name: 'Main Account (Default)',
+      balance: dashboardData?.totalCash || 0,
+    };
+
+    return [
+      mainAccountOption,
+      ...linkedAccounts.map(account => ({
+        value: account.id || account._id,  // Use the actual account ID from backend
+        label: `${account.bank} - ${account.accountNumber || account.accountType || 'Account'} - ${formatSR(account.balance || 0)}`,
+        name: `${account.bank} - ${account.accountNumber || account.accountType || 'Account'}`,
+        balance: account.balance || 0,
+      }))
+    ];
+  }, [dashboardData?.totalCash, linkedAccounts]);
+
+  // Fetch dashboard data from backend
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${API_BASE_URL}/dashboard`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setDashboardData(result.data);
+          setLinkedAccounts(result.data.accounts || []);
+
+          // Update latest updates from backend
+          if (result.data.latestUpdates && result.data.latestUpdates.length > 0) {
+            const formattedUpdates = result.data.latestUpdates.map((update, index) => ({
+              id: update.id || `update-${index}`,
+              merchant: update.merchant,
+              amount: update.amount,
+              timestamp: formatTimestamp(update.timestamp),
+              method: update.method,
+              status: update.status,
+              icon: update.status === 'investment' ? TrendingUp : (update.status === 'in' ? ArrowUpCircle : ShoppingBag),
+            }));
+            setLatestUpdates(formattedUpdates);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Refresh dashboard when user returns to the page (e.g., after creating an investment)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDashboardData();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchDashboardData();
+    };
+
+    // Listen for page visibility changes (tab switching)
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    // Listen for window focus events (clicking back into the app)
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchDashboardData]);
+
+  const mapTransactions = useCallback(
+    (transactions = []) =>
+      transactions.map((transaction, index) => {
+        const amount = Number(transaction.amount ?? transaction.value ?? 0);
+        const status = transaction.status || transaction.direction || (transaction.type === 'credit' ? 'in' : 'out');
+        const icon = status === 'in' ? ArrowUpCircle : ShoppingBag;
+        return {
+          id: transaction.id || `tx-${index}`,
+          merchant: transaction.merchant || transaction.description || 'Transaction',
+          amount,
+          timestamp: formatTimestamp(transaction.timestamp || transaction.createdAt || transaction.date),
+          method: transaction.method || transaction.category || transaction.type || '—',
+          status: status === 'credit' ? 'in' : status === 'debit' ? 'out' : status || 'out',
+          icon,
+        };
+      }),
+    []
+  );
 
   const addLatestUpdate = (update) => {
     setLatestUpdates((prev) =>
@@ -314,7 +396,8 @@ function DashboardPage() {
     return `${parts[0][0]?.toUpperCase() || ''}${parts[1][0]?.toUpperCase() || ''}`;
   }, [displayName]);
 
-  const activeFinancialData = financialStatusData[statusRange];
+  // Use real data from backend instead of hardcoded financialStatusData
+  const activeFinancialData = dashboardData?.weeklyChart || financialStatusData[statusRange];
   const maxFinancialValue = Math.max(
     ...activeFinancialData.map((item) => item.value),
     1
@@ -358,6 +441,8 @@ function DashboardPage() {
       resetActionForm(actionId);
     }
     setActiveAction(null);
+    setLinkingAccount(false);
+    setLinkAccountStep(1);
   };
 
   const updateActionValue = (actionId, field, value) => {
@@ -377,56 +462,317 @@ function DashboardPage() {
     }));
   };
 
-  const handleSubmitAction = (actionId, event) => {
+  const handleNextStep = () => {
+    if (linkAccountStep < 3) {
+      setLinkAccountStep(linkAccountStep + 1);
+    }
+  };
+
+  const handlePreviousStep = () => {
+    if (linkAccountStep > 1) {
+      setLinkAccountStep(linkAccountStep - 1);
+    }
+  };
+
+  const handleSubmitAction = async (actionId, event) => {
     event.preventDefault();
+
+    if (actionId === 'link-account') {
+      const data = actionValues['link-account'];
+
+      // Validate all fields
+      if (!data.bank || !data.initialDeposit || !data.accountName) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      setLinkingAccount(true);
+
+      try {
+        // Call backend API to create account
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+
+        const response = await fetch(`${API_BASE_URL}/accounts/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            bankId: data.bank,
+            initialDeposit: parseFloat(data.initialDeposit),
+            accountName: data.accountName,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create account');
+        }
+
+        const result = await response.json();
+
+        // Add success notification or update
+        addLatestUpdate({
+          merchant: `${getOptionLabel(bankOptions, data.bank)} Account Linked`,
+          amount: parseFloat(data.initialDeposit),
+          timestamp: formatTimestamp(),
+          method: 'Account Creation • Initial Deposit',
+          status: 'in',
+          icon: Link2,
+        });
+
+        // Refresh dashboard data to show new account
+        fetchDashboardData();
+
+        // Reset form and close modal
+        resetActionForm(actionId);
+        setActiveAction(null);
+        setLinkAccountStep(1);
+
+      } catch (error) {
+        console.error('Error creating account:', error);
+        alert('Failed to create account. Please try again.');
+      } finally {
+        setLinkingAccount(false);
+      }
+
+      return;
+    }
 
     if (actionId === 'quick-deposit') {
       const data = actionValues['quick-deposit'];
-      const amount = parseFloat(data.amount) || 0;
-      addLatestUpdate({
-        merchant: data.description || 'Quick deposit',
-        amount,
-        timestamp: formatTimestamp(data.date),
-        method: `${getOptionLabel(linkedAccountOptions, data.account)} • Deposit`,
-        status: 'in',
-        icon: ArrowUpCircle,
-      });
+
+      // Validate all fields
+      if (!data.fromAccount || !data.account || !data.amount || !data.date) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      // Prevent transfer to same account
+      if (data.fromAccount === data.account) {
+        alert('Cannot transfer to the same account');
+        return;
+      }
+
+      try {
+        // Call backend API to transfer funds
+        const token = localStorage.getItem('token');
+
+        console.log('💸 Submitting Transfer:', {
+          fromAccountId: data.fromAccount,
+          toAccountId: data.account,
+          amount: parseFloat(data.amount),
+          description: data.description || 'Transfer',
+        });
+
+        const response = await fetch('/api/transactions/transfer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            fromAccountId: data.fromAccount,
+            toAccountId: data.account,
+            amount: parseFloat(data.amount),
+            description: data.description || 'Transfer',
+            date: data.date,
+          }),
+        });
+
+        // Get the response body for better error messages
+        const result = await response.json();
+
+        if (!response.ok) {
+          const errorMsg = result.error || 'Failed to transfer funds';
+          console.error('❌ Transfer failed:', {
+            status: response.status,
+            error: errorMsg,
+            details: result
+          });
+          throw new Error(errorMsg);
+        }
+
+        console.log('✅ Transfer successful:', result);
+
+        // Add success notification
+        const amount = parseFloat(data.amount) || 0;
+        const fromLabel = getOptionLabel(linkedAccountOptions, data.fromAccount);
+        const toLabel = getOptionLabel(linkedAccountOptions, data.account);
+
+        addLatestUpdate({
+          merchant: data.description || 'Transfer',
+          amount,
+          timestamp: formatTimestamp(data.date),
+          method: `${fromLabel} → ${toLabel}`,
+          status: 'in',
+          icon: ArrowUpCircle,
+        });
+
+        // Update accounts and Main Account balance immediately from response
+        if (result.updatedAccounts) {
+          setLinkedAccounts(result.updatedAccounts);
+        }
+
+        if (result.updatedMainBalance !== undefined) {
+          // Update the dashboard data with new Main Account balance
+          setDashboardData(prevData => ({
+            ...prevData,
+            totalCash: result.updatedMainBalance,
+            accounts: result.updatedAccounts || prevData.accounts,
+          }));
+        }
+
+        // Reset form and close modal
+        resetActionForm(actionId);
+        setActiveAction(null);
+
+        // Show success message
+        alert(`Successfully transferred ${formatSR(amount)} from ${fromLabel} to ${toLabel}`);
+
+      } catch (error) {
+        console.error('Error processing transfer:', error);
+        alert(`Failed to transfer funds: ${error.message}`);
+      }
+
+      return;
     }
 
     if (actionId === 'manual-entry') {
       const data = actionValues['manual-entry'];
-      const amount = parseFloat(data.amount) || 0;
-      const status =
-        data.transactionType === 'income'
-          ? 'in'
-          : data.transactionType === 'expense'
-          ? 'out'
-          : 'out';
-      const transactionLabel = data.transactionType
-        ? `${data.transactionType.charAt(0).toUpperCase()}${data.transactionType.slice(1)}`
-        : 'Entry';
 
-      addLatestUpdate({
-        merchant: data.merchant || 'Manual transaction',
-        amount,
-        timestamp: formatTimestamp(data.date),
-        method: `${transactionLabel} • ${getOptionLabel(categoryOptions, data.category)}`,
-        status,
-        icon: PenSquare,
-      });
+      // Validate all fields
+      if (!data.account || !data.amount || !data.date || !data.transactionType) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      try {
+        // Call backend API to create manual entry
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+
+        const direction = data.transactionType === 'income' ? 'incoming' : 'outgoing';
+
+        const response = await fetch(`${API_BASE_URL}/transactions/manual`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            accountId: data.account,
+            amount: parseFloat(data.amount),
+            name: data.merchant || 'Manual transaction',
+            date: data.date,
+            category: data.category,
+            direction,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create manual entry');
+        }
+
+        const result = await response.json();
+
+        // Add success notification
+        const amount = parseFloat(data.amount) || 0;
+        const status = direction === 'incoming' ? 'in' : 'out';
+        const transactionLabel = data.transactionType
+          ? `${data.transactionType.charAt(0).toUpperCase()}${data.transactionType.slice(1)}`
+          : 'Entry';
+
+        addLatestUpdate({
+          merchant: data.merchant || 'Manual transaction',
+          amount,
+          timestamp: formatTimestamp(data.date),
+          method: `${transactionLabel} • ${getOptionLabel(categoryOptions, data.category)}`,
+          status,
+          icon: PenSquare,
+        });
+
+        // Refresh dashboard data to show updated balance
+        fetchDashboardData();
+
+        // Reset form and close modal
+        resetActionForm(actionId);
+        setActiveAction(null);
+
+      } catch (error) {
+        console.error('Error creating manual entry:', error);
+        alert('Failed to create manual entry. Please try again.');
+      }
+
+      return;
     }
 
     if (actionId === 'parse-sms') {
       const data = actionValues['parse-sms'];
-      const parsed = parseSmsText(data.sms);
-      addLatestUpdate({
-        merchant: parsed.merchant || 'Bank SMS',
-        amount: parsed.amount,
-        timestamp: formatTimestamp(),
-        method: `${getOptionLabel(bankOptions, data.bank)} • Parsed SMS`,
-        status: parsed.isCredit ? 'in' : 'out',
-        icon: MessageSquare,
-      });
+
+      // Validate all fields
+      if (!data.account || !data.sms) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      try {
+        // Call backend API to parse SMS
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+
+        const response = await fetch(`${API_BASE_URL}/transactions/parse-sms`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            accountId: data.account,
+            smsText: data.sms,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to parse SMS');
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.data.saved) {
+          const parsed = result.data.parsed;
+
+          // Add success notification
+          addLatestUpdate({
+            merchant: parsed.merchant || 'Bank SMS',
+            amount: parsed.amount,
+            timestamp: formatTimestamp(),
+            method: `Parsed SMS`,
+            status: parsed.type === 'deposit' ? 'in' : 'out',
+            icon: MessageSquare,
+          });
+
+          // Refresh dashboard data to show updated balance
+          fetchDashboardData();
+
+          // Reset form and close modal
+          resetActionForm(actionId);
+          setActiveAction(null);
+        } else {
+          alert('Could not extract transaction details from SMS. Please try manual entry.');
+        }
+
+      } catch (error) {
+        console.error('Error parsing SMS:', error);
+        alert('Failed to parse SMS. Please try again.');
+      }
+
+      return;
     }
 
     resetActionForm(actionId);
@@ -439,78 +785,195 @@ function DashboardPage() {
     switch (currentAction.id) {
       case 'link-account':
         return (
-          <form
-            onSubmit={(event) => handleSubmitAction('link-account', event)}
-            className="space-y-4"
-          >
-            <SelectMenu
-              label="Account Type"
-              name="accountType"
-              value={actionValues['link-account'].accountType}
-              onChange={(event) =>
-                updateActionValue('link-account', 'accountType', event.target.value)
-              }
-              options={accountTypeOptions}
-              required
-            />
-            <InputField
-              label="Institution Name"
-              name="institution"
-              value={actionValues['link-account'].institution}
-              onChange={(event) =>
-                updateActionValue('link-account', 'institution', event.target.value)
-              }
-              placeholder="e.g., Bank of America"
-              required
-            />
-            <InputField
-              label="Account Number"
-              name="accountNumber"
-              value={actionValues['link-account'].accountNumber}
-              onChange={(event) =>
-                updateActionValue('link-account', 'accountNumber', event.target.value)
-              }
-              placeholder="Enter account number"
-              required
-            />
-            <p className="text-xs text-gray-500 -mt-3">
-              Your account information is encrypted and secure.
-            </p>
-            <InputField
-              label="Account Nickname (Optional)"
-              name="nickname"
-              value={actionValues['link-account'].nickname}
-              onChange={(event) =>
-                updateActionValue('link-account', 'nickname', event.target.value)
-              }
-              placeholder="e.g., My Main Checking"
-            />
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => handleCancelAction('link-account')}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">{currentAction.submitLabel}</Button>
+          <div className="space-y-6">
+            {/* Progress Indicator */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-gray-400">
+                  Step {linkAccountStep} of 3
+                </p>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-700/50 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-teal-400 to-blue-500 transition-all duration-300 ease-out"
+                  style={{ width: `${(linkAccountStep / 3) * 100}%` }}
+                />
+              </div>
             </div>
-          </form>
+
+            <form
+              onSubmit={(event) => handleSubmitAction('link-account', event)}
+              className="space-y-5"
+            >
+              {/* Step 1: Choose Bank */}
+              {linkAccountStep === 1 && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-1">Choose Your Bank</h3>
+                    <p className="text-sm text-gray-400">Select the bank you want to link</p>
+                  </div>
+                  <SelectMenu
+                    label="Bank"
+                    name="bank"
+                    value={actionValues['link-account'].bank}
+                    onChange={(event) =>
+                      updateActionValue('link-account', 'bank', event.target.value)
+                    }
+                    options={bankOptions}
+                    required
+                  />
+                  <div className="flex justify-end gap-3 pt-2">
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      onClick={() => handleCancelAction('link-account')}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleNextStep}
+                      disabled={!actionValues['link-account'].bank}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Initial Deposit */}
+              {linkAccountStep === 2 && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-1">Initial Deposit</h3>
+                    <p className="text-sm text-gray-400">Enter the starting balance for this account</p>
+                  </div>
+                  <InputField
+                    label="Amount (SR)"
+                    name="initialDeposit"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={actionValues['link-account'].initialDeposit}
+                    onChange={(event) =>
+                      updateActionValue('link-account', 'initialDeposit', event.target.value)
+                    }
+                    placeholder="0.00"
+                    required
+                  />
+                  <div className="flex justify-between gap-3 pt-2">
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      onClick={handlePreviousStep}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleNextStep}
+                      disabled={!actionValues['link-account'].initialDeposit}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Account Name */}
+              {linkAccountStep === 3 && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-1">Name Your Account</h3>
+                    <p className="text-sm text-gray-400">Give this account a memorable name</p>
+                  </div>
+                  <InputField
+                    label="Account Name"
+                    name="accountName"
+                    value={actionValues['link-account'].accountName}
+                    onChange={(event) =>
+                      updateActionValue('link-account', 'accountName', event.target.value)
+                    }
+                    placeholder="e.g., Main Checking, Savings"
+                    required
+                  />
+
+                  {/* Review Summary */}
+                  <div className="mt-6 p-4 rounded-xl bg-slate-700/30 border border-slate-600/50 space-y-2">
+                    <p className="text-xs uppercase tracking-wider text-gray-400 mb-3">Review</p>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Bank:</span>
+                      <span className="text-white font-medium">
+                        {getOptionLabel(bankOptions, actionValues['link-account'].bank)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Initial Deposit:</span>
+                      <span className="text-white font-medium">
+                        {formatSR(actionValues['link-account'].initialDeposit)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Account Name:</span>
+                      <span className="text-white font-medium">
+                        {actionValues['link-account'].accountName || '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between gap-3 pt-2">
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      onClick={handlePreviousStep}
+                    >
+                      Back
+                    </Button>
+                    <Button type="submit" loading={linkingAccount}>
+                      Create Account
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>
         );
       case 'quick-deposit':
+        // Filter out the selected fromAccount from toAccount options
+        const fromAccountId = actionValues['quick-deposit'].fromAccount;
+        const toAccountOptions = linkedAccountOptions.filter(
+          opt => opt.value !== fromAccountId
+        );
+
+        // Filter out the selected toAccount from fromAccount options
+        const toAccountId = actionValues['quick-deposit'].account;
+        const fromAccountOptions = linkedAccountOptions.filter(
+          opt => opt.value !== toAccountId
+        );
+
         return (
           <form
             onSubmit={(event) => handleSubmitAction('quick-deposit', event)}
             className="space-y-4"
           >
             <SelectMenu
-              label="Deposit To"
+              label="Transfer From"
+              name="fromAccount"
+              value={actionValues['quick-deposit'].fromAccount}
+              onChange={(event) =>
+                updateActionValue('quick-deposit', 'fromAccount', event.target.value)
+              }
+              options={fromAccountOptions}
+              required
+            />
+            <SelectMenu
+              label="Transfer To"
               name="account"
               value={actionValues['quick-deposit'].account}
               onChange={(event) =>
                 updateActionValue('quick-deposit', 'account', event.target.value)
               }
-              options={linkedAccountOptions}
+              options={toAccountOptions}
               required
             />
             <InputField
@@ -543,7 +1006,7 @@ function DashboardPage() {
               onChange={(event) =>
                 updateActionValue('quick-deposit', 'description', event.target.value)
               }
-              placeholder="e.g., Salary deposit"
+              placeholder="e.g., Transfer funds"
             />
             <div className="flex justify-end gap-3 pt-2">
               <Button
@@ -749,26 +1212,55 @@ function DashboardPage() {
                       <p className="text-sm text-gray-400">Welcome back 👋</p>
                       <div className="flex flex-wrap items-baseline gap-3 mt-1">
                         <p className="text-4xl font-bold">
-                          {formatSR(1245.9)}
+                          {formatSR(dashboardData?.totalBalance || 0)}
                         </p>
                         <span className="px-3 py-1 rounded-full text-sm font-medium bg-teal-500/10 text-teal-300 border border-teal-500/40">
-                          +3.2% · 30d
+                          {linkedAccounts.length} accounts
                         </span>
                       </div>
-                      <p className="text-sm text-gray-400 mt-1">Weekly spend</p>
+                      <p className="text-sm text-gray-400 mt-1">Total Balance</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs uppercase tracking-widest text-gray-400">
                         Weekly Spend
                       </p>
                       <p className="text-2xl font-semibold text-teal-300">
-                        {formatSR(0)}
+                        {formatSR(dashboardData?.weeklySpend || 0)}
                       </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {heroStats.map((stat) => {
+                    {[
+                      {
+                        key: 'weekly-spend',
+                        label: 'Weekly Spend',
+                        amount: dashboardData?.weeklySpend || 0,
+                        icon: Wallet,
+                        hint: 'Spent this week',
+                      },
+                      {
+                        key: 'investments',
+                        label: 'Investments',
+                        amount: dashboardData?.investmentsTotal || 0,
+                        icon: TrendingUp,
+                        hint: 'Stocks, Gold & more',
+                      },
+                      {
+                        key: 'total-balance',
+                        label: 'Total Balance',
+                        amount: dashboardData?.totalBalance || 0,
+                        icon: Banknote,
+                        hint: 'Across all accounts',
+                      },
+                      {
+                        key: 'credit-card',
+                        label: 'Credit Card Due',
+                        amount: dashboardData?.creditCardDue || 0,
+                        icon: CreditCard,
+                        hint: 'Outstanding balance',
+                      },
+                    ].map((stat) => {
                       const Icon = stat.icon;
                       return (
                         <div
@@ -786,7 +1278,7 @@ function DashboardPage() {
                             </div>
                           </div>
                           <div>
-                            <p className="text-xl font-semibold">{formatSR(stat.amount, stat.digits)}</p>
+                            <p className="text-xl font-semibold">{formatSR(stat.amount)}</p>
                             <p className="text-xs text-gray-500">{stat.hint}</p>
                           </div>
                         </div>
@@ -899,14 +1391,14 @@ function DashboardPage() {
                     <p className="text-xs uppercase tracking-widest text-gray-400">
                       Daily spend limit
                     </p>
-                    <p className="text-2xl font-semibold text-white mt-1">{formatSR(10)}</p>
+                    <p className="text-2xl font-semibold text-white mt-1">{formatSR(dashboardData?.dailySpendLimit || 0)}</p>
                     <p className="text-sm text-gray-400 mt-2">Transfers between my accounts</p>
                   </div>
                   <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4">
                     <p className="text-xs uppercase tracking-widest text-gray-400">
                       Remaining limit
                     </p>
-                    <p className="text-2xl font-semibold text-white mt-1">{formatSR(90)}</p>
+                    <p className="text-2xl font-semibold text-white mt-1">{formatSR(dashboardData?.remainingLimit || 0)}</p>
                     <p className="text-sm text-gray-400 mt-2">Safe spending buffer for today</p>
                   </div>
                 </div>
@@ -917,23 +1409,24 @@ function DashboardPage() {
                   {latestUpdates.map((transaction) => {
                     const Icon = transaction.icon;
                     const isCredit = transaction.status === 'in';
+                    const isInvestment = transaction.status === 'investment';
                     return (
                       <div
                         key={transaction.id}
                         className="flex items-center gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/40 px-4 py-3"
                       >
                         <div className="w-12 h-12 rounded-2xl bg-slate-800/70 flex items-center justify-center">
-                          <Icon className="w-5 h-5 text-teal-300" />
+                          <Icon className={`w-5 h-5 ${isInvestment ? 'text-yellow-400' : 'text-teal-300'}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-white truncate">{transaction.merchant}</p>
                           <p className="text-xs text-gray-400">{transaction.timestamp} • {transaction.method}</p>
                         </div>
                         <div className="text-right">
-                          <p className={`text-base font-semibold ${isCredit ? 'text-teal-300' : 'text-rose-300'}`}>
-                            {isCredit ? '+' : '-'}{formatSR(transaction.amount)}
+                          <p className={`text-base font-semibold ${isInvestment ? 'text-yellow-400' : (isCredit ? 'text-teal-300' : 'text-rose-300')}`}>
+                            {isInvestment ? '' : (isCredit ? '+' : '-')}{formatSR(transaction.amount)}
                           </p>
-                          <p className="text-xs text-gray-500">{isCredit ? 'Incoming' : 'Outgoing'}</p>
+                          <p className="text-xs text-gray-500">{isInvestment ? 'Investment' : (isCredit ? 'Incoming' : 'Outgoing')}</p>
                         </div>
                       </div>
                     );
@@ -972,14 +1465,39 @@ function DashboardPage() {
                 </div>
               </Card>
 
+              <Card title="Your Accounts">
+                <div className="space-y-2">
+                  {linkedAccountOptions.map((account) => (
+                    <div
+                      key={account.value}
+                      className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-slate-900/30 border border-slate-700/40 hover:border-teal-500/30 transition"
+                    >
+                      <span className="text-sm text-gray-300">{account.name}</span>
+                      <span className="text-sm font-semibold text-white">
+                        {formatSR(account.balance)}
+                      </span>
+                    </div>
+                  ))}
+                  {linkedAccountOptions.length === 1 && (
+                    <p className="text-xs text-gray-500 text-center py-2">
+                      Link accounts to see more balances
+                    </p>
+                  )}
+                </div>
+              </Card>
+
               <Card title="Where did your money go?">
                 <div className="rounded-2xl border border-slate-700/60 bg-slate-900/30 p-4">
                   <p className="text-xs uppercase tracking-widest text-gray-400">Top merchant</p>
-                  <p className="text-2xl font-semibold text-white mt-1">{spendingBreakdown.topMerchant}</p>
-                  <p className="text-sm text-gray-400">{formatSR(spendingBreakdown.amount)}</p>
+                  <p className="text-2xl font-semibold text-white mt-1">
+                    {dashboardData?.topMerchant?.name || spendingBreakdown.topMerchant}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {formatSR(dashboardData?.topMerchant?.amount || spendingBreakdown.amount)}
+                  </p>
                 </div>
                 <div className="mt-5 space-y-3">
-                  {spendingBreakdown.allocation.map((allocation) => (
+                  {(dashboardData?.categoryBreakdown || spendingBreakdown.allocation).map((allocation) => (
                     <div key={allocation.label}>
                       <div className="flex items-center justify-between text-sm text-gray-300 mb-1">
                         <span>{allocation.label}</span>
@@ -995,12 +1513,12 @@ function DashboardPage() {
                   ))}
                 </div>
                 <div className="mt-6 rounded-2xl border border-slate-700/60 bg-slate-900/30 p-4">
-                  <p className="text-xs uppercase tracking-widest text-gray-400">Category breakdown</p>
+                  <p className="text-xs uppercase tracking-widest text-gray-400">Daily spend limit</p>
                   <p className="text-lg font-semibold text-white mt-1">
-                    {spendingBreakdown.category} {spendingBreakdown.percentage}%
+                    {formatSR(dashboardData?.dailySpendLimit || 1000)}
                   </p>
                   <p className="text-sm text-gray-500 mt-2">
-                    Latest purchases were mostly telecom expenses.
+                    Remaining: {formatSR(dashboardData?.remainingLimit || 1000)}
                   </p>
                 </div>
               </Card>

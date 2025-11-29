@@ -169,7 +169,15 @@ exports.createInvestment = async (req, res) => {
       buyPrice,
       currentPrice,
       purchaseDate,
-      notes
+      notes,
+      // Real Estate specific fields
+      areaSqm,
+      latitude,
+      longitude,
+      propertyType,
+      yearBuilt,
+      bedrooms,
+      bathrooms
     } = req.body;
 
     // Validation (category-specific)
@@ -198,7 +206,7 @@ exports.createInvestment = async (req, res) => {
       });
     }
 
-    const investment = await Investment.create({
+    const investmentData = {
       userId: req.userId,
       name,
       category,
@@ -207,12 +215,57 @@ exports.createInvestment = async (req, res) => {
       currentPrice: category === 'Real Estate' ? currentPrice : currentPrice,
       purchaseDate,
       notes
-    });
+    };
+
+    // Add Real Estate specific fields if provided
+    if (category === 'Real Estate') {
+      if (areaSqm) investmentData.areaSqm = areaSqm;
+      if (latitude) investmentData.latitude = latitude;
+      if (longitude) investmentData.longitude = longitude;
+      if (propertyType) investmentData.propertyType = propertyType;
+      if (yearBuilt) investmentData.yearBuilt = yearBuilt;
+      if (bedrooms) investmentData.bedrooms = bedrooms;
+      if (bathrooms) investmentData.bathrooms = bathrooms;
+    }
+
+    const investment = await Investment.create(investmentData);
+
+    // Calculate investment value for the update message
+    const investmentValue = category === 'Real Estate'
+      ? currentPrice
+      : (currentPrice * amountOwned);
+
+    // Create a formatted update message for dashboard
+    let updateMessage = '';
+    if (category === 'Stock') {
+      updateMessage = `Bought ${amountOwned} shares of ${name}`;
+    } else if (category === 'Real Estate') {
+      updateMessage = `Invested in ${name}`;
+    } else if (category === 'Gold') {
+      updateMessage = `Bought ${amountOwned}g of gold`;
+    } else if (category === 'Crypto') {
+      updateMessage = `Purchased ${amountOwned} ${name}`;
+    } else {
+      updateMessage = `Invested in ${name}`;
+    }
+
+    // Create latest update object for dashboard
+    const latestUpdate = {
+      id: investment._id.toString(),
+      merchant: updateMessage,
+      amount: investmentValue,
+      timestamp: new Date().toISOString(),
+      method: `Investment · ${category}`,
+      status: 'investment', // Special status for investment transactions
+      category: category,
+      type: 'investment'
+    };
 
     res.status(201).json({
       success: true,
       message: 'Investment created successfully',
-      investment
+      investment,
+      latestUpdate // Include this for dashboard to display
     });
   } catch (error) {
     res.status(500).json({
