@@ -6,11 +6,24 @@ const path = require('path');
 const app = express();
 
 // Middleware
-app.use(helmet()); // Security headers
-app.use(cors({
+// CORS must come before helmet to ensure headers are set correctly
+const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// Configure helmet to not interfere with CORS
+app.use(helmet({
+  crossOriginResourcePolicy: false,
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -36,6 +49,9 @@ app.use('/api/cities', require('./routes/cityRoutes'));
 app.use('/api/stocks', require('./routes/stockRoutes'));
 app.use('/api/real-estate', require('./routes/realEstateRoutes'));
 app.use('/api/gold', require('./routes/goldRoutes'));
+app.use('/api/accounts', require('./routes/accountRoutes'));
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+app.use('/api/transactions', require('./routes/transactionRoutes'));
 
 // Test route
 app.get('/test', (req, res) => {
@@ -47,8 +63,17 @@ app.get('/test', (req, res) => {
 
 // 404 handler
 app.use((req, res, next) => {
+  console.log('❌ 404 Not Found:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    headers: req.headers
+  });
   res.status(404).json({
-    error: 'Route not found'
+    error: 'Route not found',
+    path: req.path,
+    method: req.method
   });
 });
 

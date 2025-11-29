@@ -17,19 +17,20 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Central Bank connected to MongoDB'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
-// Saudi Banks
+// Saudi Banks with logos and IDs
 const SAUDI_BANKS = [
-  'Al Rajhi Bank',
-  'National Commercial Bank (NCB)',
-  'Riyad Bank',
-  'Samba Financial Group',
-  'Banque Saudi Fransi',
-  'Arab National Bank',
-  'Saudi British Bank (SABB)',
-  'Alinma Bank',
-  'Bank Al Jazira',
-  'Bank Albilad'
+  { id: 1, name: 'Al Rajhi Bank', logo: '/bank-logos/alrajhi.png', color: 'from-emerald-400 to-teal-500' },
+  { id: 2, name: 'National Commercial Bank', logo: '/bank-logos/ncb.png', color: 'from-blue-400 to-cyan-500' },
+  { id: 3, name: 'Riyad Bank', logo: '/bank-logos/riyad.png', color: 'from-purple-400 to-indigo-500' },
+  { id: 4, name: 'Saudi British Bank', logo: '/bank-logos/sabb.png', color: 'from-red-400 to-orange-500' },
+  { id: 5, name: 'Bank Albilad', logo: '/bank-logos/albilad.png', color: 'from-amber-400 to-yellow-500' },
+  { id: 6, name: 'Alinma Bank', logo: '/bank-logos/alinma.png', color: 'from-teal-400 to-emerald-500' },
+  { id: 7, name: 'Bank Al Jazira', logo: '/bank-logos/aljazira.png', color: 'from-cyan-400 to-blue-500' },
+  { id: 8, name: 'Banque Saudi Fransi', logo: '/bank-logos/bsf.png', color: 'from-indigo-400 to-purple-500' }
 ];
+
+// Legacy bank names array for backward compatibility
+const SAUDI_BANK_NAMES = SAUDI_BANKS.map(b => b.name);
 
 // Saudi Stock Brokerages
 const SAUDI_BROKERAGES = [
@@ -124,10 +125,10 @@ app.post('/api/create_user', async (req, res) => {
     for (let i = 0; i < numAccounts; i++) {
       const account = new ExternalBankAccount({
         userId,
-        bank: getRandomElement(SAUDI_BANKS),
+        bank: getRandomElement(SAUDI_BANK_NAMES),
         accountNumber: generateAccountNumber(),
         accountType: getRandomElement(accountTypes),
-        balance: getRandomNumber(1000, 50000),
+        balance: 0, // Start with 0 balance - user will add funds via deposits
         currency: 'SAR',
         transactions: [],
         totalDeposits: 0,
@@ -192,7 +193,7 @@ app.post('/api/create_user', async (req, res) => {
 
         const stock = new ExternalStock({
           userId,
-          bank: getRandomElement(SAUDI_BANKS),
+          bank: getRandomElement(SAUDI_BANK_NAMES),
           brokerage: getRandomElement(SAUDI_BROKERAGES),
           symbol: stockInfo.symbol,
           name: stockInfo.name,
@@ -348,12 +349,25 @@ app.post('/api/perform_operation', async (req, res) => {
 
 // Handle Deposit
 async function handleDeposit(userId, accountId, amount, description) {
-  const account = await ExternalBankAccount.findById(accountId);
+  console.log('💰 handleDeposit called:', { userId, accountId, amount, description });
 
-  if (!account || account.userId.toString() !== userId) {
-    throw new Error('Account not found');
+  const account = await ExternalBankAccount.findById(accountId);
+  console.log('📊 Account found:', account ? `Yes (bank: ${account.bank}, balance: ${account.balance})` : 'No');
+
+  if (!account) {
+    console.error('❌ Account not found with ID:', accountId);
+    throw new Error(`Account not found with ID: ${accountId}`);
   }
 
+  if (account.userId.toString() !== userId) {
+    console.error('❌ User ID mismatch:', {
+      expectedUserId: userId,
+      actualUserId: account.userId.toString()
+    });
+    throw new Error('Account does not belong to this user');
+  }
+
+  const oldBalance = account.balance;
   account.balance += amount;
   account.totalDeposits += amount;
   account.transactions.push({
@@ -364,6 +378,12 @@ async function handleDeposit(userId, accountId, amount, description) {
   });
 
   await account.save();
+
+  console.log('✅ Deposit successful:', {
+    oldBalance,
+    newBalance: account.balance,
+    depositAmount: amount
+  });
 
   return {
     account_id: accountId,
@@ -757,6 +777,79 @@ app.get('/api/gold_value/:userId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching gold reserve:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// GET LIST OF BANKS
+app.get('/api/banks', (req, res) => {
+  res.json({
+    success: true,
+    banks: SAUDI_BANKS
+  });
+});
+
+// LINK A NEW ACCOUNT (simple - no credentials needed)
+app.post('/api/link-account', async (req, res) => {
+  try {
+    const { userId, bankId } = req.body;
+
+    // Validation
+    if (!userId || !bankId) {
+      return res.status(400).json({
+        success: false,
+        error: 'userId and bankId are required'
+      });
+    }
+
+    // Find bank
+    const bank = SAUDI_BANKS.find(b => b.id === bankId);
+    if (!bank) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid bank ID'
+      });
+    }
+
+    // Generate new account
+    const accountNumber = generateAccountNumber();
+    const balance = 0; // Start with zero balance - user will deposit initial amount
+    const accountType = getRandomElement(['Checking', 'Savings', 'Investment']);
+
+    // Create account in database
+    const account = new ExternalBankAccount({
+      userId,
+      bank: bank.name,
+      accountNumber,
+      accountType,
+      balance,
+      currency: 'SAR',
+      transactions: [],
+      totalDeposits: 0,
+      totalPayments: 0
+    });
+
+    await account.save();
+
+    // Return full account number (no masking for simplicity)
+    res.json({
+      success: true,
+      message: 'Account linked successfully',
+      account: {
+        id: account._id,
+        bankName: bank.name,
+        bankLogo: bank.logo,
+        accountNumber: accountNumber,
+        accountType,
+        balance,
+        currency: 'SAR'
+      }
+    });
+  } catch (error) {
+    console.error('Error linking account:', error);
     res.status(500).json({
       success: false,
       error: error.message
