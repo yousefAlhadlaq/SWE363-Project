@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const ExternalBankAccount = require('../models/externalBankAccount');
 const ExternalStock = require('../models/externalStock');
 const ExternalGold = require('../models/externalGold');
@@ -5,10 +6,9 @@ const Expense = require('../models/expense');
 const Investment = require('../models/Investment');
 const axios = require('axios');
 
-// Central Bank API URL
 const CENTRAL_BANK_API = process.env.CENTRAL_BANK_API || 'http://localhost:5002/api';
+const MAX_RECENT_LIMIT = 50;
 
-// Helper: Get start of week (Sunday)
 const getStartOfWeek = () => {
   const now = new Date();
   const day = now.getDay();
@@ -16,13 +16,11 @@ const getStartOfWeek = () => {
   return new Date(now.setDate(diff));
 };
 
-// Helper: Get start of month
 const getStartOfMonth = () => {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), 1);
 };
 
-// Helper: Categorize transaction
 const categorizeTransaction = (description = '') => {
   const desc = description.toLowerCase();
 
@@ -51,7 +49,6 @@ const categorizeTransaction = (description = '') => {
   return 'Other';
 };
 
-// Fetch data from Central Bank mock server
 const fetchFromCentralBank = async (endpoint, userId) => {
   try {
     const response = await axios.get(`${CENTRAL_BANK_API}/${endpoint}/${userId}`);
@@ -67,7 +64,6 @@ exports.getDashboardData = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Fetch data from multiple sources in parallel
     const [
       expensesFromDB,
       investmentsFromDB,
@@ -75,27 +71,18 @@ exports.getDashboardData = async (req, res) => {
       centralBankStocks,
       centralBankGold,
     ] = await Promise.all([
-      // Local database
       Expense.find({ userId }).sort({ date: -1 }).limit(50),
       Investment.find({ userId }),
-      // Central Bank mock server (PRIMARY SOURCE - used by all team members)
       fetchFromCentralBank('accounts', userId),
       fetchFromCentralBank('stocks', userId),
       fetchFromCentralBank('gold_value', userId),
     ]);
 
-    // Use Central Bank as primary source (for team collaboration)
     const accounts = centralBankAccounts?.accounts || [];
     const stockPortfolios = centralBankStocks?.portfolios || [];
     const stockSummary = centralBankStocks?.summary || { totalValue: 0, totalGainLoss: 0 };
     const goldData = centralBankGold?.gold;
 
-    console.log('📊 Dashboard Data Debug:');
-    console.log('  - User ID:', userId);
-    console.log('  - Accounts from Central Bank:', accounts.length);
-    console.log('  - Accounts data:', JSON.stringify(accounts, null, 2));
-
-    // Calculate totals
     let totalBalance = 0;
     let weeklySpend = 0;
     let monthlySpend = 0;
@@ -103,20 +90,15 @@ exports.getDashboardData = async (req, res) => {
     const allTransactions = [];
     const merchantSpending = {};
     const categorySpending = {};
-    const weeklyChartData = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
+    const weeklyChartData = [0, 0, 0, 0, 0, 0, 0];
 
     const startOfWeek = getStartOfWeek();
     const startOfMonth = getStartOfMonth();
-    
-    // Rolling 7-day window for "Weekly Spend" scalar
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     oneWeekAgo.setHours(0, 0, 0, 0);
 
-    // Process bank accounts
     const processedAccounts = [];
 
-    // Handle accounts from Central Bank (array format)
     if (Array.isArray(accounts)) {
       accounts.forEach(account => {
         const balance = account.balance || 0;
@@ -127,20 +109,17 @@ exports.getDashboardData = async (req, res) => {
           bank: account.bank,
           accountNumber: account.accountNumber,
           accountType: account.accountType,
-          balance: balance,
+          balance,
           currency: account.currency || 'SAR',
           createdAt: account.createdAt,
         });
 
-        // Check if credit card
         if (account.accountType === 'Credit') {
           creditCardDue += Math.abs(balance);
         }
 
-        // Process transactions from account (Central Bank stores them in billing.transactions)
         const transactions = account.billing?.transactions || account.transactions || [];
         transactions.forEach(tx => {
-          // Convert Mongoose subdocument to plain object if needed
           const txData = tx.toObject ? tx.toObject() : tx;
           allTransactions.push({
             ...txData,
@@ -150,32 +129,24 @@ exports.getDashboardData = async (req, res) => {
             source: 'bank',
           });
 
-          // Calculate spending - STRICTLY payments only
-          // Exclude transfers, investments, deposits
           if (tx.type === 'payment') {
             const txDate = new Date(tx.date);
 
-            // Weekly Spend: Rolling 7 days
             if (txDate >= oneWeekAgo) {
               weeklySpend += tx.amount;
             }
 
-            // Weekly Chart: Sunday to Saturday (Visual)
             if (txDate >= startOfWeek) {
-              const dayIndex = txDate.getDay();
-              weeklyChartData[dayIndex] += tx.amount;
+              weeklyChartData[txDate.getDay()] += tx.amount;
             }
 
             if (txDate >= startOfMonth) {
               monthlySpend += tx.amount;
             }
 
-            // Merchant spending
             const merchant = tx.merchant || tx.description || 'Unknown';
             merchantSpending[merchant] = (merchantSpending[merchant] || 0) + tx.amount;
 
-            // Category spending
-            // Prefer explicit category, fallback to helper
             const category = tx.category || categorizeTransaction(tx.description);
             categorySpending[category] = (categorySpending[category] || 0) + tx.amount;
           }
@@ -183,97 +154,67 @@ exports.getDashboardData = async (req, res) => {
       });
     }
 
-    // Add expenses from Expense model
-    if (expensesFromDB && expensesFromDB.length > 0) {
-      expensesFromDB.forEach(expense => {
-        const txDate = new Date(expense.date);
+    expensesFromDB.forEach(expense => {
+      const txDate = new Date(expense.date);
 
-        allTransactions.push({
-          _id: expense._id,
-          type: 'payment',
-          amount: expense.amount,
-          description: expense.description || expense.category,
-          date: expense.date,
-          source: 'expense',
-        });
-
-        if (txDate >= oneWeekAgo) {
-          weeklySpend += expense.amount;
-        }
-
-        if (txDate >= startOfWeek) {
-          const dayIndex = txDate.getDay();
-          weeklyChartData[dayIndex] += expense.amount;
-        }
-
-        if (txDate >= startOfMonth) {
-          monthlySpend += expense.amount;
-        }
-
-        const category = expense.category || categorizeTransaction(expense.description);
-        categorySpending[category] = (categorySpending[category] || 0) + expense.amount;
-
-        if (expense.merchant) {
-          merchantSpending[expense.merchant] = (merchantSpending[expense.merchant] || 0) + expense.amount;
-        }
+      allTransactions.push({
+        _id: expense._id,
+        type: 'payment',
+        amount: expense.amount,
+        description: expense.description || expense.category,
+        date: expense.date,
+        source: 'expense',
       });
-    }
 
-    // Calculate investments total
-    let investmentsTotal = 0;
+      if (txDate >= oneWeekAgo) {
+        weeklySpend += expense.amount;
+      }
 
-    // Stocks value
-    investmentsTotal += stockSummary.totalValue || 0;
+      if (txDate >= startOfWeek) {
+        weeklyChartData[txDate.getDay()] += expense.amount;
+      }
 
-    // Gold value
+      if (txDate >= startOfMonth) {
+        monthlySpend += expense.amount;
+      }
+
+      const category = expense.category || categorizeTransaction(expense.description);
+      categorySpending[category] = (categorySpending[category] || 0) + expense.amount;
+
+      if (expense.merchant) {
+        merchantSpending[expense.merchant] = (merchantSpending[expense.merchant] || 0) + expense.amount;
+      }
+    });
+
+    let investmentsTotal = stockSummary.totalValue || 0;
     if (goldData) {
       investmentsTotal += goldData.investmentValue || (goldData.amountOunces * goldData.currentPrice) || 0;
     }
+    investmentsFromDB.forEach(inv => {
+      const currentValue = (inv.currentPrice || 0) * (inv.amountOwned || 1);
+      investmentsTotal += currentValue;
 
-    // Investments from Investment model (manually created investments)
-    if (investmentsFromDB && investmentsFromDB.length > 0) {
-      investmentsFromDB.forEach(inv => {
-        // Calculate current value based on currentPrice * amountOwned
-        const currentValue = (inv.currentPrice || 0) * (inv.amountOwned || 1);
-        investmentsTotal += currentValue;
+      allTransactions.push({
+        _id: inv._id,
+        description: inv.category === 'Stock'
+          ? `Bought ${inv.amountOwned} shares of ${inv.name}`
+          : inv.category === 'Real Estate'
+            ? `Invested in ${inv.name}`
+            : inv.category === 'Gold'
+              ? `Bought ${inv.amountOwned}g of gold`
+              : inv.category === 'Crypto'
+                ? `Purchased ${inv.amountOwned} ${inv.name}`
+                : `Invested in ${inv.name}`,
+        amount: currentValue,
+        date: inv.purchaseDate || inv.createdAt,
+        type: 'investment',
+        category: inv.category,
+        source: 'investment',
       });
-    }
+    });
 
-    // Add investment purchases to allTransactions for Latest Updates
-    if (investmentsFromDB && investmentsFromDB.length > 0) {
-      investmentsFromDB.forEach(inv => {
-        const investmentValue = (inv.currentPrice || 0) * (inv.amountOwned || 1);
-
-        // Create formatted message based on category
-        let description = '';
-        if (inv.category === 'Stock') {
-          description = `Bought ${inv.amountOwned} shares of ${inv.name}`;
-        } else if (inv.category === 'Real Estate') {
-          description = `Invested in ${inv.name}`;
-        } else if (inv.category === 'Gold') {
-          description = `Bought ${inv.amountOwned}g of gold`;
-        } else if (inv.category === 'Crypto') {
-          description = `Purchased ${inv.amountOwned} ${inv.name}`;
-        } else {
-          description = `Invested in ${inv.name}`;
-        }
-
-        allTransactions.push({
-          _id: inv._id,
-          description: description,
-          amount: investmentValue,
-          date: inv.purchaseDate || inv.createdAt,
-          type: 'investment',
-          category: inv.category,
-          source: 'investment',
-        });
-      });
-    }
-
-    // Sort transactions by date (newest first)
     allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Get top merchant
     let topMerchant = { name: 'None', amount: 0 };
     Object.entries(merchantSpending).forEach(([name, amount]) => {
       if (amount > topMerchant.amount) {
@@ -281,11 +222,7 @@ exports.getDashboardData = async (req, res) => {
       }
     });
 
-    // Calculate category percentages
-    // Calculate category percentages with "Other" grouping
     const totalCategorySpend = Object.values(categorySpending).reduce((sum, val) => sum + val, 0);
-    
-    // 1. Convert to array and sort
     let sortedCategories = Object.entries(categorySpending)
       .map(([label, value]) => ({
         label,
@@ -294,28 +231,14 @@ exports.getDashboardData = async (req, res) => {
       }))
       .sort((a, b) => b.amount - a.amount);
 
-    // 2. Take top 5 and group the rest
-    let categoryBreakdown = [];
     if (sortedCategories.length > 5) {
       const top5 = sortedCategories.slice(0, 5);
       const others = sortedCategories.slice(5);
-      
       const otherAmount = others.reduce((sum, item) => sum + item.amount, 0);
-      const otherValue = others.reduce((sum, item) => sum + item.value, 0); // Sum of percentages might be slightly off due to rounding, but close enough
-
-      categoryBreakdown = [
-        ...top5,
-        {
-          label: 'Other',
-          value: otherValue,
-          amount: otherAmount
-        }
-      ];
-    } else {
-      categoryBreakdown = sortedCategories;
+      const otherValue = others.reduce((sum, item) => sum + item.value, 0);
+      sortedCategories = [...top5, { label: 'Other', value: otherValue, amount: otherAmount }];
     }
 
-    // Format latest updates (last 10 transactions, including investments)
     const latestUpdates = allTransactions.slice(0, 10).map(tx => ({
       id: tx._id || tx.id,
       merchant: tx.description || 'Transaction',
@@ -328,7 +251,6 @@ exports.getDashboardData = async (req, res) => {
       category: tx.category,
     }));
 
-    // Weekly chart formatted
     const weeklyChart = [
       { label: 'Sun', value: weeklyChartData[0] },
       { label: 'Mon', value: weeklyChartData[1] },
@@ -339,7 +261,6 @@ exports.getDashboardData = async (req, res) => {
       { label: 'Sat', value: weeklyChartData[6] },
     ];
 
-    // Format stock portfolios
     const formattedStocks = stockPortfolios.map(portfolio => ({
       bank: portfolio.bank,
       brokerage: portfolio.brokerage,
@@ -347,7 +268,6 @@ exports.getDashboardData = async (req, res) => {
       totalValue: portfolio.stocks.reduce((sum, s) => sum + s.currentValue, 0),
     }));
 
-    // Format gold data
     const formattedGold = goldData ? {
       amountOunces: goldData.amountOunces,
       purchasePrice: goldData.purchasePrice,
@@ -360,43 +280,27 @@ exports.getDashboardData = async (req, res) => {
     res.json({
       success: true,
       data: {
-        // Summary stats
         totalBalance,
         weeklySpend,
         monthlySpend,
         creditCardDue,
         investmentsTotal,
-
-        // Accounts
         accounts: processedAccounts,
         accountCount: processedAccounts.length,
-
-        // Investments
         stocks: formattedStocks,
         stockSummary,
         gold: formattedGold,
-
-        // Latest activity
         latestUpdates,
-
-        // Spending analysis
         topMerchant,
-        categoryBreakdown,
-
-        // Chart data
+        categoryBreakdown: sortedCategories,
         weeklyChart,
-
-        // Limits
         dailySpendLimit: 1000,
         remainingLimit: Math.max(0, 1000 - (weeklySpend / 7)),
       }
     });
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch dashboard data'
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch dashboard data' });
   }
 };
 
@@ -404,8 +308,6 @@ exports.getDashboardData = async (req, res) => {
 exports.getLinkedAccounts = async (req, res) => {
   try {
     const userId = req.userId;
-
-    // Use LOCAL DB as primary source (this is where linked accounts are saved)
     const accounts = await ExternalBankAccount.find({ userId }).sort({ createdAt: -1 });
 
     res.json({
@@ -427,10 +329,7 @@ exports.getLinkedAccounts = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching linked accounts:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch linked accounts'
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch linked accounts' });
   }
 };
 
@@ -439,13 +338,11 @@ exports.getInvestments = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Fetch from Central Bank
     const [centralBankStocks, centralBankGold] = await Promise.all([
       fetchFromCentralBank('stocks', userId),
       fetchFromCentralBank('gold_value', userId),
     ]);
 
-    // Fallback to local DB if needed
     const localStocks = await ExternalStock.find({ userId });
     const localGold = await ExternalGold.findOne({ userId });
     const investments = await Investment.find({ userId });
@@ -479,10 +376,7 @@ exports.getInvestments = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching investments:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch investments'
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch investments' });
   }
 };
 
@@ -490,12 +384,10 @@ exports.getInvestments = async (req, res) => {
 exports.getLatestUpdates = async (req, res) => {
   try {
     const userId = req.userId;
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = parseInt(req.query.limit, 10) || 20;
 
-    // Collect all transactions
     const allTransactions = [];
 
-    // From local accounts (PRIMARY SOURCE)
     const localAccounts = await ExternalBankAccount.find({ userId });
     localAccounts.forEach(account => {
       account.transactions.forEach(tx => {
@@ -514,7 +406,6 @@ exports.getLatestUpdates = async (req, res) => {
       });
     });
 
-    // From expenses
     const expenses = await Expense.find({ userId }).sort({ date: -1 }).limit(limit);
     expenses.forEach(expense => {
       allTransactions.push({
@@ -528,7 +419,6 @@ exports.getLatestUpdates = async (req, res) => {
       });
     });
 
-    // Sort by date and limit
     allTransactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     const limitedTransactions = allTransactions.slice(0, limit);
 
@@ -541,10 +431,7 @@ exports.getLatestUpdates = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching latest updates:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch latest updates'
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch latest updates' });
   }
 };
 
@@ -552,9 +439,8 @@ exports.getLatestUpdates = async (req, res) => {
 exports.getSpendingStats = async (req, res) => {
   try {
     const userId = req.userId;
-    const period = req.query.period || 'weekly'; // weekly, monthly, yearly
+    const period = req.query.period || 'weekly';
 
-    // Use LOCAL DB as primary source
     const accounts = await ExternalBankAccount.find({ userId });
     const expenses = await Expense.find({ userId });
 
@@ -569,18 +455,19 @@ exports.getSpendingStats = async (req, res) => {
         startDate = new Date(now.getFullYear(), 0, 1);
         break;
       case 'weekly':
-      default:
+      default: {
         const day = now.getDay();
         startDate = new Date(now);
         startDate.setDate(now.getDate() - day);
         startDate.setHours(0, 0, 0, 0);
+        break;
+      }
     }
 
     let totalSpend = 0;
     let totalIncome = 0;
     const categorySpending = {};
 
-    // Process bank transactions
     accounts.forEach(account => {
       const transactions = account.transactions || [];
       transactions.forEach(tx => {
@@ -597,7 +484,6 @@ exports.getSpendingStats = async (req, res) => {
       });
     });
 
-    // Process expenses
     expenses.forEach(expense => {
       const txDate = new Date(expense.date);
       if (txDate >= startDate) {
@@ -625,9 +511,109 @@ exports.getSpendingStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching spending stats:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch spending stats'
+    res.status(500).json({ success: false, error: 'Failed to fetch spending stats' });
+  }
+};
+
+// GET /api/dashboard/overview - Aggregated monthly metrics (admin + user)
+exports.getOverview = async (req, res) => {
+  try {
+    const userObjectId = new mongoose.Types.ObjectId(req.userId);
+    const isAdmin = req.user?.role === 'admin';
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const matchFilter = {
+      date: {
+        $gte: startOfMonth,
+        $lte: endOfMonth
+      },
+      ...(isAdmin ? {} : { userId: userObjectId })
+    };
+
+    const [monthlyExpenses] = await Expense.aggregate([
+      { $match: matchFilter },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const totalExpenses = monthlyExpenses?.total || 0;
+
+    const investments = await Investment.find(isAdmin ? {} : { userId: req.userId });
+    const totalInvestments = investments.reduce((sum, investment) => {
+      const price = typeof investment.currentPrice === 'number'
+        ? investment.currentPrice
+        : (typeof investment.buyPrice === 'number' ? investment.buyPrice : 0);
+      return sum + price * (investment.amountOwned || 0);
+    }, 0);
+
+    const incomePipeline = [
+      { $match: isAdmin ? {} : { userId: userObjectId } },
+      { $unwind: '$transactions' },
+      {
+        $match: {
+          'transactions.date': { $gte: startOfMonth, $lte: endOfMonth },
+          'transactions.type': { $in: ['deposit', 'transfer_in'] }
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$transactions.amount' } } }
+    ];
+
+    const [incomeAggregate] = await ExternalBankAccount.aggregate(incomePipeline);
+    const totalIncome = incomeAggregate?.total || 0;
+    const netBalance = totalIncome - totalExpenses;
+
+    res.json({
+      success: true,
+      data: {
+        totalIncome,
+        totalExpenses,
+        netBalance,
+        totalInvestments,
+        period: {
+          label: 'current_month',
+          start: startOfMonth.toISOString(),
+          end: endOfMonth.toISOString()
+        }
+      }
     });
+  } catch (error) {
+    console.error('Dashboard overview error:', error);
+    res.status(500).json({ error: error.message || 'Failed to load dashboard overview' });
+  }
+};
+
+// GET /api/dashboard/recent-transactions - condensed recent items
+exports.getRecentTransactions = async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 10, MAX_RECENT_LIMIT);
+    const isAdmin = req.user?.role === 'admin';
+
+    let expenseQuery = Expense.find(isAdmin ? {} : { userId: req.userId })
+      .populate('categoryId', 'name color')
+      .sort({ date: -1 })
+      .limit(limit);
+
+    if (isAdmin) {
+      expenseQuery = expenseQuery.populate('userId', 'fullName email');
+    }
+
+    const expenses = await expenseQuery;
+
+    const transactions = expenses.map((expense) => ({
+      id: expense._id,
+      type: 'expense',
+      amount: expense.amount,
+      title: expense.title,
+      category: expense.categoryId?.name || 'Uncategorized',
+      categoryColor: expense.categoryId?.color || '#f87171',
+      date: expense.date,
+      merchant: expense.merchant || null,
+      owner: isAdmin ? (expense.userId?.fullName || 'User') : undefined
+    }));
+
+    res.json({ success: true, data: transactions });
+  } catch (error) {
+    console.error('Dashboard recent transactions error:', error);
+    res.status(500).json({ error: error.message || 'Failed to load recent transactions' });
   }
 };

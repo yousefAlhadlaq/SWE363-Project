@@ -51,14 +51,14 @@ exports.createGoal = async (req, res) => {
     const { name, targetAmount, savedAmount, deadline } = req.body;
 
     // Validation
-    if (!name || !targetAmount) {
+    if (!name || targetAmount === undefined || targetAmount === null) {
       return res.status(400).json({
         success: false,
         error: 'Please provide name and target amount'
       });
     }
 
-    if (targetAmount < 0) {
+    if (targetAmount <= 0) {
       return res.status(400).json({
         success: false,
         error: 'Target amount must be positive'
@@ -69,6 +69,13 @@ exports.createGoal = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Saved amount must be positive'
+      });
+    }
+
+    if (deadline && new Date(deadline) < new Date()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Target date cannot be in the past'
       });
     }
 
@@ -99,7 +106,7 @@ exports.updateGoal = async (req, res) => {
     const { name, targetAmount, savedAmount, deadline, status } = req.body;
 
     // Validation
-    if (targetAmount !== undefined && targetAmount < 0) {
+    if (targetAmount !== undefined && targetAmount <= 0) {
       return res.status(400).json({
         success: false,
         error: 'Target amount must be positive'
@@ -110,6 +117,13 @@ exports.updateGoal = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Saved amount must be positive'
+      });
+    }
+
+    if (deadline && new Date(deadline) < new Date()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Target date cannot be in the past'
       });
     }
 
@@ -179,7 +193,7 @@ exports.updateGoalProgress = async (req, res) => {
       });
     }
 
-    if (amount < 0) {
+    if (amount <= 0) {
       return res.status(400).json({
         success: false,
         error: 'Amount must be positive'

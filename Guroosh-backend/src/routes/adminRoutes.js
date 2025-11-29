@@ -8,6 +8,10 @@ router.use(auth, adminAuth);
 router.get('/overview', adminController.getOverview);
 router.get('/finance', adminController.getFinanceSnapshot);
 router.get('/activity', adminController.getActivityFeed);
+router.get('/users', adminController.getUsers);
+router.get('/users/:id', adminController.getUserProfile);
+router.patch('/users/:id/status', adminController.toggleUserStatus);
+router.post('/users/:id/reset-password', adminController.resetUserPassword);
 
 // Legacy test route (kept for quick connectivity checks)
 router.get('/test', (req, res) => {

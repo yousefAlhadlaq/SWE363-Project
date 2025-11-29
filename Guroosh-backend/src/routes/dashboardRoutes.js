@@ -9,6 +9,10 @@ router.use(auth);
 // GET /api/dashboard - Main dashboard data (all computed stats)
 router.get('/', dashboardController.getDashboardData);
 
+// New consolidated metrics used by admin dashboard
+router.get('/overview', dashboardController.getOverview);
+router.get('/recent-transactions', dashboardController.getRecentTransactions);
+
 // GET /api/dashboard/accounts - Get all linked accounts
 router.get('/accounts', dashboardController.getLinkedAccounts);
 

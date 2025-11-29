@@ -7,6 +7,7 @@ const { auth } = require('../middleware/auth');
 router.use(auth);
 
 router.get('/', expenseController.getAllExpenses);
+router.get('/summary', expenseController.getSummary);
 router.get('/:id', expenseController.getExpenseById);
 router.post('/', expenseController.createExpense);
 router.put('/:id', expenseController.updateExpense);
