@@ -107,6 +107,11 @@ exports.getDashboardData = async (req, res) => {
 
     const startOfWeek = getStartOfWeek();
     const startOfMonth = getStartOfMonth();
+    
+    // Rolling 7-day window for "Weekly Spend" scalar
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    oneWeekAgo.setHours(0, 0, 0, 0);
 
     // Process bank accounts
     const processedAccounts = [];
@@ -145,12 +150,18 @@ exports.getDashboardData = async (req, res) => {
             source: 'bank',
           });
 
-          // Calculate spending
-          if (tx.type === 'payment' || tx.type === 'transfer_out') {
+          // Calculate spending - STRICTLY payments only
+          // Exclude transfers, investments, deposits
+          if (tx.type === 'payment') {
             const txDate = new Date(tx.date);
 
-            if (txDate >= startOfWeek) {
+            // Weekly Spend: Rolling 7 days
+            if (txDate >= oneWeekAgo) {
               weeklySpend += tx.amount;
+            }
+
+            // Weekly Chart: Sunday to Saturday (Visual)
+            if (txDate >= startOfWeek) {
               const dayIndex = txDate.getDay();
               weeklyChartData[dayIndex] += tx.amount;
             }
@@ -159,10 +170,13 @@ exports.getDashboardData = async (req, res) => {
               monthlySpend += tx.amount;
             }
 
-            const merchant = tx.description || 'Unknown';
+            // Merchant spending
+            const merchant = tx.merchant || tx.description || 'Unknown';
             merchantSpending[merchant] = (merchantSpending[merchant] || 0) + tx.amount;
 
-            const category = categorizeTransaction(tx.description);
+            // Category spending
+            // Prefer explicit category, fallback to helper
+            const category = tx.category || categorizeTransaction(tx.description);
             categorySpending[category] = (categorySpending[category] || 0) + tx.amount;
           }
         });
@@ -183,8 +197,11 @@ exports.getDashboardData = async (req, res) => {
           source: 'expense',
         });
 
-        if (txDate >= startOfWeek) {
+        if (txDate >= oneWeekAgo) {
           weeklySpend += expense.amount;
+        }
+
+        if (txDate >= startOfWeek) {
           const dayIndex = txDate.getDay();
           weeklyChartData[dayIndex] += expense.amount;
         }
@@ -265,12 +282,38 @@ exports.getDashboardData = async (req, res) => {
     });
 
     // Calculate category percentages
+    // Calculate category percentages with "Other" grouping
     const totalCategorySpend = Object.values(categorySpending).reduce((sum, val) => sum + val, 0);
-    const categoryBreakdown = Object.entries(categorySpending).map(([label, value]) => ({
-      label,
-      value: Math.round((value / (totalCategorySpend || 1)) * 100),
-      amount: value,
-    })).sort((a, b) => b.value - a.value);
+    
+    // 1. Convert to array and sort
+    let sortedCategories = Object.entries(categorySpending)
+      .map(([label, value]) => ({
+        label,
+        value: Math.round((value / (totalCategorySpend || 1)) * 100),
+        amount: value,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // 2. Take top 5 and group the rest
+    let categoryBreakdown = [];
+    if (sortedCategories.length > 5) {
+      const top5 = sortedCategories.slice(0, 5);
+      const others = sortedCategories.slice(5);
+      
+      const otherAmount = others.reduce((sum, item) => sum + item.amount, 0);
+      const otherValue = others.reduce((sum, item) => sum + item.value, 0); // Sum of percentages might be slightly off due to rounding, but close enough
+
+      categoryBreakdown = [
+        ...top5,
+        {
+          label: 'Other',
+          value: otherValue,
+          amount: otherAmount
+        }
+      ];
+    } else {
+      categoryBreakdown = sortedCategories;
+    }
 
     // Format latest updates (last 10 transactions, including investments)
     const latestUpdates = allTransactions.slice(0, 10).map(tx => ({
@@ -543,9 +586,9 @@ exports.getSpendingStats = async (req, res) => {
       transactions.forEach(tx => {
         const txDate = new Date(tx.date);
         if (txDate >= startDate) {
-          if (tx.type === 'payment' || tx.type === 'transfer_out') {
+          if (tx.type === 'payment') {
             totalSpend += tx.amount;
-            const category = categorizeTransaction(tx.description);
+            const category = tx.category || categorizeTransaction(tx.description);
             categorySpending[category] = (categorySpending[category] || 0) + tx.amount;
           } else if (tx.type === 'deposit' || tx.type === 'transfer_in') {
             totalIncome += tx.amount;

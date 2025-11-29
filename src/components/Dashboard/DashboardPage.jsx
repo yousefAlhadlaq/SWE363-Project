@@ -1,18 +1,19 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+ import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   ArrowUpCircle,
   Banknote,
   ChevronRight,
-  CreditCard,
   Link2,
   MessageSquare,
   PenSquare,
   PiggyBank,
   Search,
-  ShoppingBag,
-  TrendingUp,
+  ArrowUpRight,
+  ArrowDownLeft,
   Wallet,
-  RefreshCcw,
+  Download,
+  TrendingUp,
+  CreditCard,
 } from 'lucide-react';
 import Sidebar from '../Shared/Sidebar';
 import Card from '../Shared/Card';
@@ -66,7 +67,7 @@ const initialLatestUpdates = [
     timestamp: 'Oct 4, 3:51 PM',
     method: 'POS • Card',
     status: 'out',
-    icon: ShoppingBag,
+    icon: ArrowUpRight, // Changed from ShoppingBag
   },
   {
     id: 2,
@@ -93,7 +94,7 @@ const initialLatestUpdates = [
     timestamp: 'Sep 21, 11:21 AM',
     method: 'POS',
     status: 'out',
-    icon: RefreshCcw,
+    icon: ArrowDownLeft, // Changed from RefreshCcw
   },
 ];
 
@@ -138,6 +139,16 @@ const quickActions = [
     modalTitle: 'Parse Bank SMS',
     modalSubtitle: 'Paste your bank message and we will extract the details for you.',
   },
+  {
+    id: 'export',
+    title: 'Export Report',
+    description: 'Download your transaction history',
+    icon: Download,
+    accent: 'from-indigo-500 to-purple-600',
+    submitLabel: 'Download Report',
+    modalTitle: 'Export Financial Report',
+    modalSubtitle: 'Download your transaction history',
+  },
 ];
 
 const actionInitialValues = {
@@ -164,7 +175,12 @@ const actionInitialValues = {
   },
   'parse-sms': {
     sms: '',
-    bank: '',
+    account: '',
+  },
+  export: {
+    format: 'csv',
+    startDate: '',
+    endDate: '',
   },
 };
 
@@ -273,9 +289,9 @@ function DashboardPage() {
   const linkedAccountOptions = useMemo(() => {
     const mainAccountOption = {
       value: 'main',
-      label: `Main Account (Default) - ${formatSR(dashboardData?.totalCash || 0)}`,
+      label: `Main Account (Default) - ${formatSR(dashboardData?.totalBalance || 0)}`,
       name: 'Main Account (Default)',
-      balance: dashboardData?.totalCash || 0,
+      balance: dashboardData?.totalBalance || 0,
     };
 
     return [
@@ -287,7 +303,12 @@ function DashboardPage() {
         balance: account.balance || 0,
       }))
     ];
-  }, [dashboardData?.totalCash, linkedAccounts]);
+  }, [dashboardData?.totalBalance, linkedAccounts]);
+
+  // Filter out Main Account for transfer/deposit/manual actions
+  const realAccountOptions = useMemo(() => {
+    return linkedAccountOptions.filter(account => account.value !== 'main');
+  }, [linkedAccountOptions]);
 
   // Fetch dashboard data from backend
   const fetchDashboardData = useCallback(async () => {
@@ -316,7 +337,7 @@ function DashboardPage() {
               timestamp: formatTimestamp(update.timestamp),
               method: update.method,
               status: update.status,
-              icon: update.status === 'investment' ? TrendingUp : (update.status === 'in' ? ArrowUpCircle : ShoppingBag),
+              icon: update.status === 'investment' ? TrendingUp : (update.status === 'in' ? ArrowUpCircle : ArrowUpRight), // Changed ShoppingBag to ArrowUpRight
             }));
             setLatestUpdates(formattedUpdates);
           }
@@ -362,7 +383,7 @@ function DashboardPage() {
       transactions.map((transaction, index) => {
         const amount = Number(transaction.amount ?? transaction.value ?? 0);
         const status = transaction.status || transaction.direction || (transaction.type === 'credit' ? 'in' : 'out');
-        const icon = status === 'in' ? ArrowUpCircle : ShoppingBag;
+        const icon = status === 'in' ? ArrowUpCircle : ArrowUpRight; // Changed ShoppingBag to ArrowUpRight
         return {
           id: transaction.id || `tx-${index}`,
           merchant: transaction.merchant || transaction.description || 'Transaction',
@@ -529,7 +550,6 @@ function DashboardPage() {
         // Reset form and close modal
         resetActionForm(actionId);
         setActiveAction(null);
-        setLinkAccountStep(1);
 
       } catch (error) {
         console.error('Error creating account:', error);
@@ -621,7 +641,7 @@ function DashboardPage() {
           // Update the dashboard data with new Main Account balance
           setDashboardData(prevData => ({
             ...prevData,
-            totalCash: result.updatedMainBalance,
+            totalBalance: result.updatedMainBalance,
             accounts: result.updatedAccounts || prevData.accounts,
           }));
         }
@@ -772,6 +792,59 @@ function DashboardPage() {
         alert('Failed to parse SMS. Please try again.');
       }
 
+      return;
+    }
+
+    if (actionId === 'export') {
+      const { format, startDate, endDate } = actionValues.export;
+
+      // Validation
+      if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+        // toast.error is not defined, using alert for now
+        alert('Start date cannot be after end date');
+        return;
+      }
+
+      // Trigger download
+      const queryParams = new URLSearchParams();
+      if (startDate) queryParams.append('startDate', startDate);
+      if (endDate) queryParams.append('endDate', endDate);
+      queryParams.append('format', format);
+      
+      const endpoint = format === 'pdf' ? '/export/pdf' : '/export/csv';
+      const downloadUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${endpoint}?${queryParams.toString()}`;
+      
+      try {
+        const response = await fetch(downloadUrl, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Export failed: ${errorText}`);
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // toast.success is not defined, using alert for now
+        alert('Report downloaded successfully');
+        handleCancelAction('export');
+        setActiveAction(null);
+      } catch (error) {
+        console.error('Export error:', error);
+        // toast.error is not defined, using alert for now
+        alert(`Failed to download report: ${error.message}`);
+      }
       return;
     }
 
@@ -940,14 +1013,15 @@ function DashboardPage() {
         );
       case 'quick-deposit':
         // Filter out the selected fromAccount from toAccount options
+        // AND ensure Main Account is never an option for transfers
         const fromAccountId = actionValues['quick-deposit'].fromAccount;
-        const toAccountOptions = linkedAccountOptions.filter(
+        const toAccountOptions = realAccountOptions.filter(
           opt => opt.value !== fromAccountId
         );
 
         // Filter out the selected toAccount from fromAccount options
         const toAccountId = actionValues['quick-deposit'].account;
-        const fromAccountOptions = linkedAccountOptions.filter(
+        const fromAccountOptions = realAccountOptions.filter(
           opt => opt.value !== toAccountId
         );
 
@@ -1043,7 +1117,7 @@ function DashboardPage() {
               onChange={(event) =>
                 updateActionValue('manual-entry', 'account', event.target.value)
               }
-              options={linkedAccountOptions}
+              options={realAccountOptions}
               required
             />
             <InputField
@@ -1142,13 +1216,13 @@ function DashboardPage() {
               </p>
             </div>
             <SelectMenu
-              label="Bank"
-              name="bank"
-              value={actionValues['parse-sms'].bank}
+              label="Account to Deposit"
+              name="account"
+              value={actionValues['parse-sms'].account}
               onChange={(event) =>
-                updateActionValue('parse-sms', 'bank', event.target.value)
+                updateActionValue('parse-sms', 'account', event.target.value)
               }
-              options={bankOptions}
+              options={realAccountOptions}
               required
             />
             <div className="flex justify-end gap-3 pt-2">
@@ -1163,6 +1237,75 @@ function DashboardPage() {
             </div>
           </form>
         );
+
+      case 'export':
+        return (
+          <form
+            onSubmit={(event) => handleSubmitAction('export', event)}
+            className="space-y-4"
+          >
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-300">File Format</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => updateActionValue('export', 'format', 'csv')}
+                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${
+                    actionValues.export.format === 'csv'
+                      ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
+                      : 'bg-slate-800/50 border-slate-700 text-gray-400 hover:border-slate-600'
+                  }`}
+                >
+                  CSV (Excel)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateActionValue('export', 'format', 'pdf')}
+                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${
+                    actionValues.export.format === 'pdf'
+                      ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
+                      : 'bg-slate-800/50 border-slate-700 text-gray-400 hover:border-slate-600'
+                  }`}
+                >
+                  PDF Document
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <InputField
+                label="Start Date (Optional)"
+                name="startDate"
+                type="date"
+                value={actionValues.export.startDate}
+                onChange={(event) =>
+                  updateActionValue('export', 'startDate', event.target.value)
+                }
+              />
+              <InputField
+                label="End Date (Optional)"
+                name="endDate"
+                type="date"
+                value={actionValues.export.endDate}
+                onChange={(event) =>
+                  updateActionValue('export', 'endDate', event.target.value)
+                }
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => handleCancelAction('export')}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">{currentAction.submitLabel}</Button>
+            </div>
+          </form>
+        );
+
       default:
         return null;
     }
@@ -1497,20 +1640,26 @@ function DashboardPage() {
                   </p>
                 </div>
                 <div className="mt-5 space-y-3">
-                  {(dashboardData?.categoryBreakdown || spendingBreakdown.allocation).map((allocation) => (
-                    <div key={allocation.label}>
-                      <div className="flex items-center justify-between text-sm text-gray-300 mb-1">
-                        <span>{allocation.label}</span>
-                        <span>{allocation.value}%</span>
+                  {(dashboardData?.categoryBreakdown || []).length > 0 ? (
+                    (dashboardData?.categoryBreakdown || spendingBreakdown.allocation).map((allocation) => (
+                      <div key={allocation.label}>
+                        <div className="flex items-center justify-between text-sm text-gray-300 mb-1">
+                          <span>{allocation.label}</span>
+                          <span>{allocation.value}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-slate-800/70">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-teal-400 to-blue-500"
+                            style={{ width: `${allocation.value}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 rounded-full bg-slate-800/70">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-teal-400 to-blue-500"
-                          style={{ width: `${allocation.value}%` }}
-                        />
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      No spending recorded yet.
                     </div>
-                  ))}
+                  )}
                 </div>
                 <div className="mt-6 rounded-2xl border border-slate-700/60 bg-slate-900/30 p-4">
                   <p className="text-xs uppercase tracking-widest text-gray-400">Daily spend limit</p>
