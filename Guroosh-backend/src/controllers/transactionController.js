@@ -110,6 +110,105 @@ const parseSmsText = (sms = '') => {
   return result;
 };
 
+// POST /api/transactions/transfer - Transfer funds between accounts
+exports.transfer = async (req, res) => {
+  try {
+    const { fromAccountId, toAccountId, amount, description } = req.body;
+    const userId = req.userId;
+
+    console.log('💸 Transfer Request:', { userId, fromAccountId, toAccountId, amount, description });
+
+    // Validation
+    if (!fromAccountId || !toAccountId || !amount) {
+      return res.status(400).json({
+        success: false,
+        error: 'fromAccountId, toAccountId, and amount are required'
+      });
+    }
+
+    if (fromAccountId === toAccountId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot transfer to the same account'
+      });
+    }
+
+    const transferAmount = parseFloat(amount);
+    if (transferAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Amount must be greater than 0'
+      });
+    }
+
+    // Determine transfer type
+    if (fromAccountId === 'main' || toAccountId === 'main') {
+      return res.status(400).json({
+        success: false,
+        error: 'Main Account is not transferable. Please select a specific bank account.'
+      });
+    }
+
+    // Call Central Bank API to perform transfer between real accounts
+    try {
+      console.log('📡 Calling Central Bank API for Transfer:', `${CENTRAL_BANK_API}/transfer`);
+      const response = await axios.post(`${CENTRAL_BANK_API}/transfer`, {
+        userId,
+        from_account_id: fromAccountId,
+        to_account_id: toAccountId,
+        amount: transferAmount,
+        description: description || 'Transfer'
+      });
+
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Failed to perform transfer');
+      }
+
+      // Get updated account info from Central Bank
+      const accountResponse = await axios.get(`${CENTRAL_BANK_API}/accounts/${userId}`);
+      const accounts = accountResponse.data.accounts || [];
+
+      // Calculate new Main Account balance (sum of all real accounts)
+      const newMainBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+
+      res.status(201).json({
+        success: true,
+        updatedMainBalance: newMainBalance,
+        updatedAccounts: accounts,
+        data: {
+          transaction: {
+            type: 'transfer',
+            amount: transferAmount,
+            description: description || 'Transfer',
+            date: new Date(),
+            fromAccountId,
+            toAccountId
+          },
+          message: 'Transfer successful'
+        }
+      });
+    } catch (centralBankError) {
+      console.error('Central Bank API Error:', centralBankError.message);
+
+      // Fallback to local DB if Central Bank is unavailable
+      // Note: This fallback logic assumes both accounts exist locally
+      // ... (existing fallback logic can remain or be simplified if we assume CB is always up)
+
+      // For now, let's keep the error response if CB fails, as local fallback for transfer is complex
+      return res.status(500).json({
+        success: false,
+        error: 'Transfer failed: ' + (centralBankError.response?.data?.error || centralBankError.message)
+      });
+    }
+  } catch (error) {
+    console.error('Error processing transfer:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process transfer'
+    });
+  }
+};
+
 // POST /api/transactions/deposit - Quick deposit
 exports.quickDeposit = async (req, res) => {
   try {
@@ -135,63 +234,9 @@ exports.quickDeposit = async (req, res) => {
 
     // Handle deposit to "Main Account" (virtual account)
     if (accountId === 'main') {
-      console.log('💳 Depositing to Main Account (virtual)');
-
-      // For Main Account, we'll create a local transaction record
-      const Expense = require('../models/expense');
-      const Category = require('../models/category');
-
-      // Find or create an "Income" category for this user
-      let incomeCategory = await Category.findOne({
-        userId,
-        name: 'Income',
-        type: 'income'
-      });
-
-      if (!incomeCategory) {
-        incomeCategory = new Category({
-          userId,
-          name: 'Income',
-          type: 'income',
-          color: '#22d3ee',
-          icon: 'dollar-sign'
-        });
-        await incomeCategory.save();
-      }
-
-      const transaction = new Expense({
-        userId,
-        categoryId: incomeCategory._id,
-        amount: parseFloat(amount),
-        title: description || 'Quick deposit to Main Account',
-        description: description || 'Quick deposit to Main Account',
-        date: new Date(),
-        merchant: 'Main Account Deposit',
-      });
-
-      await transaction.save();
-
-      console.log('✅ Main Account deposit successful:', {
-        amount: parseFloat(amount),
-        description: transaction.description
-      });
-
-      return res.status(201).json({
-        success: true,
-        data: {
-          transaction: {
-            id: transaction._id,
-            type: 'deposit',
-            amount: parseFloat(amount),
-            description: transaction.title,
-            date: transaction.date,
-          },
-          account: {
-            id: 'main',
-            name: 'Main Account (Default)',
-            balance: parseFloat(amount), // Return the deposit amount
-          }
-        }
+      return res.status(400).json({
+        success: false,
+        error: 'Main Account is a computed virtual account and cannot receive direct deposits.'
       });
     }
 
@@ -316,64 +361,9 @@ exports.manualEntry = async (req, res) => {
 
     // Handle Main Account (virtual account)
     if (accountId === 'main') {
-      console.log('💳 Manual entry to Main Account (virtual)');
-
-      const Expense = require('../models/expense');
-      const Category = require('../models/category');
-
-      // Find or create a category for this transaction
-      const categoryType = direction === 'incoming' ? 'income' : 'expense';
-      const categoryName = category || (direction === 'incoming' ? 'Income' : 'Other');
-
-      let transactionCategory = await Category.findOne({
-        userId,
-        name: categoryName,
-        type: categoryType
-      });
-
-      if (!transactionCategory) {
-        transactionCategory = new Category({
-          userId,
-          name: categoryName,
-          type: categoryType,
-          color: '#22d3ee',
-          icon: 'tag'
-        });
-        await transactionCategory.save();
-      }
-
-      const transaction = new Expense({
-        userId,
-        categoryId: transactionCategory._id,
-        amount: txAmount,
-        title: description,
-        description,
-        date: date ? new Date(date) : new Date(),
-        merchant: name || 'Manual Entry',
-      });
-
-      await transaction.save();
-
-      console.log('✅ Main Account manual entry successful');
-
-      return res.status(201).json({
-        success: true,
-        data: {
-          transaction: {
-            id: transaction._id,
-            type: operationType,
-            amount: txAmount,
-            description,
-            date: transaction.date,
-            direction,
-            category: categoryName,
-          },
-          account: {
-            id: 'main',
-            name: 'Main Account (Default)',
-            balance: txAmount,
-          }
-        }
+      return res.status(400).json({
+        success: false,
+        error: 'Main Account is a computed virtual account and cannot be modified directly.'
       });
     }
 

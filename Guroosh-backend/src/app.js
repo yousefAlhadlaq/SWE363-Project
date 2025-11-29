@@ -52,6 +52,7 @@ app.use('/api/gold', require('./routes/goldRoutes'));
 app.use('/api/accounts', require('./routes/accountRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/transactions', require('./routes/transactionRoutes'));
+app.use('/api/export', require('./routes/exportRoutes'));
 
 // Test route
 app.get('/test', (req, res) => {
