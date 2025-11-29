@@ -1,6 +1,79 @@
 const mongoose = require('mongoose');
 const Expense = require('../models/expense');
 const Category = require('../models/category');
+const Account = require('../models/account');
+const Budget = require('../models/budget');
+
+const PERIOD_IN_DAYS = {
+  weekly: 7,
+  monthly: 30,
+  yearly: 365
+};
+
+const resolveBudgetWindow = (budget) => {
+  const now = new Date();
+  if (budget.period === 'custom' && budget.endDate) {
+    return { start: new Date(budget.startDate), end: new Date(budget.endDate) };
+  }
+
+  const increment = PERIOD_IN_DAYS[budget.period] || 30;
+  let currentStart = new Date(budget.startDate);
+  let currentEnd = new Date(currentStart);
+  currentEnd.setDate(currentEnd.getDate() + increment);
+
+  while (currentEnd <= now) {
+    currentStart = new Date(currentEnd);
+    currentEnd = new Date(currentStart);
+    currentEnd.setDate(currentEnd.getDate() + increment);
+  }
+
+  return { start: currentStart, end: currentEnd };
+};
+
+const getBudgetStatus = async (budget, userId) => {
+  const { start, end } = resolveBudgetWindow(budget);
+  const categoryObjectId = new mongoose.Types.ObjectId(
+    typeof budget.categoryId === 'object' ? budget.categoryId._id || budget.categoryId : budget.categoryId
+  );
+  const [agg] = await Expense.aggregate([
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(userId),
+        categoryId: categoryObjectId,
+        date: { $gte: start, $lte: end }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: '$amount' }
+      }
+    }
+  ]);
+
+  const spent = agg?.total || 0;
+  const percentage = budget.limit ? Math.min((spent / budget.limit) * 100, 999) : 0;
+  const state = percentage >= 100 ? 'exceeded' : percentage >= budget.alertThreshold ? 'warning' : 'ok';
+  return { budgetId: budget._id, spent, percentage: Number(percentage.toFixed(1)), state };
+};
+
+const collectBudgetStatuses = async (userId, categoryId) => {
+  const filterCategoryId = typeof categoryId === 'object' ? categoryId._id || categoryId : categoryId;
+  const budgets = await Budget.find({ userId, categoryId: filterCategoryId, isActive: true });
+  if (!budgets.length) return [];
+  const statuses = await Promise.all(budgets.map((budget) => getBudgetStatus(budget, userId)));
+  const now = new Date();
+  await Promise.all(
+    statuses.map((status, index) => {
+      if (status.state !== 'ok') {
+        budgets[index].lastTriggeredAt = now;
+        return budgets[index].save();
+      }
+      return null;
+    })
+  );
+  return statuses;
+};
 
 // Get all expenses with optional filters
 exports.getAllExpenses = async (req, res) => {
@@ -20,6 +93,7 @@ exports.getAllExpenses = async (req, res) => {
 
     const expenses = await Expense.find(query)
       .populate('categoryId', 'name color type')
+      .populate('accountId', 'name type')
       .sort({ date: -1 });
 
     res.json({
@@ -38,7 +112,7 @@ exports.getExpenseById = async (req, res) => {
     const expense = await Expense.findOne({
       _id: req.params.id,
       userId: req.userId
-    }).populate('categoryId', 'name color type');
+    }).populate('categoryId', 'name color type').populate('accountId', 'name type');
 
     if (!expense) {
       return res.status(404).json({ error: 'Expense not found' });
@@ -57,10 +131,10 @@ exports.getExpenseById = async (req, res) => {
 // Create an expense
 exports.createExpense = async (req, res) => {
   try {
-    const { categoryId, amount, title, description, date, merchant } = req.body;
+    const { categoryId, accountId, amount, title, description, date, merchant } = req.body;
 
-    if (!categoryId || !amount || !title || !date) {
-      return res.status(400).json({ error: 'categoryId, amount, title, and date are required' });
+    if (!categoryId || !accountId || !amount || !title || !date) {
+      return res.status(400).json({ error: 'categoryId, accountId, amount, title, and date are required' });
     }
 
     if (Number(amount) <= 0) {
@@ -77,9 +151,19 @@ exports.createExpense = async (req, res) => {
       return res.status(404).json({ error: 'Category not found' });
     }
 
+    if (!category.isActive) {
+      return res.status(400).json({ error: 'This category is disabled. Enable it before adding expenses.' });
+    }
+
+    const account = await Account.findOne({ _id: accountId, userId: req.userId, status: 'active' });
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found or inactive' });
+    }
+
     const expense = await Expense.create({
       userId: req.userId,
       categoryId,
+      accountId,
       amount,
       title: title.trim(),
       description,
@@ -89,10 +173,16 @@ exports.createExpense = async (req, res) => {
 
     await expense.populate('categoryId', 'name color type');
 
+    account.balance = Number(account.balance || 0) - Number(amount);
+    await account.save();
+
+    const budgetStatus = await collectBudgetStatuses(req.userId, categoryId);
+
     res.status(201).json({
       success: true,
       message: 'Expense created successfully',
-      data: expense
+      data: expense,
+      budgets: budgetStatus
     });
   } catch (error) {
     console.error('Create expense error:', error);
@@ -103,46 +193,67 @@ exports.createExpense = async (req, res) => {
 // Update an expense
 exports.updateExpense = async (req, res) => {
   try {
-    const { categoryId, amount, title, description, date, merchant } = req.body;
+    const { categoryId, accountId, amount, title, description, date, merchant } = req.body;
 
     if (amount !== undefined && Number(amount) <= 0) {
       return res.status(400).json({ error: 'Amount must be positive' });
     }
 
-    if (categoryId) {
-      const category = await Category.findOne({
-        _id: categoryId,
-        userId: req.userId,
-        type: 'expense'
-      });
-
-      if (!category) {
-        return res.status(404).json({ error: 'Category not found' });
-      }
-    }
-
-    const updates = {};
-    if (categoryId !== undefined) updates.categoryId = categoryId;
-    if (amount !== undefined) updates.amount = amount;
-    if (title !== undefined) updates.title = title.trim();
-    if (description !== undefined) updates.description = description;
-    if (date !== undefined) updates.date = date;
-    if (merchant !== undefined) updates.merchant = merchant;
-
-    const expense = await Expense.findOneAndUpdate(
-      { _id: req.params.id, userId: req.userId },
-      updates,
-      { new: true, runValidators: true }
-    ).populate('categoryId', 'name color type');
-
+    const expense = await Expense.findOne({ _id: req.params.id, userId: req.userId });
     if (!expense) {
       return res.status(404).json({ error: 'Expense not found' });
     }
 
+    const previousAccountId = expense.accountId.toString();
+    const previousAmount = expense.amount;
+
+    if (categoryId) {
+      const category = await Category.findOne({ _id: categoryId, userId: req.userId, type: 'expense' });
+      if (!category) {
+        return res.status(404).json({ error: 'Category not found' });
+      }
+      if (!category.isActive) {
+        return res.status(400).json({ error: 'Cannot assign disabled category' });
+      }
+      expense.categoryId = categoryId;
+    }
+
+    if (accountId) {
+      const account = await Account.findOne({ _id: accountId, userId: req.userId, status: 'active' });
+      if (!account) {
+        return res.status(404).json({ error: 'Account not found or inactive' });
+      }
+      expense.accountId = accountId;
+    }
+
+    if (amount !== undefined) expense.amount = amount;
+    if (title !== undefined) expense.title = title.trim();
+    if (description !== undefined) expense.description = description;
+    if (date !== undefined) expense.date = date;
+    if (merchant !== undefined) expense.merchant = merchant;
+
+    await expense.save();
+
+    const newAccountId = expense.accountId.toString();
+    const newAmount = expense.amount;
+
+    if (previousAccountId !== newAccountId) {
+      await Account.findOneAndUpdate({ _id: previousAccountId, userId: req.userId }, { $inc: { balance: previousAmount } });
+      await Account.findOneAndUpdate({ _id: newAccountId, userId: req.userId }, { $inc: { balance: -newAmount } });
+    } else if (previousAmount !== newAmount) {
+      const diff = newAmount - previousAmount;
+      await Account.findOneAndUpdate({ _id: newAccountId, userId: req.userId }, { $inc: { balance: -diff } });
+    }
+
+    await expense.populate('categoryId', 'name color type');
+
+    const budgetStatus = await collectBudgetStatuses(req.userId, expense.categoryId._id || expense.categoryId);
+
     res.json({
       success: true,
       message: 'Expense updated successfully',
-      data: expense
+      data: expense,
+      budgets: budgetStatus
     });
   } catch (error) {
     console.error('Update expense error:', error);
@@ -162,9 +273,17 @@ exports.deleteExpense = async (req, res) => {
       return res.status(404).json({ error: 'Expense not found' });
     }
 
+    await Account.findOneAndUpdate(
+      { _id: expense.accountId, userId: req.userId },
+      { $inc: { balance: expense.amount } }
+    );
+
+    const budgetStatus = await collectBudgetStatuses(req.userId, expense.categoryId);
+
     res.json({
       success: true,
-      message: 'Expense deleted successfully'
+      message: 'Expense deleted successfully',
+      budgets: budgetStatus
     });
   } catch (error) {
     console.error('Delete expense error:', error);
@@ -268,6 +387,10 @@ exports.getSummary = async (req, res) => {
         .populate('categoryId', 'name color')
     ]);
 
+    const budgets = await Budget.find({ userId: req.userId, isActive: true })
+      .populate('categoryId', 'name color');
+    const budgetStatuses = await Promise.all(budgets.map((budget) => getBudgetStatus(budget, req.userId)));
+
     const monthTotals = monthlyAgg[0] || { total: 0, count: 0, largest: 0 };
     const weekTotals = weeklyAgg[0] || { total: 0, count: 0 };
 
@@ -314,6 +437,14 @@ exports.getSummary = async (req, res) => {
           date: expense.date,
           category: expense.categoryId?.name || 'Uncategorized',
           color: expense.categoryId?.color || '#94a3b8'
+        })),
+        budgetAlerts: budgets.map((budget, index) => ({
+          id: budget._id,
+          category: budget.categoryId?.name || 'Uncategorized',
+          limit: budget.limit,
+          state: budgetStatuses[index]?.state || 'ok',
+          percentage: budgetStatuses[index]?.percentage || 0,
+          spent: budgetStatuses[index]?.spent || 0
         }))
       }
     });

@@ -5,6 +5,9 @@ const Request = require('../models/request');
 const Meeting = require('../models/meeting');
 const AdvisorRequest = require('../models/advisorRequest');
 const ExternalBankAccount = require('../models/externalBankAccount');
+const emailService = require('../utils/emailService');
+
+const generateResetCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const formatMonthLabel = (year, monthIndex) => {
   const date = new Date(year, monthIndex - 1, 1);
@@ -295,5 +298,105 @@ exports.getActivityFeed = async (req, res) => {
   } catch (error) {
     console.error('Admin activity feed error:', error);
     res.status(500).json({ error: error.message || 'Failed to load activity feed' });
+  }
+};
+
+exports.getUsers = async (req, res) => {
+  try {
+    const { q, status, role } = req.query;
+    const filters = {};
+    if (status) filters.status = status;
+    if (role) filters.role = role;
+    if (q) {
+      filters.$or = [
+        { fullName: { $regex: q, $options: 'i' } },
+        { email: { $regex: q, $options: 'i' } },
+        { phoneNumber: { $regex: q, $options: 'i' } }
+      ];
+    }
+
+    const users = await User.find(filters)
+      .select('-password -emailVerificationCode -passwordResetCode')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error('Admin list users error:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch users' });
+  }
+};
+
+exports.getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const [recentExpenses, recentRequests] = await Promise.all([
+      Expense.find({ userId: user._id }).sort({ date: -1 }).limit(10),
+      Request.find({ client: user._id }).sort({ createdAt: -1 }).limit(5)
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        user,
+        recentExpenses,
+        recentRequests
+      }
+    });
+  } catch (error) {
+    console.error('Admin user profile error:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch profile' });
+  }
+};
+
+exports.toggleUserStatus = async (req, res) => {
+  try {
+    const { action } = req.body;
+    if (!['activate', 'deactivate'].includes(action)) {
+      return res.status(400).json({ error: 'Action must be activate or deactivate' });
+    }
+
+    if (req.params.id === String(req.userId)) {
+      return res.status(400).json({ error: 'You cannot change your own status' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.status = action === 'activate' ? 'active' : 'inactive';
+    user.deactivatedAt = action === 'deactivate' ? new Date() : null;
+    await user.save();
+
+    res.json({ success: true, message: `User ${action}d successfully`, data: user });
+  } catch (error) {
+    console.error('Admin toggle user status error:', error);
+    res.status(500).json({ error: error.message || 'Failed to update user status' });
+  }
+};
+
+exports.resetUserPassword = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const resetCode = generateResetCode();
+    user.passwordResetCode = resetCode;
+    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+
+    emailService.sendPasswordResetEmail(user.email, user.fullName, resetCode)
+      .catch((err) => console.error('Admin reset email error:', err.message));
+
+    res.json({ success: true, message: 'Password reset instructions sent to user' });
+  } catch (error) {
+    console.error('Admin reset password error:', error);
+    res.status(500).json({ error: error.message || 'Failed to reset password' });
   }
 };

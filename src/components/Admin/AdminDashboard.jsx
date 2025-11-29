@@ -13,6 +13,42 @@ const formatSar = (value) => {
   }).format(Number(value));
 };
 
+const formatSarCompact = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return 'SAR —';
+  }
+  const num = Number(value);
+  const absVal = Math.abs(num);
+  if (absVal < 1000) {
+    return formatSar(num);
+  }
+  const units = [
+    { value: 1e12, suffix: 'T' },
+    { value: 1e9, suffix: 'B' },
+    { value: 1e6, suffix: 'M' },
+    { value: 1e3, suffix: 'K' }
+  ];
+
+  for (const unit of units) {
+    if (absVal >= unit.value) {
+      const scaled = num / unit.value;
+      const capped = unit.value === 1e12 && Math.abs(scaled) >= 1000
+        ? 999 * Math.sign(scaled)
+        : scaled;
+      const needsPlus = unit.value === 1e12 && Math.abs(scaled) >= 1000;
+      const magnitude = Math.abs(capped);
+      const precision = magnitude >= 100 ? 0 : magnitude >= 10 ? 1 : 2;
+      const formatted = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: precision
+      }).format(Number(capped.toFixed(precision)));
+      return `SAR ${formatted}${unit.suffix}${needsPlus ? '+' : ''}`;
+    }
+  }
+
+  return formatSar(num);
+};
+
 const formatRelativeTime = (value) => {
   if (!value) return 'moments ago';
   const date = new Date(value);
@@ -71,14 +107,14 @@ function AdminDashboard() {
     return [
       {
         label: 'Net Balance',
-        value: formatSar(summary.netBalance),
-        delta: `Income ${formatSar(summary.totalIncome)} · Expenses ${formatSar(summary.totalExpenses)}`,
+        value: formatSarCompact(summary.netBalance),
+        delta: `Income ${formatSarCompact(summary.totalIncome)} · Expenses ${formatSarCompact(summary.totalExpenses)}`,
         accent: 'from-emerald-400/30 to-emerald-500/10',
         badge: 'Finance'
       },
       {
         label: 'Investments',
-        value: formatSar(summary.totalInvestments),
+        value: formatSarCompact(summary.totalInvestments),
         delta: 'Total market value being tracked',
         accent: 'from-cyan-400/30 to-cyan-500/10',
         badge: 'Assets'
@@ -110,17 +146,17 @@ function AdminDashboard() {
     return [
       {
         label: 'Monthly expenses',
-        value: formatSar(expensesValue),
+        value: formatSarCompact(expensesValue),
         percent: safePercent(expensesValue, 10000)
       },
       {
         label: 'Investments under watch',
-        value: formatSar(investments),
+        value: formatSarCompact(investments),
         percent: safePercent(investments, 50000)
       },
       {
         label: 'Net balance swing',
-        value: formatSar(netBalance),
+        value: formatSarCompact(netBalance),
         percent: safePercent(Math.abs(netBalance), expensesValue || 1)
       }
     ];
@@ -143,7 +179,7 @@ function AdminDashboard() {
       id: transaction.id,
       actor: transaction.category || 'Expense',
       action: transaction.title,
-      detail: `${formatSar(transaction.amount)}${transaction.merchant ? ` · ${transaction.merchant}` : ''}`,
+      detail: `${formatSarCompact(transaction.amount)}${transaction.merchant ? ` · ${transaction.merchant}` : ''}`,
       time: formatRelativeTime(transaction.date)
     }));
   }, [recentTransactions]);

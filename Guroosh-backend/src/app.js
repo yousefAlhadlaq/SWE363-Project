@@ -28,6 +28,8 @@ app.use('/api/meetings', require('./routes/meetingRoutes'));
 app.use('/api/notes', require('./routes/noteRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
+app.use('/api/accounts', require('./routes/accountRoutes'));
+app.use('/api/budgets', require('./routes/budgetRoutes'));
 app.use('/api/investments', require('./routes/investmentRoutes'));
 app.use('/api/goals', require('./routes/goalRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));

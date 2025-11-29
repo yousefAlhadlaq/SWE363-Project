@@ -1,12 +1,22 @@
 const Category = require('../models/category');
+const Expense = require('../models/expense');
+const Budget = require('../models/budget');
+
+const withEnabledFlag = (doc) => {
+  if (!doc) return doc;
+  const json = doc.toObject ? doc.toObject() : doc;
+  return { ...json, enabled: json.isActive };
+};
 
 // Get all categories for the authenticated user
 exports.getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.find({ userId: req.userId }).sort({ createdAt: 1 });
+    const categories = await Category.find({ userId: req.userId })
+      .sort({ createdAt: 1 })
+      .lean();
     res.json({
       success: true,
-      data: categories
+      data: categories.map((category) => ({ ...category, enabled: category.isActive }))
     });
   } catch (error) {
     console.error('Get categories error:', error);
@@ -28,7 +38,7 @@ exports.getCategoryById = async (req, res) => {
 
     res.json({
       success: true,
-      data: category
+      data: withEnabledFlag(category)
     });
   } catch (error) {
     console.error('Get category by id error:', error);
@@ -67,7 +77,7 @@ exports.createCategory = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Category created successfully',
-      data: category
+      data: withEnabledFlag(category)
     });
   } catch (error) {
     console.error('Create category error:', error);
@@ -99,7 +109,7 @@ exports.updateCategory = async (req, res) => {
     res.json({
       success: true,
       message: 'Category updated successfully',
-      data: category
+      data: withEnabledFlag(category)
     });
   } catch (error) {
     console.error('Update category error:', error);
@@ -114,14 +124,19 @@ exports.updateCategory = async (req, res) => {
 // Delete a category
 exports.deleteCategory = async (req, res) => {
   try {
-    const category = await Category.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.userId
-    });
+    const category = await Category.findOne({ _id: req.params.id, userId: req.userId });
 
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
+
+    const hasExpenses = await Expense.exists({ categoryId: category._id, userId: req.userId });
+    if (hasExpenses) {
+      return res.status(400).json({ error: 'Category has expenses and cannot be deleted. Disable it instead.' });
+    }
+
+    await Budget.deleteMany({ userId: req.userId, categoryId: category._id });
+    await category.deleteOne();
 
     res.json({
       success: true,
@@ -130,5 +145,33 @@ exports.deleteCategory = async (req, res) => {
   } catch (error) {
     console.error('Delete category error:', error);
     res.status(500).json({ error: error.message || 'Error deleting category' });
+  }
+};
+
+exports.toggleCategory = async (req, res) => {
+  try {
+    const category = await Category.findOne({ _id: req.params.id, userId: req.userId });
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+
+    category.isActive = !category.isActive;
+    await category.save();
+
+    if (!category.isActive) {
+      await Budget.updateMany(
+        { userId: req.userId, categoryId: category._id, isActive: true },
+        { $set: { isActive: false, notes: 'Automatically paused because category was disabled' } }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `Category ${category.isActive ? 'enabled' : 'disabled'} successfully`,
+      data: withEnabledFlag(category)
+    });
+  } catch (error) {
+    console.error('Toggle category error:', error);
+    res.status(500).json({ error: error.message || 'Failed to toggle category' });
   }
 };

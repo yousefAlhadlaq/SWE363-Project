@@ -5,9 +5,8 @@ import FloatingActionButton from '../Shared/FloatingActionButton';
 import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
-import useLocalStorage from '../../hooks/useLocalStorage';
 import { useAuth } from '../../context/AuthContext';
-import { categoryService, expenseService } from '../../services';
+import { budgetService, categoryService, expenseService, goalService } from '../../services';
 
 const colorPalette = ['#22d3ee', '#0ea5e9', '#14b8a6', '#2dd4bf', '#34d399', '#67e8f9'];
 
@@ -27,10 +26,10 @@ const formatShortDate = (value) => {
 const createId = (prefix) => `${prefix}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
 
 const defaultCategoriesSeed = [
-  { id: 'cat-housing', name: 'Housing', enabled: true, color: colorPalette[0] },
-  { id: 'cat-food', name: 'Food & Dining', enabled: true, color: colorPalette[1] },
-  { id: 'cat-transport', name: 'Transport', enabled: true, color: colorPalette[2] },
-  { id: 'cat-entertainment', name: 'Entertainment', enabled: true, color: colorPalette[3] }
+  { id: 'cat-housing', name: 'Housing', enabled: true, color: colorPalette[0], icon: '🏠' },
+  { id: 'cat-food', name: 'Food & Dining', enabled: true, color: colorPalette[1], icon: '🍽️' },
+  { id: 'cat-transport', name: 'Transport', enabled: true, color: colorPalette[2], icon: '🚗' },
+  { id: 'cat-entertainment', name: 'Entertainment', enabled: true, color: colorPalette[3], icon: '🎬' }
 ];
 
 const defaultBudgetsSeed = [
@@ -62,71 +61,97 @@ const advisorGhostButtonClasses =
 const advisorDangerButtonClasses =
   'px-4 py-2.5 text-sm font-semibold rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 hover:border-red-300 shadow-[0_8px_25px_rgba(248,113,113,0.18)] transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20 dark:hover:border-red-400/70 dark:shadow-[0_10px_25px_rgba(248,113,113,0.25)] dark:focus-visible:ring-red-400';
 
-const normalizeCategories = (list = []) => {
-  const source = Array.isArray(list) && list.length ? list : defaultCategoriesSeed;
+const defaultIconChoices = ['💳', '🍽️', '🏠', '🚗', '🎬', '🩺', '🎁', '🛍️'];
+
+const mapId = (value) => {
+  if (!value) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    return value._id || value.id || value.valueOf?.();
+  }
+  return String(value);
+};
+
+const normalizeCategories = (list) => {
+  const source = Array.isArray(list) ? list : defaultCategoriesSeed;
   return source.map((category, index) => ({
-    id: category.id ?? createId('cat'),
+    id: mapId(category.id ?? category._id) ?? createId('cat'),
     name: category.name ?? `Category ${index + 1}`,
-    enabled: category.enabled !== false,
+    enabled: category.enabled !== undefined ? category.enabled : category.isActive !== false,
     color: category.color ?? colorPalette[index % colorPalette.length],
-    manualSpent:
-      typeof category.manualSpent === 'number' && !Number.isNaN(category.manualSpent)
-        ? Math.max(0, category.manualSpent)
-        : undefined
+    icon: category.icon || defaultIconChoices[index % defaultIconChoices.length],
+    type: category.type || 'expense'
   }));
 };
 
-const normalizeBudgets = (list = [], categories = []) => {
-  const source = Array.isArray(list) && list.length ? list : defaultBudgetsSeed;
+const normalizeBudgets = (list, categories = []) => {
+  const source = Array.isArray(list) ? list : defaultBudgetsSeed;
   const allowedIds = new Set(categories.map((cat) => cat.id));
   return source
     .map((budget, index) => {
-      const categoryId = budget.categoryId ?? categories[index]?.id;
+      const categoryId =
+        mapId(budget.categoryId) ??
+        mapId(budget.category?.id) ??
+        categories[index]?.id ??
+        null;
       if (!categoryId || !allowedIds.has(categoryId)) return null;
       const limit = Math.max(0, Number(budget.limit ?? budget.amount ?? 0));
       if (!limit) return null;
       return {
-        id: budget.id ?? createId('budget'),
+        id: mapId(budget.id ?? budget._id) ?? createId('budget'),
         categoryId,
-        limit
+        categoryName:
+          (typeof budget.categoryId === 'object' && budget.categoryId?.name) ||
+          categories.find((cat) => cat.id === categoryId)?.name ||
+          'Category',
+        limit,
+        period: budget.period || 'monthly',
+        status: budget.status || null,
+        alertThreshold: budget.alertThreshold ?? 80,
+        isActive: budget.isActive !== undefined ? budget.isActive : true
       };
     })
     .filter(Boolean);
 };
 
-const normalizeExpenses = (list = [], categories = []) => {
-  const source = Array.isArray(list) && list.length ? list : defaultExpensesSeed;
+const normalizeExpenses = (list, categories = []) => {
+  const source = Array.isArray(list) ? list : defaultExpensesSeed;
   const categoryFallback = categories[0]?.id;
   return source
     .map((expense, index) => {
       const categoryId =
-        expense.categoryId ??
+        mapId(expense.categoryId) ??
+        mapId(expense.category?._id) ??
         categories.find((cat) => cat.name === expense.category)?.id ??
         categoryFallback;
       const amount = Math.max(0, Number(expense.amount ?? 0));
       if (!categoryId || !amount) return null;
       return {
-        id: expense.id ?? createId('exp'),
+        id: mapId(expense.id ?? expense._id) ?? createId('exp'),
         categoryId,
         amount,
-        date: expense.date ?? new Date().toISOString().split('T')[0],
-        title: expense.title ?? `Expense ${index + 1}`
+        date: expense.date ? expense.date.split('T')[0] : new Date().toISOString().split('T')[0],
+        title: expense.title ?? `Expense ${index + 1}`,
+        description: expense.description || '',
+        merchant: expense.merchant || ''
       };
     })
     .filter(Boolean);
 };
 
-const normalizeGoals = (list = []) => {
-  const source = Array.isArray(list) && list.length ? list : defaultGoalsSeed;
+const normalizeGoals = (list) => {
+  const source = Array.isArray(list) ? list : defaultGoalsSeed;
   return source
     .map((goal, index) => {
       const targetAmount = Math.max(0, Number(goal.targetAmount ?? goal.target ?? 0));
       if (!targetAmount) return null;
       return {
-        id: goal.id ?? createId('goal'),
+        id: mapId(goal.id ?? goal._id) ?? createId('goal'),
         name: goal.name ?? `Goal ${index + 1}`,
         targetAmount,
-        savedAmount: Math.max(0, Number(goal.savedAmount ?? goal.saved ?? 0))
+        savedAmount: Math.max(0, Number(goal.savedAmount ?? goal.saved ?? 0)),
+        deadline: goal.deadline ? goal.deadline.split('T')[0] : undefined,
+        status: goal.status || 'active'
       };
     })
     .filter(Boolean);
@@ -134,17 +159,12 @@ const normalizeGoals = (list = []) => {
 
 function ExpensesPage() {
   const { user } = useAuth();
-  const storagePrefix = useMemo(() => {
-    if (!user) return 'qu_guest';
-    const identifier = user._id || user.id || user.email || 'guest';
-    return `qu_${identifier}`.replace(/[^a-zA-Z0-9_-]/g, '_');
-  }, [user]);
 
-  const [storedCategories, setStoredCategories] = useLocalStorage(`${storagePrefix}_categories`, defaultCategoriesSeed);
-  const [storedBudgets, setStoredBudgets] = useLocalStorage(`${storagePrefix}_budgets`, defaultBudgetsSeed);
-  const [storedExpenses, setStoredExpenses] = useLocalStorage(`${storagePrefix}_expenses`, defaultExpensesSeed);
-  const [storedGoals, setStoredGoals] = useLocalStorage(`${storagePrefix}_goals`, defaultGoalsSeed);
-  const [syncInfo, setSyncInfo] = useState({ status: user ? 'loading' : 'idle', lastSuccess: null, error: null });
+  const [storedCategories, setStoredCategories] = useState(defaultCategoriesSeed);
+  const [storedBudgets, setStoredBudgets] = useState(defaultBudgetsSeed);
+  const [storedExpenses, setStoredExpenses] = useState(defaultExpensesSeed);
+  const [storedGoals, setStoredGoals] = useState(defaultGoalsSeed);
+  const [syncInfo, setSyncInfo] = useState({ status: user ? 'loading' : 'guest', lastSuccess: null, error: null });
 
   const categories = useMemo(() => normalizeCategories(storedCategories), [storedCategories]);
   const budgets = useMemo(() => normalizeBudgets(storedBudgets, categories), [storedBudgets, categories]);
@@ -156,53 +176,88 @@ function ExpensesPage() {
   const [modalMode, setModalMode] = useState('add');
   const [modalError, setModalError] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [categoryForm, setCategoryForm] = useState({ name: '', budget: '', spent: '' });
-  const [goalForm, setGoalForm] = useState({ name: '', targetAmount: '', savedAmount: '' });
+  const [categoryForm, setCategoryForm] = useState({ name: '', budget: '', color: colorPalette[0], icon: defaultIconChoices[0], period: 'monthly' });
+  const [goalForm, setGoalForm] = useState({ name: '', targetAmount: '', savedAmount: '', deadline: '' });
+  const [modalSaving, setModalSaving] = useState(false);
+
+  const seedDefaultCategories = useCallback(async () => {
+    for (let index = 0; index < defaultCategoriesSeed.length; index += 1) {
+      const template = defaultCategoriesSeed[index];
+      try {
+        await categoryService.createCategory({
+          name: template.name,
+          type: 'expense',
+          color: template.color || colorPalette[index % colorPalette.length],
+          icon: template.icon || defaultIconChoices[index % defaultIconChoices.length]
+        });
+      } catch (error) {
+        const message = error?.message?.toLowerCase?.() || '';
+        if (!message.includes('exists')) {
+          throw error;
+        }
+      }
+    }
+  }, []);
+
+  const seedDefaultGoals = useCallback(async () => {
+    for (const template of defaultGoalsSeed) {
+      try {
+        await goalService.createGoal({
+          name: template.name,
+          targetAmount: template.targetAmount,
+          savedAmount: template.savedAmount || 0
+        });
+      } catch (error) {
+        const message = error?.message?.toLowerCase?.() || '';
+        if (!message.includes('duplicate')) {
+          throw error;
+        }
+      }
+    }
+  }, []);
 
   const syncFromServer = useCallback(async () => {
     if (!user) {
-      setSyncInfo((prev) => ({ ...prev, status: 'idle', error: null }));
+      setStoredCategories(defaultCategoriesSeed);
+      setStoredBudgets(defaultBudgetsSeed);
+      setStoredExpenses(defaultExpensesSeed);
+      setStoredGoals(defaultGoalsSeed);
+      setSyncInfo({ status: 'guest', lastSuccess: null, error: null });
       return;
     }
 
     setSyncInfo((prev) => ({ ...prev, status: 'loading', error: null }));
 
     try {
-      const [categoriesResponse, expensesResponse] = await Promise.all([
+      const [categoriesResponse, budgetsResponse, expensesResponse, goalsResponse] = await Promise.all([
         categoryService.getCategories(),
-        expenseService.getExpenses()
+        budgetService.getBudgets(),
+        expenseService.getExpenses(),
+        goalService.getGoals()
       ]);
 
-      if (categoriesResponse?.success && Array.isArray(categoriesResponse.data)) {
-        setStoredCategories(
-          categoriesResponse.data
-            .filter((category) => category.type !== 'income')
-            .map((category, index) => ({
-              id: category._id,
-              name: category.name,
-              type: category.type,
-              enabled: true,
-              color: category.color || colorPalette[index % colorPalette.length]
-            }))
+      let categoryPayload = (categoriesResponse?.data || categoriesResponse?.categories || []).filter(
+        (category) => category.type !== 'income'
+      );
+      if (!categoryPayload.length) {
+        await seedDefaultCategories();
+        const seededCategoriesResponse = await categoryService.getCategories();
+        categoryPayload = (seededCategoriesResponse?.data || seededCategoriesResponse?.categories || []).filter(
+          (category) => category.type !== 'income'
         );
       }
 
-      if (expensesResponse?.success && Array.isArray(expensesResponse.data)) {
-        setStoredExpenses(
-          expensesResponse.data.map((expense) => ({
-            id: expense._id,
-            categoryId:
-              typeof expense.categoryId === 'object' && expense.categoryId !== null
-                ? expense.categoryId._id
-                : expense.categoryId,
-            amount: Number(expense.amount) || 0,
-            date: expense.date ? expense.date.split('T')[0] : undefined,
-            title: expense.title || 'Expense',
-            description: expense.description || '',
-            merchant: expense.merchant || ''
-          }))
-        );
+      let goalPayload = goalsResponse?.goals || goalsResponse?.data || [];
+      if (!goalPayload.length) {
+        await seedDefaultGoals();
+        const seededGoalsResponse = await goalService.getGoals();
+        goalPayload = seededGoalsResponse?.goals || seededGoalsResponse?.data || [];
       }
+
+      setStoredCategories(categoryPayload);
+      setStoredBudgets(budgetsResponse?.data || budgetsResponse?.budgets || []);
+      setStoredExpenses(expensesResponse?.data || []);
+      setStoredGoals(goalPayload);
 
       setSyncInfo({ status: 'success', lastSuccess: new Date().toISOString(), error: null });
     } catch (err) {
@@ -210,47 +265,18 @@ function ExpensesPage() {
       setSyncInfo((prev) => ({
         status: 'error',
         lastSuccess: prev.lastSuccess || null,
-        error: err.message || 'Failed to sync expenses'
+        error: err.response?.data?.error || err.message || 'Failed to sync expenses'
       }));
     }
-  }, [user, setStoredCategories, setStoredExpenses]);
+  }, [seedDefaultCategories, seedDefaultGoals, user]);
 
   useEffect(() => {
     syncFromServer();
   }, [syncFromServer]);
 
-  const updateCategories = (updater) => {
-    setStoredCategories((prev) => {
-      const normalized = normalizeCategories(prev);
-      return typeof updater === 'function' ? updater(normalized) : updater;
-    });
-  };
-
-  const updateBudgets = (updater) => {
-    setStoredBudgets((prev) => {
-      const normalized = normalizeBudgets(prev, categories);
-      return typeof updater === 'function' ? updater(normalized) : updater;
-    });
-  };
-
-  const updateGoals = (updater) => {
-    setStoredGoals((prev) => {
-      const normalized = normalizeGoals(prev);
-      return typeof updater === 'function' ? updater(normalized) : updater;
-    });
-  };
-
   const totalSpent = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
   const totalBudget = useMemo(() => budgets.reduce((sum, budget) => sum + budget.limit, 0), [budgets]);
   const coverage = totalBudget ? Math.min((totalSpent / totalBudget) * 100, 150) : 0;
-
-  const budgetByCategory = useMemo(() => {
-    const map = {};
-    budgets.forEach((budget) => {
-      map[budget.categoryId] = budget;
-    });
-    return map;
-  }, [budgets]);
 
   const spentByCategory = useMemo(() => {
     const map = {};
@@ -260,25 +286,52 @@ function ExpensesPage() {
     return map;
   }, [expenses]);
 
+  const budgetByCategory = useMemo(() => {
+    const map = {};
+    budgets.forEach((budget) => {
+      const spent = budget.status?.spent ?? spentByCategory[budget.categoryId] ?? 0;
+      const percent = budget.status?.percentage ?? (budget.limit ? (spent / budget.limit) * 100 : 0);
+      let state = budget.status?.state || 'idle';
+      if (!budget.status) {
+        if (!budget.limit) {
+          state = 'idle';
+        } else if (spent > budget.limit) {
+          state = 'over';
+        } else if (percent >= (budget.alertThreshold || 80)) {
+          state = 'warning';
+        } else {
+          state = 'ok';
+        }
+      } else if (state === 'exceeded') {
+        state = 'over';
+      }
+      map[budget.categoryId] = {
+        ...budget,
+        spent,
+        percent,
+        status: state
+      };
+    });
+    return map;
+  }, [budgets, spentByCategory]);
+
   const categorySummaries = useMemo(() => {
     return categories.map((category, index) => {
-      const manualOverride =
-        typeof category.manualSpent === 'number' && !Number.isNaN(category.manualSpent)
-          ? category.manualSpent
-          : null;
-      const spent = manualOverride !== null ? manualOverride : spentByCategory[category.id] || 0;
+      const spent = spentByCategory[category.id] || 0;
       const budget = budgetByCategory[category.id];
       const limit = budget?.limit ?? 0;
       const progress = limit ? Math.min((spent / limit) * 100, 150) : 100;
       let statusLabel = `${formatSar(spent)} spent`;
-      let statusTone = 'ok';
+      let statusTone = budget?.status ?? 'idle';
       if (limit) {
         if (spent > limit) {
           statusLabel = `Over by ${formatSar(spent - limit)}`;
           statusTone = 'over';
         } else {
           statusLabel = `${formatSar(spent)} / ${formatSar(limit)}`;
-          statusTone = spent / limit > 0.75 ? 'warning' : 'ok';
+          if (statusTone === 'idle') {
+            statusTone = spent / limit > 0.75 ? 'warning' : 'ok';
+          }
         }
       } else {
         statusLabel = 'No budget set';
@@ -403,15 +456,12 @@ function ExpensesPage() {
         setCategoryForm({
           name: category?.name ?? '',
           budget: budget?.limit ? String(budget.limit) : '',
-          spent:
-            category && typeof category.manualSpent === 'number'
-              ? String(category.manualSpent)
-              : spentByCategory[targetId]
-              ? String(spentByCategory[targetId])
-              : ''
+          color: category?.color ?? colorPalette[0],
+          icon: category?.icon ?? defaultIconChoices[0],
+          period: budget?.period || 'monthly'
         });
       } else {
-        setCategoryForm({ name: '', budget: '', spent: '' });
+        setCategoryForm({ name: '', budget: '', color: colorPalette[0], icon: defaultIconChoices[0], period: 'monthly' });
       }
     } else {
       if (mode === 'edit' && targetId) {
@@ -419,10 +469,11 @@ function ExpensesPage() {
         setGoalForm({
           name: goal?.name ?? '',
           targetAmount: goal?.targetAmount ? String(goal.targetAmount) : '',
-          savedAmount: goal?.savedAmount ? String(goal.savedAmount) : ''
+          savedAmount: goal?.savedAmount ? String(goal.savedAmount) : '',
+          deadline: goal?.deadline || ''
         });
       } else {
-        setGoalForm({ name: '', targetAmount: '', savedAmount: '' });
+        setGoalForm({ name: '', targetAmount: '', savedAmount: '', deadline: '' });
       }
     }
 
@@ -433,78 +484,85 @@ function ExpensesPage() {
     setIsModalOpen(false);
     setModalError('');
     setEditingId(null);
+    setModalSaving(false);
   };
 
-  const handleSubmitCategory = (event) => {
+  const handleSubmitCategory = async (event) => {
     event.preventDefault();
+    if (!user) {
+      setModalError('Sign in to manage categories');
+      return;
+    }
+
     const trimmedName = categoryForm.name.trim();
     const limitValue = Number(categoryForm.budget);
-    const manualSpentValue = (() => {
-      if (categoryForm.spent === '' || categoryForm.spent === null || categoryForm.spent === undefined) {
-        return null;
-      }
-      const parsed = Number(categoryForm.spent);
-      if (Number.isNaN(parsed) || parsed < 0) {
-        return null;
-      }
-      return parsed;
-    })();
     if (!trimmedName) {
       setModalError('Category name is required');
       return;
     }
 
-    let newCategoryId = editingId;
+    setModalError('');
+    setModalSaving(true);
 
-    updateCategories((prev) => {
+    try {
+      let categoryId = editingId;
       if (modalMode === 'edit' && editingId) {
-        return prev.map((category) => {
-          if (category.id !== editingId) return category;
-          const updated = { ...category, name: trimmedName };
-          if (manualSpentValue === null) {
-            delete updated.manualSpent;
-          } else {
-            updated.manualSpent = manualSpentValue;
-          }
-          return updated;
+        await categoryService.updateCategory(editingId, {
+          name: trimmedName,
+          color: categoryForm.color,
+          icon: categoryForm.icon
         });
-      }
-      newCategoryId = createId('cat');
-      const colorIndex = prev.length % colorPalette.length;
-      const nextCategory = {
-        id: newCategoryId,
-        name: trimmedName,
-        enabled: true,
-        color: colorPalette[colorIndex]
-      };
-      if (manualSpentValue !== null) {
-        nextCategory.manualSpent = manualSpentValue;
-      }
-      return [...prev, nextCategory];
-    });
-
-    updateBudgets((prev) => {
-      const targetCategoryId = modalMode === 'edit' ? editingId : newCategoryId;
-      if (!targetCategoryId) return prev;
-
-      if (!limitValue) {
-        return prev.filter((budget) => budget.categoryId !== targetCategoryId);
+      } else {
+        const response = await categoryService.createCategory({
+          name: trimmedName,
+          type: 'expense',
+          color: categoryForm.color,
+          icon: categoryForm.icon
+        });
+        categoryId = mapId(response?.data) || mapId(response?.category);
       }
 
-      const existing = prev.some((budget) => budget.categoryId === targetCategoryId);
-      if (existing) {
-        return prev.map((budget) =>
-          budget.categoryId === targetCategoryId ? { ...budget, limit: limitValue } : budget
-        );
+      if (categoryId) {
+        const existingBudget = budgets.find((budget) => budget.categoryId === categoryId);
+        if (limitValue && limitValue > 0) {
+          if (existingBudget) {
+            const payload = { limit: limitValue };
+            if (categoryForm.period && categoryForm.period !== existingBudget.period) {
+              payload.period = categoryForm.period;
+            }
+            await budgetService.updateBudget(existingBudget.id, payload);
+          } else {
+            if (categoryForm.period === 'custom') {
+              throw new Error('Custom budgets require start and end dates. Please choose weekly, monthly, or yearly.');
+            }
+            await budgetService.createBudget({
+              categoryId,
+              limit: limitValue,
+              period: categoryForm.period || 'monthly'
+            });
+          }
+        } else if (existingBudget) {
+          await budgetService.deleteBudget(existingBudget.id);
+        }
       }
-      return [...prev, { id: createId('budget'), categoryId: targetCategoryId, limit: limitValue }];
-    });
 
-    closeModal();
+      await syncFromServer();
+      closeModal();
+    } catch (error) {
+      console.error('Save category error:', error);
+      setModalError(error.response?.data?.error || error.message || 'Failed to save category');
+    } finally {
+      setModalSaving(false);
+    }
   };
 
-  const handleSubmitGoal = (event) => {
+  const handleSubmitGoal = async (event) => {
     event.preventDefault();
+    if (!user) {
+      setModalError('Sign in to manage goals');
+      return;
+    }
+
     const trimmedName = goalForm.name.trim();
     const targetValue = Number(goalForm.targetAmount);
     const savedValue = Number(goalForm.savedAmount);
@@ -516,44 +574,71 @@ function ExpensesPage() {
       setModalError('Target amount must be positive');
       return;
     }
-
-    updateGoals((prev) => {
-      if (modalMode === 'edit' && editingId) {
-        return prev.map((goal) =>
-          goal.id === editingId
-            ? {
-                ...goal,
-                name: trimmedName,
-                targetAmount: targetValue,
-                savedAmount: Math.max(0, savedValue || 0)
-              }
-            : goal
-        );
+    if (goalForm.deadline) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const deadlineDate = new Date(goalForm.deadline);
+      if (deadlineDate < today) {
+        setModalError('Target date cannot be in the past');
+        return;
       }
-      return [
+    }
+
+    setModalError('');
+    setModalSaving(true);
+
+    try {
+      const payload = {
+        name: trimmedName,
+        targetAmount: targetValue,
+        savedAmount: Math.max(0, savedValue || 0),
+        deadline: goalForm.deadline || undefined
+      };
+
+      if (modalMode === 'edit' && editingId) {
+        await goalService.updateGoal(editingId, payload);
+      } else {
+        await goalService.createGoal(payload);
+      }
+
+      await syncFromServer();
+      closeModal();
+    } catch (error) {
+      console.error('Save goal error:', error);
+      setModalError(error.response?.data?.error || error.message || 'Failed to save goal');
+    } finally {
+      setModalSaving(false);
+    }
+  };
+
+  const handleToggleCategory = async (categoryId) => {
+    if (!user) return;
+    try {
+      await categoryService.toggleCategory(categoryId);
+      await syncFromServer();
+    } catch (error) {
+      console.error('Toggle category error:', error);
+      setSyncInfo((prev) => ({
         ...prev,
-        {
-          id: createId('goal'),
-          name: trimmedName,
-          targetAmount: targetValue,
-          savedAmount: Math.max(0, savedValue || 0)
-        }
-      ];
-    });
-
-    closeModal();
+        status: 'error',
+        error: error.response?.data?.error || error.message || 'Failed to toggle category'
+      }));
+    }
   };
 
-  const handleToggleCategory = (categoryId) => {
-    updateCategories((prev) =>
-      prev.map((category) =>
-        category.id === categoryId ? { ...category, enabled: !category.enabled } : category
-      )
-    );
-  };
-
-  const handleDeleteGoal = (goalId) => {
-    updateGoals((prev) => prev.filter((goal) => goal.id !== goalId));
+  const handleDeleteGoal = async (goalId) => {
+    if (!user) return;
+    try {
+      await goalService.deleteGoal(goalId);
+      await syncFromServer();
+    } catch (error) {
+      console.error('Delete goal error:', error);
+      setSyncInfo((prev) => ({
+        ...prev,
+        status: 'error',
+        error: error.response?.data?.error || error.message || 'Failed to delete goal'
+      }));
+    }
   };
 
   const handleTabChange = (tab) => {
@@ -562,9 +647,9 @@ function ExpensesPage() {
     setModalMode('add');
     setEditingId(null);
     if (tab === 'category') {
-      setCategoryForm({ name: '', budget: '', spent: '' });
+      setCategoryForm({ name: '', budget: '', color: colorPalette[0], icon: defaultIconChoices[0], period: 'monthly' });
     } else {
-      setGoalForm({ name: '', targetAmount: '', savedAmount: '' });
+      setGoalForm({ name: '', targetAmount: '', savedAmount: '', deadline: '' });
     }
   };
 
@@ -578,30 +663,63 @@ function ExpensesPage() {
         placeholder="e.g. Health, Groceries"
         required
       />
-      <InputField
-        label="Budget (SAR)"
-        type="number"
-        min="0"
-        name="category-budget"
-        value={categoryForm.budget}
-        onChange={(event) => setCategoryForm((current) => ({ ...current, budget: event.target.value }))}
-        placeholder="Enter a limit"
-      />
-      <InputField
-        label="Spent (SAR)"
-        type="number"
-        min="0"
-        name="category-spent"
-        value={categoryForm.spent}
-        onChange={(event) => setCategoryForm((current) => ({ ...current, spent: event.target.value }))}
-        placeholder="Enter spent amount for showcase"
-      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="text-sm text-slate-400 mb-1 block">Color</label>
+          <input
+            type="color"
+            value={categoryForm.color}
+            onChange={(event) => setCategoryForm((current) => ({ ...current, color: event.target.value }))}
+            className="w-full h-11 rounded-xl border border-slate-200 bg-white px-2 dark:border-white/5 dark:bg-slate-900"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-slate-400 mb-1 block">Icon</label>
+          <select
+            value={categoryForm.icon}
+            onChange={(event) => setCategoryForm((current) => ({ ...current, icon: event.target.value }))}
+            className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-white/5 dark:text-white"
+          >
+            {defaultIconChoices.map((icon) => (
+              <option key={icon} value={icon}>
+                {icon}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <InputField
+          label="Budget (SAR)"
+          type="number"
+          min="0"
+          name="category-budget"
+          value={categoryForm.budget}
+          onChange={(event) => setCategoryForm((current) => ({ ...current, budget: event.target.value }))}
+          placeholder="Leave empty to remove budget"
+        />
+        <div>
+          <label className="text-sm text-slate-400 mb-1 block">Period</label>
+          <select
+            value={categoryForm.period}
+            onChange={(event) => setCategoryForm((current) => ({ ...current, period: event.target.value }))}
+            className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-white/5 dark:text-white"
+          >
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+      </div>
       {modalError && <p className="text-sm text-red-400">{modalError}</p>}
       <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="secondary" onClick={closeModal}>
+        <Button type="button" variant="secondary" onClick={closeModal} disabled={modalSaving}>
           Cancel
         </Button>
-        <Button type="submit">{modalMode === 'edit' ? 'Save changes' : 'Save category'}</Button>
+        <Button type="submit" disabled={modalSaving}>
+          {modalSaving ? 'Saving…' : modalMode === 'edit' ? 'Save changes' : 'Save category'}
+        </Button>
       </div>
     </form>
   );
@@ -627,6 +745,13 @@ function ExpensesPage() {
         required
       />
       <InputField
+        label="Target date"
+        type="date"
+        name="goal-deadline"
+        value={goalForm.deadline}
+        onChange={(event) => setGoalForm((current) => ({ ...current, deadline: event.target.value }))}
+      />
+      <InputField
         label="Saved so far (SAR)"
         type="number"
         min="0"
@@ -637,10 +762,12 @@ function ExpensesPage() {
       />
       {modalError && <p className="text-sm text-red-400">{modalError}</p>}
       <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="secondary" onClick={closeModal}>
+        <Button type="button" variant="secondary" onClick={closeModal} disabled={modalSaving}>
           Cancel
         </Button>
-        <Button type="submit">{modalMode === 'edit' ? 'Save changes' : 'Save goal'}</Button>
+        <Button type="submit" disabled={modalSaving}>
+          {modalSaving ? 'Saving…' : modalMode === 'edit' ? 'Save changes' : 'Save goal'}
+        </Button>
       </div>
     </form>
   );
@@ -801,6 +928,7 @@ function ExpensesPage() {
                             </Button>
                             <Button
                               variant="danger"
+                              disabled={!user}
                               className="text-xs px-3 py-1"
                               onClick={() => handleDeleteGoal(goal.id)}
                             >

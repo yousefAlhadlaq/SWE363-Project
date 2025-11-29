@@ -15,6 +15,10 @@ const categoryService = {
 
   async deleteCategory(categoryId) {
     return api.delete(`/categories/${categoryId}`);
+  },
+
+  async toggleCategory(categoryId) {
+    return api.patch(`/categories/${categoryId}/toggle`, {});
   }
 };
 

@@ -78,7 +78,8 @@ const dashboardRoutes = [
 
 const expenseAndIncomeRoutes = [
   { path: '/income', element: createProtectedElement(IncomeEntry, clientRoles) },
-  { path: '/expenses', element: createProtectedElement(ExpenseEntry, clientRoles) },
+  { path: '/expenses', element: createProtectedElement(ExpensesPage, clientRoles) },
+  { path: '/expenses/manual-entry', element: createProtectedElement(ExpenseEntry, clientRoles) },
   { path: '/categories', element: createProtectedElement(CategoryManager, clientRoles) },
   { path: '/budgets', element: createProtectedElement(BudgetsGoals, clientRoles) },
 ];

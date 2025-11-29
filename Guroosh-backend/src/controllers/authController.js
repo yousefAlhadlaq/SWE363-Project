@@ -288,6 +288,12 @@ exports.login = async (req, res) => {
       }
     }
 
+    if (user.status === 'inactive') {
+      return res.status(403).json({
+        error: 'Your account has been deactivated by an administrator'
+      });
+    }
+
     // Generate token
     const token = generateToken(user._id);
 

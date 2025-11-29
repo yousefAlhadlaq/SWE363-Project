@@ -1,83 +1,65 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminLayout from './AdminLayout';
+import { adminService } from '../../services';
+import { useAuth } from '../../context/AuthContext';
 
-const initialUsers = [
+const formatRelativeTime = (value) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return date.toLocaleDateString('en-SA', { month: 'short', day: 'numeric' });
+};
+
+const getInitialLog = (actorName) => ([
   {
-    id: 'U-10428',
-    name: 'Noura Al-Qahtani',
-    email: 'noura.q@example.com',
-    status: 'active',
-    advisor: 'Assigned',
-    lastLogin: 'Sep 28 • 09:12 KSA',
-    segment: 'Premium',
-    location: 'Riyadh',
-    phone: '+966 50 123 4567',
-    type: 'User'
-  },
-  {
-    id: 'U-10177',
-    name: 'Abdulrahman Saleh',
-    email: 'abdulrahman.s@example.com',
-    status: 'active',
-    advisor: 'Assigned',
-    lastLogin: 'Yesterday • 18:45 KSA',
-    segment: 'Standard',
-    location: 'Jeddah',
-    phone: '+966 53 890 1234',
-    type: 'User'
-  },
-  {
-    id: 'U-10311',
-    name: 'Omar Al-Harbi',
-    email: 'omar.h@example.com',
-    status: 'inactive',
-    advisor: 'Unassigned',
-    lastLogin: 'Aug 02 • 14:20 KSA',
-    segment: 'Dormant',
-    location: 'Dammam',
-    phone: '+966 54 321 9087',
-    type: 'Advisor'
-  },
-  {
-    id: 'ADM-001',
-    name: 'Rayan Khalid',
-    email: 'admin@quroosh.com',
-    status: 'active',
-    advisor: 'N/A',
-    lastLogin: 'Today • 08:05 KSA',
-    segment: 'Admin',
-    location: 'Riyadh',
-    phone: '+966 59 111 2222',
-    role: 'admin',
-    type: 'User'
+    id: 'log-0',
+    type: 'Access',
+    detail: 'Admin console opened',
+    userName: actorName || 'Admin',
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
-];
+]);
 
-const currentAdmin = {
-  id: 'ADM-001',
-  name: 'Rayan Khalid',
-  email: 'admin@quroosh.com'
+const getInitials = (name = 'User') => name
+  .split(' ')
+  .filter(Boolean)
+  .map((part) => part[0])
+  .slice(0, 2)
+  .join('')
+  .toUpperCase();
+
+const getRoleLabel = (role) => {
+  if (!role) return 'User';
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
+
+const getAdvisorLabel = (user) => {
+  if (user?.role === 'advisor' || user?.isAdvisor) return 'Self';
+  return user?.connectedAdvisor ? 'Assigned' : 'Unassigned';
 };
 
 function UserManagement() {
+  const { user: currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [users, setUsers] = useState(initialUsers);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const [flash, setFlash] = useState(null);
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    type: 'User'
-  });
-  const [systemLog, setSystemLog] = useState([
-    {
-      id: 'log-0',
-      type: 'Access',
-      detail: 'Admin console opened',
-      userName: currentAdmin.name,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actionUserId, setActionUserId] = useState(null);
+  const [systemLog, setSystemLog] = useState(() => getInitialLog(currentUser?.fullName));
+
+  useEffect(() => {
+    setSystemLog(getInitialLog(currentUser?.fullName));
+  }, [currentUser?.fullName]);
 
   useEffect(() => {
     if (!flash) return;
@@ -85,164 +67,121 @@ function UserManagement() {
     return () => clearTimeout(timer);
   }, [flash]);
 
-  const filteredUsers = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    return users.filter((user) => {
-      if (user.id === currentAdmin.id) return false;
-      if (!query) return true;
-      return (
-        user.name.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query) ||
-        user.id.toLowerCase().includes(query)
-      );
-    });
-  }, [searchQuery, users]);
+  const loadUsers = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await adminService.getUsers(params);
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to load users');
+      }
+      setUsers(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      console.error('Admin users fetch error:', err);
+      setError(err.message || 'Unable to load users');
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const pushLog = (type, user, detail) => {
-    const newEntry = {
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  const currentAdminId = currentUser?._id || currentUser?.id;
+
+  const pushLog = useCallback((type, actor, detail) => {
+    const entry = {
       id: `${type}-${Date.now()}`,
       type,
       detail,
-      userName: user?.name || 'System',
+      userName: actor?.fullName || actor?.name || currentUser?.fullName || 'Admin',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
+    setSystemLog((prev) => [entry, ...prev].slice(0, 7));
+  }, [currentUser?.fullName]);
 
-    setSystemLog((prev) => [newEntry, ...prev].slice(0, 7));
-  };
+  const showFlash = (type, message) => setFlash({ type, message });
 
-  const showFlash = (type, message) => {
-    setFlash({ type, message });
-  };
+  const refreshUsers = () => loadUsers(searchQuery ? { q: searchQuery } : {});
 
-  const handleStatusToggle = (user) => {
-    if (user.id === currentAdmin.id || user.email === currentAdmin.email) {
-      showFlash('error', 'You cannot deactivate your own admin account.');
-      pushLog('Security', user, 'Prevented self-deactivation');
+  const handleStatusToggle = async (user) => {
+    if (!user) return;
+    const targetId = user._id || user.id;
+    if (currentAdminId && targetId === currentAdminId) {
+      showFlash('error', 'You cannot change the status of your own admin account.');
+      pushLog('Security', currentUser, 'Prevented self-deactivation');
       return;
     }
 
-    const nextStatus = user.status === 'active' ? 'inactive' : 'active';
+    const nextAction = user.status === 'active' ? 'deactivate' : 'activate';
     const confirmed = window.confirm(
-      `Are you sure you want to ${nextStatus === 'active' ? 'activate' : 'deactivate'} ${user.name}?`
+      `Are you sure you want to ${nextAction} ${user.fullName || user.email}?`
     );
     if (!confirmed) return;
 
-    const notify = window.confirm('Notify user about this change?');
-
-    setUsers((prev) =>
-      prev.map((item) =>
-        item.id === user.id ? { ...item, status: nextStatus } : item
-      )
-    );
-    setSelectedUser((prev) =>
-      prev && prev.id === user.id ? { ...prev, status: nextStatus } : prev
-    );
-
-    pushLog(
-      nextStatus === 'active' ? 'Activation' : 'Deactivation',
-      user,
-      notify ? 'User notified via email' : 'No notification sent'
-    );
-    showFlash(
-      'success',
-      `${user.name} is now marked as ${nextStatus}. ${notify ? 'Notification issued.' : ''}`
-    );
+    setActionUserId(targetId);
+    try {
+      await adminService.toggleUserStatus(targetId, nextAction);
+      showFlash('success', `${user.fullName || user.email} is now ${nextAction === 'activate' ? 'active' : 'inactive'}.`);
+      pushLog(nextAction === 'activate' ? 'Activation' : 'Deactivation', user, 'Status updated via admin console');
+      await refreshUsers();
+    } catch (err) {
+      console.error('Toggle status failed:', err);
+      showFlash('error', err.message || 'Failed to update user status.');
+    } finally {
+      setActionUserId(null);
+    }
   };
 
-  const handleResetPassword = (user) => {
-    const confirmed = window.confirm(
-      `Reset password for ${user.name}? They will be required to set a new one.`
-    );
+  const handleResetPassword = async (user) => {
+    if (!user) return;
+    const confirmed = window.confirm(`Send password reset instructions to ${user.email}?`);
     if (!confirmed) return;
 
-    const sendLink = window.confirm(
-      'Select OK to send a reset link to the user.\nSelect Cancel to set a temporary password yourself.'
-    );
-
-    if (sendLink) {
-      pushLog('Password Reset', user, 'Reset link emailed to user');
-      showFlash('success', `Reset link sent to ${user.email}.`);
-      return;
+    setActionUserId(user._id || user.id);
+    try {
+      const response = await adminService.resetUserPassword(user._id || user.id);
+      showFlash('success', response?.message || `Reset instructions sent to ${user.email}.`);
+      pushLog('Password Reset', user, 'Reset email triggered');
+    } catch (err) {
+      console.error('Reset password failed:', err);
+      showFlash('error', err.message || 'Failed to reset password.');
+    } finally {
+      setActionUserId(null);
     }
-
-    const tempPassword = window.prompt(
-      'Enter the temporary password you want to assign (leave blank to cancel):'
-    );
-    if (!tempPassword) {
-      showFlash('error', 'Manual reset cancelled - no password provided.');
-      return;
-    }
-
-    pushLog('Password Reset', user, `Manual password set by admin (${tempPassword.length} chars)`);
-    showFlash(
-      'success',
-      `Manual password reset recorded for ${user.name}. Provide the temporary password securely.`
-    );
   };
 
   const handleProfileOpen = (user) => {
-    setSelectedUser(user);
-    pushLog('Profile View', user, 'Profile opened from search results');
+    setSelectedUserId(user?._id || user?.id);
+    pushLog('Profile View', user, 'Profile opened from listing');
   };
 
-  const handleSearchSubmit = (event) => {
+  const handleSearchSubmit = async (event) => {
     event.preventDefault();
-    pushLog('Search', currentAdmin, `Query submitted: "${searchQuery || 'all'}"`);
+    await refreshUsers();
+    pushLog('Search', currentUser, `Query submitted: "${searchQuery || 'all'}"`);
   };
 
   const handleCreateUser = (event) => {
     event.preventDefault();
-
-    if (!newUser.name.trim() || !newUser.email.trim()) {
-      showFlash('error', 'Name and email are required to create a user.');
-      return;
-    }
-
-    const exists = users.some(
-      (user) => user.email.toLowerCase() === newUser.email.trim().toLowerCase()
-    );
-    if (exists) {
-      showFlash('error', 'A user with that email already exists.');
-      return;
-    }
-
-    const nextId = `U-${Math.floor(10000 + Math.random() * 89999)}`;
-    const createdUser = {
-      id: nextId,
-      name: newUser.name.trim(),
-      email: newUser.email.trim(),
-      status: 'active',
-      advisor: newUser.type === 'Advisor' ? 'Self' : 'Assigned',
-      lastLogin: 'Never',
-      segment: 'Manual',
-      location: 'N/A',
-      phone: 'N/A',
-      type: newUser.type
-    };
-
-    setUsers((prev) => [createdUser, ...prev]);
-    setNewUser({ name: '', email: '', type: 'User' });
-    pushLog('Create User', createdUser, `Profile created as ${createdUser.type}`);
-    showFlash('success', `${createdUser.name} has been created.`);
+    showFlash('error', 'Admin-side user creation is not wired to the API yet. Please onboard via the signup flow.');
+    pushLog('Info', currentUser, 'Attempted to use placeholder create user form');
   };
 
   const handleDeleteUser = (user) => {
-    if (user.id === currentAdmin.id) {
-      showFlash('error', 'You cannot delete your own admin profile.');
-      pushLog('Security', user, 'Attempted self-deletion was blocked');
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `Delete ${user.name}? This removes their profile and history from this console.`
-    );
-    if (!confirmed) return;
-
-    setUsers((prev) => prev.filter((item) => item.id !== user.id));
-    setSelectedUser((prev) => (prev && prev.id === user.id ? null : prev));
-    pushLog('Delete User', user, 'Profile removed by admin');
-    showFlash('success', `${user.name} has been deleted.`);
+    showFlash('error', 'Deleting users is restricted. Disable accounts instead.');
+    pushLog('Security', user, 'Delete operation blocked');
   };
+
+  const displayUsers = useMemo(() => (
+    users.filter((user) => (user._id || user.id) !== currentAdminId)
+  ), [users, currentAdminId]);
+
+  const selectedUser = useMemo(() => (
+    displayUsers.find((user) => (user._id || user.id) === selectedUserId) || null
+  ), [displayUsers, selectedUserId]);
 
   return (
     <>
@@ -302,8 +241,14 @@ function UserManagement() {
           </form>
 
           <div className="text-sm text-gray-400">
-            Showing {filteredUsers.length} result{filteredUsers.length === 1 ? '' : 's'}
+            {loading ? 'Loading users…' : `Showing ${displayUsers.length} result${displayUsers.length === 1 ? '' : 's'}`}
           </div>
+
+          {error && (
+            <div className="rounded-2xl bg-red-500/10 border border-red-400/50 text-red-100 px-4 py-3">
+              {error}
+            </div>
+          )}
 
           <section className="bg-white/5 border border-white/10 rounded-3xl p-6 shadow-[0_10px_40px_rgba(0,0,0,0.45)] space-y-5">
             <div>
@@ -315,46 +260,57 @@ function UserManagement() {
             <form className="grid md:grid-cols-3 gap-4" onSubmit={handleCreateUser}>
               <input
                 type="text"
-                value={newUser.name}
-                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                value=""
+                onChange={() => {}}
                 placeholder="Full name"
                 className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400/70"
+                disabled
               />
               <input
                 type="email"
-                value={newUser.email}
-                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                value=""
+                onChange={() => {}}
                 placeholder="email@example.com"
                 className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400/70"
+                disabled
               />
               <select
-                value={newUser.type}
-                onChange={(e) => setNewUser({ ...newUser, type: e.target.value })}
+                value="User"
+                onChange={() => {}}
                 className="w-full rounded-2xl bg-white/5 border border-white/10 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-400/70 admin-dark-select"
+                disabled
               >
                 <option value="User">User</option>
                 <option value="Advisor">Advisor</option>
               </select>
               <button
                 type="submit"
-                className="md:col-span-3 rounded-2xl bg-white/10 border border-white/20 text-white font-semibold py-3 hover:bg-white/20 transition"
+                className="md:col-span-3 rounded-2xl bg-white/10 border border-white/20 text-white font-semibold py-3 hover:bg-white/20 transition disabled:opacity-50"
+                disabled
               >
-                Create User
+                Create User (coming soon)
               </button>
             </form>
           </section>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-            {filteredUsers.map((user) => (
-              <UserCard
-                key={user.id}
-                user={user}
-                onOpenProfile={() => handleProfileOpen(user)}
-                onToggleStatus={() => handleStatusToggle(user)}
-                onResetPassword={() => handleResetPassword(user)}
-                onDelete={() => handleDeleteUser(user)}
-              />
-            ))}
+            {loading ? (
+              <div className="col-span-full text-center text-gray-400 py-10">Loading directory…</div>
+            ) : displayUsers.length === 0 ? (
+              <div className="col-span-full text-center text-gray-400 py-10">No users match the current filters.</div>
+            ) : (
+              displayUsers.map((user) => (
+                <UserCard
+                  key={user._id || user.id}
+                  user={user}
+                  busy={actionUserId === (user._id || user.id)}
+                  onOpenProfile={() => handleProfileOpen(user)}
+                  onToggleStatus={() => handleStatusToggle(user)}
+                  onResetPassword={() => handleResetPassword(user)}
+                  onDelete={() => handleDeleteUser(user)}
+                />
+              ))
+            )}
           </div>
 
           <section className="bg-white/5 border border-white/5 rounded-3xl p-6 shadow-[0_12px_45px_rgba(1,6,12,0.75)]">
@@ -398,7 +354,8 @@ function UserManagement() {
       {selectedUser && (
         <ProfileDrawer
           user={selectedUser}
-          onClose={() => setSelectedUser(null)}
+          busy={actionUserId === (selectedUser._id || selectedUser.id)}
+          onClose={() => setSelectedUserId(null)}
           onResetPassword={() => handleResetPassword(selectedUser)}
           onToggleStatus={() => handleStatusToggle(selectedUser)}
           onDelete={() => handleDeleteUser(selectedUser)}
@@ -408,15 +365,13 @@ function UserManagement() {
   );
 }
 
-function UserCard({ user, onOpenProfile, onToggleStatus, onResetPassword, onDelete }) {
+function UserCard({ user, busy, onOpenProfile, onToggleStatus, onResetPassword, onDelete }) {
   const isActive = user.status === 'active';
-  const initials = user.name
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  const identifier = user._id || user.id;
+  const initials = getInitials(user.fullName || user.name);
+  const roleLabel = getRoleLabel(user.role);
+  const lastSeen = formatRelativeTime(user.updatedAt || user.createdAt);
+  const advisorLabel = getAdvisorLabel(user);
 
   return (
     <article className="rounded-3xl bg-white/5 border border-white/5 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur">
@@ -426,11 +381,11 @@ function UserCard({ user, onOpenProfile, onToggleStatus, onResetPassword, onDele
             {initials}
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-gray-500">{user.type}</p>
-            <h4 className="text-xl font-semibold text-white">{user.name}</h4>
+            <p className="text-xs uppercase tracking-[0.4em] text-gray-500">{roleLabel}</p>
+            <h4 className="text-xl font-semibold text-white">{user.fullName || user.name || 'User'}</h4>
             <p className="text-sm text-gray-400">{user.email}</p>
             <p className="text-xs text-gray-500 mt-1">
-              User ID: {user.id}
+              User ID: {identifier}
             </p>
           </div>
         </div>
@@ -444,8 +399,9 @@ function UserCard({ user, onOpenProfile, onToggleStatus, onResetPassword, onDele
       </div>
 
       <div className="mt-4 text-sm text-gray-400 space-y-1">
-        <p>{user.lastLogin}</p>
-        <p>Advisor: {user.advisor}</p>
+        <p>Last seen: {lastSeen}</p>
+        <p>Advisor: {advisorLabel}</p>
+        <p>Role: {roleLabel}</p>
       </div>
 
       <div className="mt-5 flex flex-wrap gap-3">
@@ -461,13 +417,15 @@ function UserCard({ user, onOpenProfile, onToggleStatus, onResetPassword, onDele
             isActive
               ? 'bg-white/5 border border-white/20 hover:bg-red-500/10 text-red-200'
               : 'bg-white/10 border border-white/20 hover:bg-emerald-500/10 text-emerald-100'
-          }`}
+          } ${busy ? 'opacity-60 cursor-not-allowed' : ''}`}
+          disabled={busy}
         >
           {isActive ? 'Deactivate' : 'Activate'}
         </button>
         <button
           onClick={onResetPassword}
-          className="flex-1 min-w-[140px] rounded-2xl border border-white/20 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition"
+          className={`flex-1 min-w-[140px] rounded-2xl border border-white/20 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition ${busy ? 'opacity-60 cursor-not-allowed' : ''}`}
+          disabled={busy}
         >
           Reset Password
         </button>
@@ -482,8 +440,10 @@ function UserCard({ user, onOpenProfile, onToggleStatus, onResetPassword, onDele
   );
 }
 
-function ProfileDrawer({ user, onClose, onResetPassword, onToggleStatus, onDelete }) {
+function ProfileDrawer({ user, busy, onClose, onResetPassword, onToggleStatus, onDelete }) {
   const isActive = user.status === 'active';
+  const identifier = user._id || user.id;
+  const advisorLabel = getAdvisorLabel(user);
 
   return (
     <div className="fixed inset-0 z-40 flex">
@@ -498,7 +458,7 @@ function ProfileDrawer({ user, onClose, onResetPassword, onToggleStatus, onDelet
             <p className="text-xs uppercase tracking-[0.4em] text-gray-500">
               Profile
             </p>
-            <h3 className="text-2xl font-semibold">{user.name}</h3>
+            <h3 className="text-2xl font-semibold">{user.fullName || user.name}</h3>
             <p className="text-sm text-gray-400">{user.email}</p>
           </div>
           <button
@@ -522,35 +482,35 @@ function ProfileDrawer({ user, onClose, onResetPassword, onToggleStatus, onDelet
             >
               {isActive ? 'Active' : 'Inactive'}
             </p>
-            <p className="text-sm text-gray-400">User ID: {user.id}</p>
-            <p className="text-sm text-gray-400">Segment: {user.segment}</p>
-            <p className="text-sm text-gray-400">Type: {user.type}</p>
+            <p className="text-sm text-gray-400">User ID: {identifier}</p>
+            <p className="text-sm text-gray-400">Role: {user.role || 'user'}</p>
           </div>
 
           <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-2">
             <p className="text-xs text-gray-500 uppercase tracking-[0.3em]">
               Activity
             </p>
-            <p className="text-sm text-gray-300">Last login</p>
+            <p className="text-sm text-gray-300">Last activity</p>
             <p className="text-lg font-semibold text-white">
-              {user.lastLogin}
+              {formatRelativeTime(user.updatedAt || user.createdAt)}
             </p>
-            <p className="text-sm text-gray-400">Advisor: {user.advisor}</p>
+            <p className="text-sm text-gray-400">Advisor: {advisorLabel}</p>
           </div>
 
           <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-2">
             <p className="text-xs text-gray-500 uppercase tracking-[0.3em]">
               Contact
             </p>
-            <p className="text-sm text-gray-400">{user.phone}</p>
-            <p className="text-sm text-gray-400">{user.location}</p>
+            <p className="text-sm text-gray-400">{user.phoneNumber || 'N/A'}</p>
+            <p className="text-sm text-gray-400">{user.address || '—'}</p>
           </div>
         </div>
 
         <div className="p-6 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             onClick={onResetPassword}
-            className="rounded-2xl border border-white/20 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition"
+            className={`rounded-2xl border border-white/20 px-4 py-3 text-sm font-semibold hover:bg-white/10 transition ${busy ? 'opacity-60 cursor-not-allowed' : ''}`}
+            disabled={busy}
           >
             Reset Password
           </button>
@@ -560,7 +520,8 @@ function ProfileDrawer({ user, onClose, onResetPassword, onToggleStatus, onDelet
               isActive
                 ? 'bg-red-500/10 border border-red-400/40 text-red-100 hover:bg-red-500/20'
                 : 'bg-emerald-500/10 border border-emerald-400/40 text-emerald-100 hover:bg-emerald-500/20'
-            }`}
+            } ${busy ? 'opacity-60 cursor-not-allowed' : ''}`}
+            disabled={busy}
           >
             {isActive ? 'Deactivate User' : 'Activate User'}
           </button>

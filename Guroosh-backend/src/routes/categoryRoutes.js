@@ -11,5 +11,6 @@ router.get('/:id', categoryController.getCategoryById);
 router.post('/', categoryController.createCategory);
 router.put('/:id', categoryController.updateCategory);
 router.delete('/:id', categoryController.deleteCategory);
+router.patch('/:id/toggle', categoryController.toggleCategory);
 
 module.exports = router;
