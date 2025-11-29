@@ -116,15 +116,9 @@ function AppRoutes() {
       {/* Protected Settings Route - All authenticated users */}
       {renderRoutes(settingsRoutes)}
 
-      {/* Dashboard Routes - Client only (supports both 'user' and 'client' roles) */}
-      {renderRoutes(dashboardRoutes)}
-      {/* Expense & Income Routes */}
-  <Route path="/income" element={<IncomeEntry />} />
-  <Route path="/expenses" element={<ExpensesPage />} />
-  <Route path="/categories" element={<CategoryManager />} />
-  <Route path="/budgets" element={<BudgetsGoals />} />
-
-      {/* Expense & Income Routes - Client only (supports both 'user' and 'client' roles) */}
+        {/* Dashboard Routes - Client only (supports both 'user' and 'client' roles) */}
+        {renderRoutes(dashboardRoutes)}
+        {/* Expense & Income Routes - Client only (supports both 'user' and 'client' roles) */}
       {renderRoutes(expenseAndIncomeRoutes)}
 
       {/* Financial Advice Routes - Both clients and advisors can access */}

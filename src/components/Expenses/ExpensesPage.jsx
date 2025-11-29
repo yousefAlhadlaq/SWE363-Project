@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Sidebar from '../Shared/Sidebar';
 import Card from '../Shared/Card';
 import FloatingActionButton from '../Shared/FloatingActionButton';
@@ -7,6 +7,7 @@ import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { useAuth } from '../../context/AuthContext';
+import { categoryService, expenseService } from '../../services';
 
 const colorPalette = ['#22d3ee', '#0ea5e9', '#14b8a6', '#2dd4bf', '#34d399', '#67e8f9'];
 
@@ -141,8 +142,9 @@ function ExpensesPage() {
 
   const [storedCategories, setStoredCategories] = useLocalStorage(`${storagePrefix}_categories`, defaultCategoriesSeed);
   const [storedBudgets, setStoredBudgets] = useLocalStorage(`${storagePrefix}_budgets`, defaultBudgetsSeed);
-  const [storedExpenses] = useLocalStorage(`${storagePrefix}_expenses`, defaultExpensesSeed);
+  const [storedExpenses, setStoredExpenses] = useLocalStorage(`${storagePrefix}_expenses`, defaultExpensesSeed);
   const [storedGoals, setStoredGoals] = useLocalStorage(`${storagePrefix}_goals`, defaultGoalsSeed);
+  const [syncInfo, setSyncInfo] = useState({ status: user ? 'loading' : 'idle', lastSuccess: null, error: null });
 
   const categories = useMemo(() => normalizeCategories(storedCategories), [storedCategories]);
   const budgets = useMemo(() => normalizeBudgets(storedBudgets, categories), [storedBudgets, categories]);
@@ -156,6 +158,66 @@ function ExpensesPage() {
   const [editingId, setEditingId] = useState(null);
   const [categoryForm, setCategoryForm] = useState({ name: '', budget: '', spent: '' });
   const [goalForm, setGoalForm] = useState({ name: '', targetAmount: '', savedAmount: '' });
+
+  const syncFromServer = useCallback(async () => {
+    if (!user) {
+      setSyncInfo((prev) => ({ ...prev, status: 'idle', error: null }));
+      return;
+    }
+
+    setSyncInfo((prev) => ({ ...prev, status: 'loading', error: null }));
+
+    try {
+      const [categoriesResponse, expensesResponse] = await Promise.all([
+        categoryService.getCategories(),
+        expenseService.getExpenses()
+      ]);
+
+      if (categoriesResponse?.success && Array.isArray(categoriesResponse.data)) {
+        setStoredCategories(
+          categoriesResponse.data
+            .filter((category) => category.type !== 'income')
+            .map((category, index) => ({
+              id: category._id,
+              name: category.name,
+              type: category.type,
+              enabled: true,
+              color: category.color || colorPalette[index % colorPalette.length]
+            }))
+        );
+      }
+
+      if (expensesResponse?.success && Array.isArray(expensesResponse.data)) {
+        setStoredExpenses(
+          expensesResponse.data.map((expense) => ({
+            id: expense._id,
+            categoryId:
+              typeof expense.categoryId === 'object' && expense.categoryId !== null
+                ? expense.categoryId._id
+                : expense.categoryId,
+            amount: Number(expense.amount) || 0,
+            date: expense.date ? expense.date.split('T')[0] : undefined,
+            title: expense.title || 'Expense',
+            description: expense.description || '',
+            merchant: expense.merchant || ''
+          }))
+        );
+      }
+
+      setSyncInfo({ status: 'success', lastSuccess: new Date().toISOString(), error: null });
+    } catch (err) {
+      console.error('Expense sync error:', err);
+      setSyncInfo((prev) => ({
+        status: 'error',
+        lastSuccess: prev.lastSuccess || null,
+        error: err.message || 'Failed to sync expenses'
+      }));
+    }
+  }, [user, setStoredCategories, setStoredExpenses]);
+
+  useEffect(() => {
+    syncFromServer();
+  }, [syncFromServer]);
 
   const updateCategories = (updater) => {
     setStoredCategories((prev) => {
@@ -596,6 +658,27 @@ function ExpensesPage() {
             <div className="flex gap-4 text-sm text-slate-500 dark:text-slate-400">
               <span className="text-slate-800 font-medium dark:text-white">Total spent</span>
               <span>This month</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+              {!user ? (
+                <span>Sign in to sync your secure expense data.</span>
+              ) : syncInfo.status === 'loading' ? (
+                <span>Syncing expenses from backend…</span>
+              ) : syncInfo.status === 'error' ? (
+                <span className="text-red-400">{syncInfo.error}</span>
+              ) : syncInfo.lastSuccess ? (
+                <span>Last synced {new Date(syncInfo.lastSuccess).toLocaleTimeString()}</span>
+              ) : (
+                <span>Using locally cached data.</span>
+              )}
+              <button
+                type="button"
+                onClick={syncFromServer}
+                className="px-3 py-1.5 rounded-full border border-slate-200 text-slate-600 text-xs hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                disabled={!user || syncInfo.status === 'loading'}
+              >
+                {syncInfo.status === 'loading' ? 'Refreshing…' : 'Refresh'}
+              </button>
             </div>
           </div>
 

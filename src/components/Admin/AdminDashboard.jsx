@@ -1,74 +1,177 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminLayout from './AdminLayout';
+import { dashboardService } from '../../services';
 
-const statCards = [
-  {
-    label: 'Total Users',
-    value: '12,584',
-    delta: '+3.1% this week',
-    accent: 'from-emerald-400/30 to-emerald-500/10',
-    badge: 'Live'
-  },
-  {
-    label: 'Active Advisors',
-    value: '86',
-    delta: '12 available now',
-    accent: 'from-cyan-400/30 to-cyan-500/10',
-    badge: 'Staff'
-  },
-  {
-    label: 'Pending Requests',
-    value: '47',
-    delta: '8 need review',
-    accent: 'from-amber-400/30 to-amber-500/10',
-    badge: 'Action'
-  },
-  {
-    label: 'Total Revenue',
-    value: '$452k',
-    delta: '+18% YoY',
-    accent: 'from-indigo-400/30 to-indigo-500/10',
-    badge: 'Finance'
+const formatSar = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return 'SAR —';
   }
-];
+  return new Intl.NumberFormat('en-SA', {
+    style: 'currency',
+    currency: 'SAR',
+    maximumFractionDigits: 0
+  }).format(Number(value));
+};
 
-const usageTrends = [
-  { label: 'Active sessions', value: '842', percent: 72 },
-  { label: 'Successful logins', value: '1,204', percent: 88 },
-  { label: 'Advisory calls', value: '214', percent: 54 }
-];
-
-const activityLog = [
-  {
-    id: 1,
-    actor: 'System',
-    action: 'Dashboard viewed',
-    detail: 'Audit trail recorded',
-    time: '2m ago'
-  },
-  {
-    id: 2,
-    actor: 'Rayan Khalid',
-    action: 'Approved advisor request',
-    detail: 'Request #A-910',
-    time: '13m ago'
-  },
-  {
-    id: 3,
-    actor: 'System',
-    action: 'Daily snapshot generated',
-    detail: 'Sent to exec mailing list',
-    time: '1h ago'
-  }
-];
+const formatRelativeTime = (value) => {
+  if (!value) return 'moments ago';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'moments ago';
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.max(Math.floor(diffMs / 60000), 0);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
 
 function AdminDashboard() {
+  const [overview, setOverview] = useState(null);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [overviewResponse, transactionsResponse] = await Promise.all([
+        dashboardService.getOverview(),
+        dashboardService.getRecentTransactions(8)
+      ]);
+
+      if (!overviewResponse?.success) {
+        throw new Error(overviewResponse?.error || 'Failed to load overview metrics');
+      }
+
+      if (!transactionsResponse?.success) {
+        throw new Error(transactionsResponse?.error || 'Failed to load recent activity');
+      }
+
+      setOverview(overviewResponse.data || {});
+      setRecentTransactions(Array.isArray(transactionsResponse.data) ? transactionsResponse.data : []);
+      setLastUpdated(new Date().toISOString());
+    } catch (err) {
+      console.error('Admin dashboard fetch error:', err);
+      setError(err.message || 'Unable to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  const statCards = useMemo(() => {
+    const summary = overview || {};
+    return [
+      {
+        label: 'Net Balance',
+        value: formatSar(summary.netBalance),
+        delta: `Income ${formatSar(summary.totalIncome)} · Expenses ${formatSar(summary.totalExpenses)}`,
+        accent: 'from-emerald-400/30 to-emerald-500/10',
+        badge: 'Finance'
+      },
+      {
+        label: 'Investments',
+        value: formatSar(summary.totalInvestments),
+        delta: 'Total market value being tracked',
+        accent: 'from-cyan-400/30 to-cyan-500/10',
+        badge: 'Assets'
+      },
+      {
+        label: 'Transactions synced',
+        value: `${recentTransactions.length}`,
+        delta: 'Last 10 expense entries',
+        accent: 'from-amber-400/30 to-amber-500/10',
+        badge: 'Activity'
+      },
+      {
+        label: 'Data freshness',
+        value: lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '—',
+        delta: 'Local time of last successful sync',
+        accent: 'from-indigo-400/30 to-indigo-500/10',
+        badge: loading ? 'Syncing' : 'Live'
+      }
+    ];
+  }, [overview, recentTransactions.length, lastUpdated, loading]);
+
+  const usageTrends = useMemo(() => {
+    const summary = overview || {};
+    const expensesValue = Number(summary.totalExpenses || 0);
+    const netBalance = Number(summary.netBalance || 0);
+    const investments = Number(summary.totalInvestments || 0);
+    const safePercent = (value, base = 1) => Math.min(Math.round((value / Math.max(base, 1)) * 100), 100);
+
+    return [
+      {
+        label: 'Monthly expenses',
+        value: formatSar(expensesValue),
+        percent: safePercent(expensesValue, 10000)
+      },
+      {
+        label: 'Investments under watch',
+        value: formatSar(investments),
+        percent: safePercent(investments, 50000)
+      },
+      {
+        label: 'Net balance swing',
+        value: formatSar(netBalance),
+        percent: safePercent(Math.abs(netBalance), expensesValue || 1)
+      }
+    ];
+  }, [overview]);
+
+  const activityLog = useMemo(() => {
+    if (!recentTransactions.length) {
+      return [
+        {
+          id: 'placeholder',
+          actor: 'System',
+          action: 'Awaiting transactions',
+          detail: 'Post an expense to populate activity',
+          time: '—'
+        }
+      ];
+    }
+
+    return recentTransactions.slice(0, 6).map((transaction) => ({
+      id: transaction.id,
+      actor: transaction.category || 'Expense',
+      action: transaction.title,
+      detail: `${formatSar(transaction.amount)}${transaction.merchant ? ` · ${transaction.merchant}` : ''}`,
+      time: formatRelativeTime(transaction.date)
+    }));
+  }, [recentTransactions]);
+
   return (
     <AdminLayout
       accentLabel="Home"
       title="System Health & Activity"
       description="Monitor live adoption, advisor performance, and compliance tasks across the Guroosh platform."
     >
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 text-sm">
+        {error ? (
+          <p className="text-red-400">{error}</p>
+        ) : (
+          <p className="text-slate-400">
+            {loading ? 'Syncing latest metrics…' : `Last updated ${lastUpdated ? new Date(lastUpdated).toLocaleString() : '—'}`}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={loadDashboard}
+          className="px-4 py-2 rounded-full border border-white/20 text-sm text-gray-200 hover:border-white/60 transition"
+          disabled={loading}
+        >
+          {loading ? 'Refreshing…' : 'Refresh data'}
+        </button>
+      </div>
+
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-10">
         {statCards.map((card) => (
           <article
@@ -83,9 +186,7 @@ function AdminDashboard() {
             </div>
             <p className="text-3xl font-semibold mt-4">{card.value}</p>
             <p className="text-sm text-emerald-200/80 mt-2">{card.delta}</p>
-            <div
-              className={`mt-4 h-1.5 rounded-full bg-gradient-to-r ${card.accent}`}
-            />
+            <div className={`mt-4 h-1.5 rounded-full bg-gradient-to-r ${card.accent}`} />
           </article>
         ))}
       </section>

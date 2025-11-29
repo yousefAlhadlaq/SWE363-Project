@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Expense = require('../models/expense');
 const Category = require('../models/category');
 
@@ -168,5 +169,156 @@ exports.deleteExpense = async (req, res) => {
   } catch (error) {
     console.error('Delete expense error:', error);
     res.status(500).json({ error: error.message || 'Error deleting expense' });
+  }
+};
+
+exports.getSummary = async (req, res) => {
+  try {
+    const userObjectId = new mongoose.Types.ObjectId(req.userId);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - 6);
+    const trendStart = new Date(now);
+    trendStart.setDate(now.getDate() - 13);
+    const categoryWindow = new Date(now);
+    categoryWindow.setDate(now.getDate() - 90);
+
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const [
+      monthlyAgg,
+      weeklyAgg,
+      categoryAgg,
+      trendAgg,
+      merchantAgg,
+      recentExpenses
+    ] = await Promise.all([
+      Expense.aggregate([
+        { $match: { userId: userObjectId, date: { $gte: startOfMonth, $lte: now } } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$amount' },
+            count: { $sum: 1 },
+            largest: { $max: '$amount' }
+          }
+        }
+      ]),
+      Expense.aggregate([
+        { $match: { userId: userObjectId, date: { $gte: startOfWeek, $lte: now } } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$amount' },
+            count: { $sum: 1 }
+          }
+        }
+      ]),
+      Expense.aggregate([
+        { $match: { userId: userObjectId, date: { $gte: categoryWindow, $lte: now } } },
+        {
+          $group: {
+            _id: '$categoryId',
+            total: { $sum: '$amount' },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { total: -1 } },
+        { $limit: 6 },
+        {
+          $lookup: {
+            from: 'categories',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'category'
+          }
+        },
+        { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } }
+      ]),
+      Expense.aggregate([
+        { $match: { userId: userObjectId, date: { $gte: trendStart, $lte: now } } },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$date' },
+              month: { $month: '$date' },
+              day: { $dayOfMonth: '$date' }
+            },
+            total: { $sum: '$amount' }
+          }
+        },
+        { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
+      ]),
+      Expense.aggregate([
+        { $match: { userId: userObjectId, merchant: { $nin: [null, ''] } } },
+        {
+          $group: {
+            _id: '$merchant',
+            total: { $sum: '$amount' },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { total: -1 } },
+        { $limit: 5 }
+      ]),
+      Expense.find({ userId: req.userId })
+        .sort({ date: -1 })
+        .limit(8)
+        .populate('categoryId', 'name color')
+    ]);
+
+    const monthTotals = monthlyAgg[0] || { total: 0, count: 0, largest: 0 };
+    const weekTotals = weeklyAgg[0] || { total: 0, count: 0 };
+
+    const daysElapsedThisMonth = Math.max(now.getDate(), 1);
+    const daysRemaining = Math.max(endOfMonth.getDate() - now.getDate(), 0);
+
+    res.json({
+      success: true,
+      data: {
+        totals: {
+          month: {
+            total: monthTotals.total,
+            transactions: monthTotals.count,
+            averageDaily: monthTotals.total / daysElapsedThisMonth,
+            projection: monthTotals.total + (monthTotals.total / Math.max(daysElapsedThisMonth, 1)) * daysRemaining,
+            largest: monthTotals.largest || 0
+          },
+          week: {
+            total: weekTotals.total || 0,
+            transactions: weekTotals.count || 0,
+            averageTicket: weekTotals.count ? (weekTotals.total || 0) / weekTotals.count : 0
+          }
+        },
+        categories: categoryAgg.map((item) => ({
+          id: item._id,
+          name: item.category?.name || 'Uncategorized',
+          color: item.category?.color || '#22d3ee',
+          total: item.total,
+          transactions: item.count
+        })),
+        trend: trendAgg.map((item) => ({
+          date: new Date(item._id.year, item._id.month - 1, item._id.day).toISOString(),
+          total: item.total
+        })),
+        merchants: merchantAgg.map((merchant) => ({
+          name: merchant._id,
+          total: merchant.total,
+          transactions: merchant.count
+        })),
+        recent: recentExpenses.map((expense) => ({
+          id: expense._id,
+          title: expense.title,
+          amount: expense.amount,
+          date: expense.date,
+          category: expense.categoryId?.name || 'Uncategorized',
+          color: expense.categoryId?.color || '#94a3b8'
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Expense summary error:', error);
+    res.status(500).json({ error: error.message || 'Error building expense summary' });
   }
 };

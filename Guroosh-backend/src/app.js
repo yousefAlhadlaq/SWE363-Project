@@ -30,6 +30,7 @@ app.use('/api/categories', require('./routes/categoryRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
 app.use('/api/investments', require('./routes/investmentRoutes'));
 app.use('/api/goals', require('./routes/goalRoutes'));
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/external', require('./routes/externalDataRoutes'));
 app.use('/api/cities', require('./routes/cityRoutes'));
 app.use('/api/stocks', require('./routes/stockRoutes'));
