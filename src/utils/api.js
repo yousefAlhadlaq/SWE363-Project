@@ -1,5 +1,7 @@
 // API Configuration and Base Setup
-const API_BASE_URL = 'http://localhost:5000/api';
+// In Vite, use import.meta.env to access environment variables
+// Variables must be prefixed with VITE_ to be exposed to client-side code
+const API_BASE_URL = 'http://localhost:5001/api';
 
 // Get token from localStorage
 const getToken = () => {
