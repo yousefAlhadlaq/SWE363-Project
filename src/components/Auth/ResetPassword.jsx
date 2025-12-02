@@ -5,11 +5,14 @@ import Button from '../Shared/Button';
 import logo from '../../assets/images/logo.png';
 import { PASSWORD_REQUIREMENTS, isPasswordStrong } from '../../utils/passwordRules';
 import authService from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const emailFromState = location.state?.email || '';
+  const { user } = useAuth();
+  const fromSettings = location.state?.fromSettings || false;
+  const emailFromState = location.state?.email || user?.email || '';
 
   const [formData, setFormData] = useState({
     verificationCode: '',
@@ -22,6 +25,8 @@ const ResetPasswordPage = () => {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [sendCodeLoading, setSendCodeLoading] = useState(false);
+  const [codeSent, setCodeSent] = useState(!fromSettings);
 
   // Fix white bar by setting body background directly
   useEffect(() => {
@@ -107,12 +112,20 @@ const ResetPasswordPage = () => {
       );
 
       if (response.success) {
-        // Success - navigate to login
-        navigate('/login', {
-          state: {
-            message: 'Password reset successful! Please login with your new password.'
-          }
-        });
+        // Success - navigate based on where user came from
+        if (fromSettings) {
+          navigate('/settings', {
+            state: {
+              message: 'Your password has been changed successfully.'
+            }
+          });
+        } else {
+          navigate('/login', {
+            state: {
+              message: 'Password reset successful! Please login with your new password.'
+            }
+          });
+        }
       } else {
         setErrors({
           verificationCode: response.error || 'Invalid code or password reset failed'
@@ -125,6 +138,35 @@ const ResetPasswordPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendInitialCode = async () => {
+    if (!emailFromState) {
+      setErrors({ general: 'Email not found. Please go back to settings.' });
+      return;
+    }
+
+    setSendCodeLoading(true);
+
+    try {
+      const response = await authService.forgotPassword(emailFromState);
+
+      if (response.success) {
+        setCodeSent(true);
+        setResendSuccess(true);
+        setTimeout(() => setResendSuccess(false), 3000);
+      } else {
+        setErrors({
+          general: response.error || 'Failed to send verification code. Please try again.'
+        });
+      }
+    } catch (err) {
+      setErrors({
+        general: err.message || 'Failed to send verification code. Please try again.'
+      });
+    } finally {
+      setSendCodeLoading(false);
     }
   };
 
@@ -181,10 +223,12 @@ const ResetPasswordPage = () => {
               />
             </div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent mb-3 tracking-tight">
-              Reset Password
+              {fromSettings ? 'Change Password' : 'Reset Password'}
             </h1>
             <p className="text-gray-400 text-sm font-medium">
-              Enter the code sent to your email and choose a new password
+              {fromSettings && !codeSent
+                ? 'We\'ll send a verification code to your email to confirm the change'
+                : 'Enter the code sent to your email and choose a new password'}
             </p>
           </div>
 
@@ -194,6 +238,13 @@ const ResetPasswordPage = () => {
             <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-3xl opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
 
             <div className="relative bg-slate-800/70 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-slate-700/50 hover:border-slate-600/50 transition-all duration-300">
+              {/* General Error Message */}
+              {errors.general && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm animate-shake">
+                  <p className="text-sm text-red-300 font-medium">{errors.general}</p>
+                </div>
+              )}
+
               {/* Resend Success Message */}
               {resendSuccess && (
                 <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl backdrop-blur-sm animate-fade-in">
@@ -201,11 +252,76 @@ const ResetPasswordPage = () => {
                     <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    <p className="text-sm text-green-300 font-medium">Code resent successfully!</p>
+                    <p className="text-sm text-green-300 font-medium">Code sent successfully!</p>
                   </div>
                 </div>
               )}
 
+              {/* If coming from settings and code not sent yet, show send code button */}
+              {fromSettings && !codeSent ? (
+                <div className="space-y-6">
+                  <div className="text-center p-6 bg-slate-700/30 rounded-xl border border-slate-600/50">
+                    <div className="mb-4">
+                      <svg className="w-16 h-16 mx-auto text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-white mb-2">Verify Your Identity</h3>
+                    <p className="text-gray-300 text-sm mb-1">
+                      We'll send a verification code to:
+                    </p>
+                    <p className="text-teal-400 font-medium mb-4">{emailFromState}</p>
+                    <p className="text-xs text-gray-400">
+                      This helps keep your account secure
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="primary"
+                    fullWidth
+                    onClick={handleSendInitialCode}
+                    disabled={sendCodeLoading}
+                    className="font-semibold"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      {sendCodeLoading ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Sending Code...
+                        </>
+                      ) : (
+                        <>
+                          Send Verification Code
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                          </svg>
+                        </>
+                      )}
+                    </span>
+                  </Button>
+
+                  <div className="relative py-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-700/50"></div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/settings')}
+                    className="group w-full text-center text-teal-400 hover:text-teal-300 transition-all duration-200 font-medium flex items-center justify-center gap-1"
+                  >
+                    <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Settings
+                  </button>
+                </div>
+              ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Verification Code */}
                 <div className="space-y-2">
@@ -314,14 +430,14 @@ const ResetPasswordPage = () => {
                 <div className="flex justify-between items-center text-sm">
                   <button
                     type="button"
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate(fromSettings ? '/settings' : '/login')}
                     className="group text-teal-400 hover:text-teal-300 transition-all duration-200 font-medium flex items-center gap-1"
                     disabled={loading}
                   >
                     <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    Back to login
+                    {fromSettings ? 'Back to Settings' : 'Back to login'}
                   </button>
                   <button
                     type="button"
@@ -336,6 +452,7 @@ const ResetPasswordPage = () => {
                   </button>
                 </div>
               </form>
+              )}
             </div>
           </div>
 
