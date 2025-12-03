@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AdminLayout from './AdminLayout';
+import advisorService from '../../services/advisorService';
 
 const statusTokens = {
   available: {
@@ -16,50 +17,71 @@ const statusTokens = {
   }
 };
 
-const advisors = [
-  {
-    id: 1,
-    name: 'Ahmed Al-Saud',
-    specialty: 'Investment',
-    status: 'available',
-    sessions: 45,
-    rating: 4.8
-  },
-  {
-    id: 2,
-    name: 'Fatima Hassan',
-    specialty: 'Zakah & Islamic Finance',
-    status: 'available',
-    sessions: 62,
-    rating: 4.9
-  },
-  {
-    id: 3,
-    name: 'Omar Ibrahim',
-    specialty: 'Budgeting & Savings',
-    status: 'busy',
-    sessions: 38,
-    rating: 4.7
-  },
-  {
-    id: 4,
-    name: 'Sara Abdullah',
-    specialty: 'Debt Management',
-    status: 'offline',
-    sessions: 29,
-    rating: 4.6
-  }
-];
-
 function AdvisorAvailability() {
-  return (
-    <AdminLayout
-      accentLabel="Advisors"
-      title="Advisor Availability"
-      description="Monitor advisor load and service coverage. Advisors update their own status from their workspace."
-    >
+  const [advisors, setAdvisors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAdvisors = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await advisorService.getAllAdvisors();
+        const payload = response?.advisors || response?.data || [];
+        if (isMounted) {
+          setAdvisors(Array.isArray(payload) ? payload : []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.response?.data?.error || err.message || 'Failed to load advisors');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadAdvisors();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const normalizedAdvisors = useMemo(() => {
+    return advisors.map((advisor) => {
+      const profile = advisor.advisorProfile || {};
+      const statusValue = profile.availability === 'unavailable' ? 'offline' : profile.availability;
+      return {
+        id: advisor._id || advisor.id,
+        name: advisor.fullName || advisor.name || 'Advisor',
+        specialty: profile.specializations?.[0] || 'Financial Advisor',
+        status: statusValue && statusTokens[statusValue] ? statusValue : 'offline',
+        sessions: profile.totalReviews ?? 0,
+        rating: typeof profile.rating === 'number' ? profile.rating : 0
+      };
+    });
+  }, [advisors]);
+
+  const renderContent = () => {
+    if (loading) {
+      return <p className="text-sm text-gray-400">Loading advisors…</p>;
+    }
+
+    if (error) {
+      return <p className="text-sm text-red-300">{error}</p>;
+    }
+
+    if (!normalizedAdvisors.length) {
+      return <p className="text-sm text-gray-400">No advisors found.</p>;
+    }
+
+    return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {advisors.map((advisor) => (
+        {normalizedAdvisors.map((advisor) => (
           <article
             key={advisor.id}
             className="rounded-3xl bg-white/5 border border-white/10 p-6 shadow-[0_12px_45px_rgba(1,6,12,0.75)] flex flex-col gap-5"
@@ -87,7 +109,7 @@ function AdvisorAvailability() {
                   Sessions
                 </p>
                 <p className="text-xl font-semibold text-white">
-                  {advisor.sessions}
+                  {advisor.sessions ?? 0}
                 </p>
               </div>
               <div className="rounded-2xl bg-white/10 border border-white/10 p-3">
@@ -95,7 +117,7 @@ function AdvisorAvailability() {
                   Rating
                 </p>
                 <p className="text-xl font-semibold text-white">
-                  * {advisor.rating.toFixed(1)}
+                  * {advisor.rating ? advisor.rating.toFixed(1) : '0.0'}
                 </p>
               </div>
               <div className="rounded-2xl bg-white/10 border border-white/10 p-3">
@@ -114,6 +136,16 @@ function AdvisorAvailability() {
           </article>
         ))}
       </div>
+    );
+  };
+
+  return (
+    <AdminLayout
+      accentLabel="Advisors"
+      title="Advisor Availability"
+      description="Monitor advisor load and service coverage. Advisors update their own status from their workspace."
+    >
+      {renderContent()}
     </AdminLayout>
   );
 }
