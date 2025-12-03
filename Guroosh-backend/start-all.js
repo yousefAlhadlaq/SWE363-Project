@@ -11,7 +11,7 @@ const servers = [
     command: 'node',
     args: ['src/server.js'],
     cwd: __dirname,
-    env: { ...process.env, PORT: 5000 }
+    env: { ...process.env, PORT: 5001 }
   },
   {
     name: 'Central Bank API',

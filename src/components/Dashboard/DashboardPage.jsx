@@ -4,7 +4,6 @@ import {
   Banknote,
   ChevronRight,
   Link2,
-  MessageSquare,
   PenSquare,
   PiggyBank,
   ArrowUpRight,
@@ -13,8 +12,12 @@ import {
   Download,
   TrendingUp,
   CreditCard,
+<<<<<<< HEAD
   Inbox,
   BarChart3,
+=======
+  Trash2,
+>>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 } from 'lucide-react';
 import Sidebar from '../Shared/Sidebar';
 import Card from '../Shared/Card';
@@ -132,14 +135,14 @@ const quickActions = [
     modalSubtitle: 'Perfect when you need to register something retroactively.',
   },
   {
-    id: 'parse-sms',
-    title: 'Parse SMS',
-    description: 'Parse bank SMS text',
-    icon: MessageSquare,
-    accent: 'from-amber-400 to-pink-500',
-    submitLabel: 'Parse & Add',
-    modalTitle: 'Parse Bank SMS',
-    modalSubtitle: 'Paste your bank message and we will extract the details for you.',
+    id: 'remove-account',
+    title: 'Remove bank account',
+    description: 'Remove a linked bank account',
+    icon: Trash2,
+    accent: 'from-rose-500 to-orange-500',
+    submitLabel: 'Remove Account',
+    modalTitle: 'Remove Linked Account',
+    modalSubtitle: 'Select an account to remove from your profile.',
   },
   {
     id: 'export',
@@ -153,6 +156,26 @@ const quickActions = [
   },
 ];
 
+const getTodayDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getManualEntryInitialValues = () => ({
+  transactionType: 'expense',
+  account: '',
+  amount: '',
+  category: '',
+  merchant: '',
+  date: getTodayDateString(),
+  notes: '',
+  fromAccount: '',
+  toAccount: '',
+});
+
 const actionInitialValues = {
   'link-account': {
     bank: '',
@@ -163,21 +186,11 @@ const actionInitialValues = {
     fromAccount: '',
     account: '',
     amount: '',
-    date: '',
     description: '',
   },
-  'manual-entry': {
-    transactionType: '',
-    account: '',
-    amount: '',
-    category: '',
-    merchant: '',
-    date: '',
-    notes: '',
-  },
-  'parse-sms': {
-    sms: '',
-    account: '',
+  'manual-entry': getManualEntryInitialValues(),
+  'remove-account': {
+    accountId: '',
   },
   export: {
     format: 'csv',
@@ -209,14 +222,28 @@ const bankOptions = [
 const transactionTypeOptions = [
   { value: 'expense', label: 'Expense' },
   { value: 'income', label: 'Income' },
-  { value: 'transfer', label: 'Transfer' },
 ];
 
-const categoryOptions = [
+const expenseCategoryOptions = [
   { value: 'telecom', label: 'Telecom' },
   { value: 'groceries', label: 'Groceries' },
   { value: 'travel', label: 'Travel' },
   { value: 'utilities', label: 'Utilities' },
+  { value: 'restaurants', label: 'Restaurants' },
+  { value: 'entertainment', label: 'Entertainment' },
+  { value: 'transport', label: 'Transport' },
+  { value: 'shopping', label: 'Shopping' },
+  { value: 'other', label: 'Other' },
+];
+
+const incomeCategoryOptions = [
+  { value: 'salary', label: 'Salary' },
+  { value: 'bonus', label: 'Bonus' },
+  { value: 'investment_return', label: 'Investment Return' },
+  { value: 'gift', label: 'Gift' },
+  { value: 'freelance', label: 'Freelance' },
+  { value: 'rental', label: 'Rental Income' },
+  { value: 'other', label: 'Other' },
 ];
 
 const spendingBreakdown = {
@@ -284,27 +311,56 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [linkedAccounts, setLinkedAccounts] = useState([]);
+<<<<<<< HEAD
   const [chartData, setChartData] = useState(financialStatusData.weekly);
+=======
+  const [formErrors, setFormErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState(null);
+>>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
   // Generate account options dynamically from linked accounts
   // Always include a default "Main Account" option for users without linked accounts
   // Use useMemo to ensure UI refreshes when balances change
   const linkedAccountOptions = useMemo(() => {
+    const mainBalance = dashboardData?.totalBalance || 0;
+    const mainBankLabel = 'Main Account';
+    const mainAccountName = 'Main Account (Default)';
+
     const mainAccountOption = {
       value: 'main',
-      label: `Main Account (Default) - ${formatSR(dashboardData?.totalBalance || 0)}`,
-      name: 'Main Account (Default)',
-      balance: dashboardData?.totalBalance || 0,
+      label: `${mainBankLabel} — ${mainAccountName} — ${formatSR(mainBalance)}`,
+      name: mainAccountName,
+      accountName: mainAccountName,
+      bank: mainBankLabel,
+      balance: mainBalance,
+      isAccountOption: true,
+      logo: null,
     };
 
     return [
       mainAccountOption,
-      ...linkedAccounts.map(account => ({
-        value: account.id || account._id,  // Use the actual account ID from backend
-        label: `${account.bank} - ${account.accountNumber || account.accountType || 'Account'} - ${formatSR(account.balance || 0)}`,
-        name: `${account.bank} - ${account.accountNumber || account.accountType || 'Account'}`,
-        balance: account.balance || 0,
-      }))
+      ...linkedAccounts.map(account => {
+        const bankLabel = account.bank || account.bankName || 'Bank';
+        const accountNameRaw =
+          account.accountName ||
+          account.name ||
+          account.nickname ||
+          account.nickName ||
+          '';
+        const accountNickname = accountNameRaw.trim() || 'Unnamed';
+        const balanceValue = account.balance || 0;
+
+        return {
+          value: account.id || account._id,  // Use the actual account ID from backend
+          bank: bankLabel,
+          accountName: accountNickname,
+          balance: balanceValue,
+          label: `${bankLabel} — ${accountNickname} — ${formatSR(balanceValue)}`,
+          name: `${bankLabel} — ${accountNickname} — ${formatSR(balanceValue)}`,
+          logo: account.bankLogo || account.logo || account.bank_logo,
+          isAccountOption: true,
+        };
+      })
     ];
   }, [dashboardData?.totalBalance, linkedAccounts]);
 
@@ -366,8 +422,14 @@ function DashboardPage() {
 
   // Fetch dashboard data from backend
   const fetchDashboardData = useCallback(async () => {
+<<<<<<< HEAD
     const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
     const token = localStorage.getItem('token');
+=======
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const token = localStorage.getItem('token');
+>>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
     // ✅ Validate token exists before making request
     if (!token) {
@@ -593,7 +655,9 @@ function DashboardPage() {
   const resetActionForm = (actionId) => {
     setActionValues((prev) => ({
       ...prev,
-      [actionId]: actionInitialValues[actionId],
+      [actionId]: actionId === 'manual-entry'
+        ? getManualEntryInitialValues()
+        : actionInitialValues[actionId],
     }));
   };
 
@@ -609,15 +673,73 @@ function DashboardPage() {
     }
   };
 
+  const handleManualEntryTypeChange = (transactionType) => {
+    setActionValues(prev => ({
+      ...prev,
+      'manual-entry': {
+        ...getManualEntryInitialValues(),
+        transactionType,
+      },
+    }));
+  };
+
+  const validateManualEntry = (data) => {
+    const amount = parseFloat(data.amount);
+
+    if (!data.transactionType) {
+      return 'Please select a transaction type';
+    }
+
+    if (data.transactionType === 'expense') {
+      if (!data.account) return 'Expense account is required';
+      if (!data.amount || Number.isNaN(amount) || amount <= 0) return 'Expense amount must be greater than 0';
+      if (!data.category) return 'Expense category is required';
+      if (!data.merchant) return 'Merchant or description is required for expenses';
+      if (!data.date) return 'Expense date is required';
+    } else if (data.transactionType === 'income') {
+      if (!data.account) return 'Income receiving account is required';
+      if (!data.amount || Number.isNaN(amount) || amount <= 0) return 'Income amount must be greater than 0';
+      if (!data.category) return 'Income category is required';
+      if (!data.merchant) return 'Income source or description is required';
+      if (!data.date) return 'Income date is required';
+    }
+
+    return null;
+  };
+
   const handleSubmitAction = async (actionId, event) => {
     event.preventDefault();
 
     if (actionId === 'link-account') {
       const data = actionValues['link-account'];
 
-      // Validate all fields
-      if (!data.bank || !data.initialDeposit || !data.accountName) {
-        alert('Please fill in all fields');
+      // Clear previous errors
+      setFormErrors({});
+
+      // Comprehensive client-side validation
+      const errors = {};
+
+      if (!data.bank) {
+        errors.bank = 'Please select a bank';
+      }
+
+      if (!data.initialDeposit) {
+        errors.initialDeposit = 'Initial deposit is required';
+      } else if (parseFloat(data.initialDeposit) <= 0) {
+        errors.initialDeposit = 'Initial deposit must be greater than 0';
+      } else if (isNaN(parseFloat(data.initialDeposit))) {
+        errors.initialDeposit = 'Please enter a valid number';
+      }
+
+      if (!data.accountName) {
+        errors.accountName = 'Account name is required';
+      } else if (data.accountName.trim().length < 3) {
+        errors.accountName = 'Account name must be at least 3 characters';
+      }
+
+      // If there are validation errors, display them and don't submit
+      if (Object.keys(errors).length > 0) {
+        setFormErrors(errors);
         return;
       }
 
@@ -625,8 +747,14 @@ function DashboardPage() {
 
       try {
         // Call backend API to create account
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
         const token = localStorage.getItem('token');
+
+        console.log('Creating account with data:', {
+          bankId: data.bank,
+          initialDeposit: parseFloat(data.initialDeposit),
+          accountName: data.accountName.trim(),
+        });
 
         const response = await fetch(`${API_BASE_URL}/accounts/create`, {
           method: 'POST',
@@ -638,15 +766,41 @@ function DashboardPage() {
           body: JSON.stringify({
             bankId: data.bank,
             initialDeposit: parseFloat(data.initialDeposit),
-            accountName: data.accountName,
+            accountName: data.accountName.trim(),
           }),
         });
 
+        const result = await response.json();
+
         if (!response.ok) {
-          throw new Error('Failed to create account');
+          // Parse specific error messages from backend
+          let errorMsg = 'Failed to create account';
+
+          if (response.status === 400) {
+            errorMsg = result.error || 'Invalid account information. Please check your inputs.';
+          } else if (response.status === 401) {
+            errorMsg = 'Authentication failed. Please log in again.';
+          } else if (response.status === 500) {
+            errorMsg = result.error || 'Server error. Please try again later.';
+          } else {
+            errorMsg = result.error || result.message || errorMsg;
+          }
+
+          console.error('Account creation failed:', {
+            status: response.status,
+            error: errorMsg,
+            details: result
+          });
+
+          setFormErrors({ general: errorMsg });
+          return;
         }
 
-        const result = await response.json();
+        console.log('Account created successfully:', result);
+
+        // Show success toast notification
+        setSuccessMessage(`Successfully linked ${getOptionLabel(bankOptions, data.bank)} account!`);
+        setTimeout(() => setSuccessMessage(null), 5000);
 
         // Add success notification or update
         addLatestUpdate({
@@ -659,8 +813,12 @@ function DashboardPage() {
         });
 
         // Refresh dashboard data to show new account
+<<<<<<< HEAD
         fetchDashboardData();
         fetchChartData(statusRange);
+=======
+        await fetchDashboardData();
+>>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
         // Reset form and close modal
         resetActionForm(actionId);
@@ -668,7 +826,9 @@ function DashboardPage() {
 
       } catch (error) {
         console.error('Error creating account:', error);
-        alert('Failed to create account. Please try again.');
+        setFormErrors({
+          general: error.message || 'Network error. Please check your connection and try again.'
+        });
       } finally {
         setLinkingAccount(false);
       }
@@ -680,7 +840,7 @@ function DashboardPage() {
       const data = actionValues['quick-deposit'];
 
       // Validate all fields
-      if (!data.fromAccount || !data.account || !data.amount || !data.date) {
+      if (!data.fromAccount || !data.account || !data.amount) {
         alert('Please fill in all required fields');
         return;
       }
@@ -714,7 +874,6 @@ function DashboardPage() {
             toAccountId: data.account,
             amount: parseFloat(data.amount),
             description: data.description || 'Transfer',
-            date: data.date,
           }),
         });
 
@@ -741,7 +900,7 @@ function DashboardPage() {
         addLatestUpdate({
           merchant: data.description || 'Transfer',
           amount,
-          timestamp: formatTimestamp(data.date),
+          timestamp: formatTimestamp(),
           method: `${fromLabel} → ${toLabel}`,
           status: 'in',
           icon: ArrowUpCircle,
@@ -778,18 +937,19 @@ function DashboardPage() {
 
     if (actionId === 'manual-entry') {
       const data = actionValues['manual-entry'];
+      const validationError = validateManualEntry(data);
 
-      // Validate all fields
-      if (!data.account || !data.amount || !data.date || !data.transactionType) {
-        alert('Please fill in all required fields');
+      // Type-specific validation
+      if (validationError) {
+        alert(validationError);
         return;
       }
 
       try {
-        // Call backend API to create manual entry
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
         const token = localStorage.getItem('token');
 
+        // Handle EXPENSE and INCOME
         const direction = data.transactionType === 'income' ? 'incoming' : 'outgoing';
 
         const response = await fetch(`${API_BASE_URL}/transactions/manual`, {
@@ -810,17 +970,15 @@ function DashboardPage() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to create manual entry');
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to create manual entry');
         }
-
-        const result = await response.json();
 
         // Add success notification
         const amount = parseFloat(data.amount) || 0;
         const status = direction === 'incoming' ? 'in' : 'out';
-        const transactionLabel = data.transactionType
-          ? `${data.transactionType.charAt(0).toUpperCase()}${data.transactionType.slice(1)}`
-          : 'Entry';
+        const transactionLabel = data.transactionType.charAt(0).toUpperCase() + data.transactionType.slice(1);
+        const categoryOptions = data.transactionType === 'income' ? incomeCategoryOptions : expenseCategoryOptions;
 
         addLatestUpdate({
           merchant: data.merchant || 'Manual transaction',
@@ -841,48 +999,54 @@ function DashboardPage() {
 
       } catch (error) {
         console.error('Error creating manual entry:', error);
-        alert('Failed to create manual entry. Please try again.');
+        alert(`Failed to create ${data.transactionType}: ${error.message}`);
       }
 
       return;
     }
 
-    if (actionId === 'parse-sms') {
-      const data = actionValues['parse-sms'];
+    if (actionId === 'remove-account') {
+      const { accountId } = actionValues['remove-account'];
 
-      // Validate all fields
-      if (!data.account || !data.sms) {
-        alert('Please fill in all required fields');
+      if (!accountId) {
+        alert('Please select an account to remove');
         return;
       }
 
-      try {
-        // Call backend API to parse SMS
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const token = localStorage.getItem('token');
+      const selectedOption = linkedAccountOptions.find(opt => opt.value === accountId);
+      const confirmationLabel = selectedOption?.label || 'this account';
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const token = localStorage.getItem('token');
 
-        const response = await fetch(`${API_BASE_URL}/transactions/parse-sms`, {
-          method: 'POST',
+      const confirmed = window.confirm(`Are you sure you want to remove ${confirmationLabel}?`);
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/accounts/external/${accountId}`, {
+          method: 'DELETE',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
           credentials: 'include',
-          body: JSON.stringify({
-            accountId: data.account,
-            smsText: data.sms,
-          }),
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to parse SMS');
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok || result.success === false) {
+          throw new Error(result.error || 'Failed to remove account');
         }
 
-        const result = await response.json();
+        // Optimistically update local state
+        setLinkedAccounts(prev => prev.filter(acc => (acc.id || acc._id) !== accountId));
+        setDashboardData(prev => ({
+          ...prev,
+          accounts: prev?.accounts?.filter(acc => (acc.id || acc._id) !== accountId) || [],
+        }));
 
-        if (result.success && result.data.saved) {
-          const parsed = result.data.parsed;
+        // Refresh to ensure balances and state are current
+        fetchDashboardData();
 
+<<<<<<< HEAD
           // Add success notification
           addLatestUpdate({
             merchant: parsed.merchant || 'Bank SMS',
@@ -903,10 +1067,16 @@ function DashboardPage() {
         } else {
           alert('Could not extract transaction details from SMS. Please try manual entry.');
         }
+=======
+        setSuccessMessage(`Removed ${confirmationLabel}`);
+        setTimeout(() => setSuccessMessage(null), 4000);
+>>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
+        resetActionForm(actionId);
+        setActiveAction(null);
       } catch (error) {
-        console.error('Error parsing SMS:', error);
-        alert('Failed to parse SMS. Please try again.');
+        console.error('Error removing account:', error);
+        alert(`Failed to remove account: ${error.message}`);
       }
 
       return;
@@ -929,7 +1099,7 @@ function DashboardPage() {
       queryParams.append('format', format);
       
       const endpoint = format === 'pdf' ? '/export/pdf' : '/export/csv';
-      const downloadUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}${endpoint}?${queryParams.toString()}`;
+      const downloadUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}${endpoint}?${queryParams.toString()}`;
       
       try {
         const response = await fetch(downloadUrl, {
@@ -1006,12 +1176,18 @@ function DashboardPage() {
                     label="Bank"
                     name="bank"
                     value={actionValues['link-account'].bank}
-                    onChange={(event) =>
-                      updateActionValue('link-account', 'bank', event.target.value)
-                    }
+                    onChange={(event) => {
+                      updateActionValue('link-account', 'bank', event.target.value);
+                      if (formErrors.bank) {
+                        setFormErrors({ ...formErrors, bank: null });
+                      }
+                    }}
                     options={bankOptions}
                     required
                   />
+                  {formErrors.bank && (
+                    <p className="text-red-400 text-sm mt-1">{formErrors.bank}</p>
+                  )}
                   <div className="flex justify-end gap-3 pt-2">
                     <Button
                       variant="secondary"
@@ -1045,12 +1221,18 @@ function DashboardPage() {
                     min="0"
                     step="0.01"
                     value={actionValues['link-account'].initialDeposit}
-                    onChange={(event) =>
-                      updateActionValue('link-account', 'initialDeposit', event.target.value)
-                    }
+                    onChange={(event) => {
+                      updateActionValue('link-account', 'initialDeposit', event.target.value);
+                      if (formErrors.initialDeposit) {
+                        setFormErrors({ ...formErrors, initialDeposit: null });
+                      }
+                    }}
                     placeholder="0.00"
                     required
                   />
+                  {formErrors.initialDeposit && (
+                    <p className="text-red-400 text-sm mt-1">{formErrors.initialDeposit}</p>
+                  )}
                   <div className="flex justify-between gap-3 pt-2">
                     <Button
                       variant="secondary"
@@ -1081,12 +1263,25 @@ function DashboardPage() {
                     label="Account Name"
                     name="accountName"
                     value={actionValues['link-account'].accountName}
-                    onChange={(event) =>
-                      updateActionValue('link-account', 'accountName', event.target.value)
-                    }
+                    onChange={(event) => {
+                      updateActionValue('link-account', 'accountName', event.target.value);
+                      if (formErrors.accountName) {
+                        setFormErrors({ ...formErrors, accountName: null });
+                      }
+                    }}
                     placeholder="e.g., Main Checking, Savings"
                     required
                   />
+                  {formErrors.accountName && (
+                    <p className="text-red-400 text-sm mt-1">{formErrors.accountName}</p>
+                  )}
+
+                  {/* General Error Message */}
+                  {formErrors.general && (
+                    <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+                      <p className="text-red-400 text-sm">{formErrors.general}</p>
+                    </div>
+                  )}
 
                   {/* Review Summary */}
                   <div className="mt-6 p-4 rounded-xl bg-slate-700/30 border border-slate-600/50 space-y-2">
@@ -1181,16 +1376,6 @@ function DashboardPage() {
               required
             />
             <InputField
-              label="Date"
-              name="date"
-              type="date"
-              value={actionValues['quick-deposit'].date}
-              onChange={(event) =>
-                updateActionValue('quick-deposit', 'date', event.target.value)
-              }
-              required
-            />
-            <InputField
               label="Description (Optional)"
               name="description"
               value={actionValues['quick-deposit'].description}
@@ -1211,90 +1396,190 @@ function DashboardPage() {
             </div>
           </form>
         );
-      case 'manual-entry':
+      case 'manual-entry': {
+        const transactionType = actionValues['manual-entry'].transactionType || 'expense';
+
         return (
           <form
             onSubmit={(event) => handleSubmitAction('manual-entry', event)}
             className="space-y-4"
           >
-            <SelectMenu
-              label="Transaction Type"
-              name="transactionType"
-              value={actionValues['manual-entry'].transactionType}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'transactionType', event.target.value)
-              }
-              options={transactionTypeOptions}
-              required
-            />
-            <SelectMenu
-              label="Account"
-              name="account"
-              value={actionValues['manual-entry'].account}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'account', event.target.value)
-              }
-              options={realAccountOptions}
-              required
-            />
-            <InputField
-              label="Amount"
-              name="amount"
-              type="number"
-              min="0"
-              step="0.01"
-              value={actionValues['manual-entry'].amount}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'amount', event.target.value)
-              }
-              placeholder="0.00"
-              required
-            />
-            <SelectMenu
-              label="Category"
-              name="category"
-              value={actionValues['manual-entry'].category}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'category', event.target.value)
-              }
-              options={categoryOptions}
-              required
-            />
-            <InputField
-              label="Merchant / Description"
-              name="merchant"
-              value={actionValues['manual-entry'].merchant}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'merchant', event.target.value)
-              }
-              placeholder="e.g., Apple Store"
-              required
-            />
-            <InputField
-              label="Date"
-              name="date"
-              type="date"
-              value={actionValues['manual-entry'].date}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'date', event.target.value)
-              }
-              required
-            />
+            {/* Transaction Type Selector */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Notes (Optional)
-              </label>
-              <textarea
-                rows={3}
-                name="notes"
-                value={actionValues['manual-entry'].notes}
-                onChange={(event) =>
-                  updateActionValue('manual-entry', 'notes', event.target.value)
-                }
-                placeholder="Add any additional details..."
-                className={textAreaClasses}
-              />
+              <p className="block text-sm font-medium text-gray-400 mb-2">
+                Transaction Type
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {transactionTypeOptions.map((option) => {
+                  const isSelected = transactionType === option.value;
+                  return (
+                    <button
+                      type="button"
+                      key={option.value}
+                      onClick={() => handleManualEntryTypeChange(option.value)}
+                      className={`
+                        w-full px-4 py-3 rounded-lg border transition-all duration-200 text-sm font-semibold
+                        ${isSelected
+                          ? 'border-teal-500 bg-teal-500/10 text-white shadow-[0_0_0_1px_rgba(20,184,166,0.4)]'
+                          : 'border-slate-600 bg-slate-700/40 text-gray-300 hover:border-slate-500'}
+                      `}
+                      aria-pressed={isSelected}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* EXPENSE FORM */}
+            {transactionType === 'expense' && (
+              <>
+                <SelectMenu
+                  label="Account"
+                  name="account"
+                  value={actionValues['manual-entry'].account}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'account', event.target.value)
+                  }
+                  options={realAccountOptions}
+                  required
+                />
+                <InputField
+                  label="Amount"
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={actionValues['manual-entry'].amount}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'amount', event.target.value)
+                  }
+                  placeholder="0.00"
+                  required
+                />
+                <SelectMenu
+                  label="Category"
+                  name="category"
+                  value={actionValues['manual-entry'].category}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'category', event.target.value)
+                  }
+                  options={expenseCategoryOptions}
+                  required
+                />
+                <InputField
+                  label="Merchant / Description"
+                  name="merchant"
+                  value={actionValues['manual-entry'].merchant}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'merchant', event.target.value)
+                  }
+                  placeholder="e.g., Apple Store"
+                  required
+                />
+                <InputField
+                  label="Date"
+                  name="date"
+                  type="date"
+                  value={actionValues['manual-entry'].date}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'date', event.target.value)
+                  }
+                  required
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    name="notes"
+                    value={actionValues['manual-entry'].notes}
+                    onChange={(event) =>
+                      updateActionValue('manual-entry', 'notes', event.target.value)
+                    }
+                    placeholder="Add any additional details..."
+                    className={textAreaClasses}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* INCOME FORM */}
+            {transactionType === 'income' && (
+              <>
+                <SelectMenu
+                  label="Account"
+                  name="account"
+                  value={actionValues['manual-entry'].account}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'account', event.target.value)
+                  }
+                  options={realAccountOptions}
+                  required
+                />
+                <InputField
+                  label="Amount"
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={actionValues['manual-entry'].amount}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'amount', event.target.value)
+                  }
+                  placeholder="0.00"
+                  required
+                />
+                <SelectMenu
+                  label="Income Category"
+                  name="category"
+                  value={actionValues['manual-entry'].category}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'category', event.target.value)
+                  }
+                  options={incomeCategoryOptions}
+                  required
+                />
+                <InputField
+                  label="Source / Description"
+                  name="merchant"
+                  value={actionValues['manual-entry'].merchant}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'merchant', event.target.value)
+                  }
+                  placeholder="e.g., Monthly Salary, Bonus"
+                  required
+                />
+                <InputField
+                  label="Date"
+                  name="date"
+                  type="date"
+                  value={actionValues['manual-entry'].date}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'date', event.target.value)
+                  }
+                  required
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    name="notes"
+                    value={actionValues['manual-entry'].notes}
+                    onChange={(event) =>
+                      updateActionValue('manual-entry', 'notes', event.target.value)
+                    }
+                    placeholder="Add any additional details..."
+                    className={textAreaClasses}
+                  />
+                </div>
+              </>
+            )}
+
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="secondary"
@@ -1307,46 +1592,32 @@ function DashboardPage() {
             </div>
           </form>
         );
-      case 'parse-sms':
+      }
+      case 'remove-account':
         return (
           <form
-            onSubmit={(event) => handleSubmitAction('parse-sms', event)}
+            onSubmit={(event) => handleSubmitAction('remove-account', event)}
             className="space-y-4"
           >
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                SMS Text
-              </label>
-              <textarea
-                rows={4}
-                name="sms"
-                value={actionValues['parse-sms'].sms}
-                onChange={(event) =>
-                  updateActionValue('parse-sms', 'sms', event.target.value)
-                }
-                placeholder="Paste your bank SMS message here..."
-                className={textAreaClasses}
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Example: Your account ending in 1234 has been debited 89.99 SR at Apple Store on 04/10/2024.
-              </p>
-            </div>
             <SelectMenu
-              label="Account to Deposit"
-              name="account"
-              value={actionValues['parse-sms'].account}
+              label="Account to Remove"
+              name="accountId"
+              value={actionValues['remove-account'].accountId}
               onChange={(event) =>
-                updateActionValue('parse-sms', 'account', event.target.value)
+                updateActionValue('remove-account', 'accountId', event.target.value)
               }
               options={realAccountOptions}
               required
             />
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              Removing an account will also remove its transactions from your dashboard summary.
+              This action cannot be undone.
+            </div>
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="secondary"
                 type="button"
-                onClick={() => handleCancelAction('parse-sms')}
+                onClick={() => handleCancelAction('remove-account')}
               >
                 Cancel
               </Button>
@@ -1431,6 +1702,46 @@ function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-page text-white pt-20">
       <Sidebar />
+
+      {/* Success Toast Notification */}
+      {successMessage && (
+        <div
+          className="fixed top-24 right-6 z-50 transition-all duration-300 ease-out"
+          style={{
+            animation: 'slideInRight 0.3s ease-out'
+          }}
+        >
+          <style>{`
+            @keyframes slideInRight {
+              from {
+                transform: translateX(100%);
+                opacity: 0;
+              }
+              to {
+                transform: translateX(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
+          <div className="bg-teal-500/90 backdrop-blur-sm border border-teal-400/50 rounded-lg px-6 py-4 shadow-2xl flex items-center gap-3 max-w-md">
+            <div className="flex-shrink-0 w-6 h-6 bg-white rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-white font-medium">{successMessage}</p>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="ml-auto text-white/80 hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 ml-64 px-6 py-8">
         <div className="max-w-6xl space-y-6">
           <header className="space-y-4">

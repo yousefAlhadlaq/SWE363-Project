@@ -6,8 +6,32 @@ import requestService from '../../services/requestService';
 import advisorService from '../../services/advisorService';
 import { useAuth } from '../../context/AuthContext';
 
+const avatarGradients = [
+  'from-teal-500 to-blue-600',
+  'from-purple-500 to-pink-600',
+  'from-amber-500 to-orange-500',
+  'from-emerald-500 to-teal-500',
+  'from-indigo-500 to-cyan-500',
+];
+
+const getAvatarProps = (person) => {
+  const name =
+    person?.fullName ||
+    person?.name ||
+    person?.email ||
+    person?.senderName ||
+    'Unknown';
+
+  const trimmed = (name || '').trim();
+  const initial = trimmed.charAt(0).toUpperCase() || 'A';
+  const hash = Array.from(trimmed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const gradient = avatarGradients[Math.abs(hash) % avatarGradients.length];
+
+  return { initial, gradient, name: trimmed || 'Unknown' };
+};
+
 function FinancialAdvicePage() {
-  const { isAdvisor } = useAuth();
+  const { isAdvisor, user } = useAuth();
   const [activeTab, setActiveTab] = useState('sent');
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedThread, setSelectedThread] = useState(null);
@@ -344,12 +368,14 @@ function FinancialAdvicePage() {
                 selectedThread.messages.map((message, index) => (
                   <div key={index} className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 shadow-sm dark:shadow-none">
                     <div className="flex items-start space-x-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                        {(() => {
-                          const senderName = message.sender?.fullName || message.sender?.email || message.senderName || 'Unknown';
-                          return senderName.charAt(0).toUpperCase();
-                        })()}
-                      </div>
+                      {(() => {
+                        const avatar = getAvatarProps(message.sender || { senderName: message.senderName });
+                        return (
+                          <div className={`w-10 h-10 bg-gradient-to-br ${avatar.gradient} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0`}>
+                            {avatar.initial}
+                          </div>
+                        );
+                      })()}
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-1">
                           <span className="font-semibold text-slate-900 dark:text-white">
@@ -411,27 +437,37 @@ function FinancialAdvicePage() {
               <div className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 shadow-sm dark:shadow-none">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Participants</h3>
                 <div className="space-y-3">
+                  {(() => {
+                    const youAvatar = getAvatarProps(user || { fullName: 'You' });
+                    return (
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                      Y
+                      <div className={`w-10 h-10 bg-gradient-to-br ${youAvatar.gradient} rounded-full flex items-center justify-center text-white font-bold`}>
+                        {youAvatar.initial}
                     </div>
                     <div>
-                      <p className="text-slate-900 dark:text-white font-medium">You</p>
+                      <p className="text-slate-900 dark:text-white font-medium">{youAvatar.name || 'You'}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-400">Requester</p>
                     </div>
                   </div>
+                    );
+                  })()}
                   {selectedThread.advisor && (
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {(selectedThread.advisor.fullName || selectedThread.advisor.email || 'A').charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-slate-900 dark:text-white font-medium">
-                          {selectedThread.advisor.fullName || selectedThread.advisor.email || 'Unknown Advisor'}
-                        </p>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Advisor</p>
-                      </div>
-                    </div>
+                    (() => {
+                      const advisorAvatar = getAvatarProps(selectedThread.advisor);
+                      return (
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-10 h-10 bg-gradient-to-br ${advisorAvatar.gradient} rounded-full flex items-center justify-center text-white font-bold`}>
+                            {advisorAvatar.initial}
+                          </div>
+                          <div>
+                            <p className="text-slate-900 dark:text-white font-medium">
+                              {selectedThread.advisor.fullName || selectedThread.advisor.email || 'Unknown Advisor'}
+                            </p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Advisor</p>
+                          </div>
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               </div>

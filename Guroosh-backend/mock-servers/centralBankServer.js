@@ -82,7 +82,7 @@ function getRandomPastDate(yearsBack = 5) {
 // Notify main backend about operations
 async function notifyMainBackend(data) {
   try {
-    const MAIN_BACKEND_URL = process.env.MAIN_BACKEND_URL || 'http://localhost:5000';
+    const MAIN_BACKEND_URL = process.env.MAIN_BACKEND_URL || 'http://localhost:5001';
     await axios.post(`${MAIN_BACKEND_URL}/api/external/notify`, data);
     console.log(`✅ Notified main backend: ${data.operation_type}`);
   } catch (error) {
@@ -628,7 +628,9 @@ app.get('/api/accounts/:userId', async (req, res) => {
       accounts: accounts.map(acc => ({
         id: acc._id,
         bank: acc.bank,
+        bankLogo: acc.bankLogo,
         accountNumber: acc.accountNumber,
+        accountName: acc.accountName,
         accountType: acc.accountType,
         balance: acc.balance,
         currency: acc.currency,
@@ -795,7 +797,7 @@ app.get('/api/banks', (req, res) => {
 // LINK A NEW ACCOUNT (simple - no credentials needed)
 app.post('/api/link-account', async (req, res) => {
   try {
-    const { userId, bankId } = req.body;
+    const { userId, bankId, accountName } = req.body;
 
     // Validation
     if (!userId || !bankId) {
@@ -824,6 +826,7 @@ app.post('/api/link-account', async (req, res) => {
       userId,
       bank: bank.name,
       accountNumber,
+      accountName: accountName || undefined,
       accountType,
       balance,
       currency: 'SAR',
@@ -842,6 +845,7 @@ app.post('/api/link-account', async (req, res) => {
         id: account._id,
         bankName: bank.name,
         bankLogo: bank.logo,
+        accountName: accountName || undefined,
         accountNumber: accountNumber,
         accountType,
         balance,

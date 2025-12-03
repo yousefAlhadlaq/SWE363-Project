@@ -19,7 +19,9 @@ const BANK_NAME_MAP = {
 const mapExternalAccount = (account) => ({
   id: account._id,
   bank: account.bank,
+  bankLogo: account.bankLogo,
   accountNumber: account.accountNumber,
+  accountName: account.accountName,
   accountType: account.accountType,
   balance: account.balance,
   currency: account.currency,
@@ -191,10 +193,11 @@ exports.linkExternalAccount = async (req, res) => {
     }
 
     try {
-      const centralBankResponse = await axios.post(`${CENTRAL_BANK_API}/link-account`, {
-        userId,
-        bankId: parseInt(bankId, 10)
-      });
+        const centralBankResponse = await axios.post(`${CENTRAL_BANK_API}/link-account`, {
+          userId,
+          bankId: parseInt(bankId, 10),
+          accountName
+        });
 
       if (!centralBankResponse.data.success) {
         throw new Error(centralBankResponse.data.error || 'Failed to link account with Central Bank');
@@ -213,34 +216,59 @@ exports.linkExternalAccount = async (req, res) => {
         throw new Error(depositResponse.data.error || 'Failed to perform initial deposit');
       }
 
+<<<<<<< HEAD
       // Create notification for linked account
       await createLinkAccountNotification(userId, {
         bankName: linkedAccount.bankName,
         accountNumber: linkedAccount.accountNumber,
         initialDeposit: parseFloat(initialDeposit)
       });
+=======
+      // Persist locally with the custom account name
+      const savedAccount = await ExternalBankAccount.findOneAndUpdate(
+        { userId, accountNumber: linkedAccount.accountNumber },
+        {
+          userId,
+          bank: linkedAccount.bankName,
+          bankLogo: linkedAccount.bankLogo,
+          accountNumber: linkedAccount.accountNumber,
+          accountName,
+          accountType: linkedAccount.accountType || 'Checking',
+          balance: depositResponse.data.new_balance,
+          currency: linkedAccount.currency || 'SAR',
+          totalDeposits: depositResponse.data.new_balance,
+          totalPayments: 0,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+>>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
       return res.status(201).json({
         success: true,
         message: 'Account created successfully',
         account: {
-          id: linkedAccount.id,
-          bank: linkedAccount.bankName,
-          accountNumber: linkedAccount.accountNumber,
-          accountName,
-          balance: depositResponse.data.new_balance,
-          currency: linkedAccount.currency
+          id: savedAccount._id,
+          bank: savedAccount.bank,
+          bankLogo: savedAccount.bankLogo,
+          accountNumber: savedAccount.accountNumber,
+          accountName: savedAccount.accountName,
+          balance: savedAccount.balance,
+          currency: savedAccount.currency
         }
       });
     } catch (centralBankError) {
       console.error('Central Bank API Error:', centralBankError.message);
+      console.log('Using fallback mode to create account locally');
+
       const accountNumber = `SA${Date.now()}${Math.floor(Math.random() * 1000000)}`;
       const bankName = BANK_NAME_MAP[bankId] || 'Unknown Bank';
 
+      // Mongoose will automatically convert string userId to ObjectId
       const newAccount = await ExternalBankAccount.create({
-        userId,
+        userId: userId,  // Let Mongoose handle the conversion
         bank: bankName,
         accountNumber,
+        accountName: accountName,  // Store the account name
         accountType: 'Checking',
         balance: parseFloat(initialDeposit),
         currency: 'SAR',
@@ -253,12 +281,16 @@ exports.linkExternalAccount = async (req, res) => {
         }]
       });
 
+<<<<<<< HEAD
       // Create notification for linked account (fallback)
       await createLinkAccountNotification(userId, {
         bankName,
         accountNumber,
         initialDeposit: parseFloat(initialDeposit)
       });
+=======
+      console.log('Account created successfully in fallback mode:', newAccount._id);
+>>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
       return res.status(201).json({
         success: true,

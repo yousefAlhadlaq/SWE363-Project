@@ -70,15 +70,20 @@ exports.getDashboardData = async (req, res) => {
       centralBankAccounts,
       centralBankStocks,
       centralBankGold,
+      localAccounts
     ] = await Promise.all([
       Expense.find({ userId }).sort({ date: -1 }).limit(50),
       Investment.find({ userId }),
       fetchFromCentralBank('accounts', userId),
       fetchFromCentralBank('stocks', userId),
       fetchFromCentralBank('gold_value', userId),
+      ExternalBankAccount.find({ userId })
     ]);
 
     const accounts = centralBankAccounts?.accounts || [];
+    const localAccountByNumber = new Map(
+      (localAccounts || []).map(acc => [acc.accountNumber, acc])
+    );
     const stockPortfolios = centralBankStocks?.portfolios || [];
     const stockSummary = centralBankStocks?.summary || { totalValue: 0, totalGainLoss: 0 };
     const goldData = centralBankGold?.gold;
@@ -104,10 +109,22 @@ exports.getDashboardData = async (req, res) => {
         const balance = account.balance || 0;
         totalBalance += balance;
 
+        const localMatch =
+          localAccountByNumber.get(account.accountNumber) ||
+          localAccountByNumber.get(account.id) ||
+          null;
+
+        const accountName =
+          account.accountName ||
+          localMatch?.accountName ||
+          '';
+
         processedAccounts.push({
           id: account.id || account._id,
           bank: account.bank,
+          bankLogo: account.bankLogo || localMatch?.bankLogo,
           accountNumber: account.accountNumber,
+          accountName: accountName,
           accountType: account.accountType,
           balance,
           currency: account.currency || 'SAR',
@@ -150,6 +167,31 @@ exports.getDashboardData = async (req, res) => {
             const category = tx.category || categorizeTransaction(tx.description);
             categorySpending[category] = (categorySpending[category] || 0) + tx.amount;
           }
+        });
+      });
+    }
+
+    // Include any locally stored accounts not present from central bank
+    if (Array.isArray(localAccounts)) {
+      localAccounts.forEach(localAcc => {
+        const alreadyIncluded = processedAccounts.some(
+          acc => acc.accountNumber === localAcc.accountNumber
+        );
+        if (alreadyIncluded) return;
+
+        const balance = localAcc.balance || 0;
+        totalBalance += balance;
+
+        processedAccounts.push({
+          id: localAcc._id,
+          bank: localAcc.bank,
+          bankLogo: localAcc.bankLogo,
+          accountNumber: localAcc.accountNumber,
+          accountName: localAcc.accountName,
+          accountType: localAcc.accountType,
+          balance,
+          currency: localAcc.currency || 'SAR',
+          createdAt: localAcc.createdAt
         });
       });
     }
@@ -327,7 +369,9 @@ exports.getLinkedAccounts = async (req, res) => {
         accounts: accounts.map(acc => ({
           id: acc._id,
           bank: acc.bank,
+          bankLogo: acc.bankLogo,
           accountNumber: acc.accountNumber,
+          accountName: acc.accountName,
           accountType: acc.accountType,
           balance: acc.balance,
           currency: acc.currency,

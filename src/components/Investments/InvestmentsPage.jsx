@@ -679,7 +679,7 @@ function InvestmentsPage() {
     const fetchCities = async () => {
       try {
         setLoadingCities(true);
-        const API_BASE_URL = 'http://localhost:5000/api';
+        const API_BASE_URL = 'http://localhost:5001/api';
         const response = await fetch(`${API_BASE_URL}/cities`);
         const data = await response.json();
 
@@ -858,7 +858,7 @@ function InvestmentsPage() {
       name: `${stock.name} (${stock.symbol})`,
     }));
 
-    const API_BASE_URL = 'http://localhost:5000/api';
+    const API_BASE_URL = 'http://localhost:5001/api';
 
     // Fetch current stock quote
     try {
@@ -924,7 +924,7 @@ function InvestmentsPage() {
       setErrors((prev) => ({ ...prev, purchaseDate: '' }));
     }
 
-    const API_BASE_URL = 'http://localhost:5000/api';
+    const API_BASE_URL = 'http://localhost:5001/api';
 
     // If stock is selected and date is valid, fetch historical price
     if (selectedStock && purchaseDate && form.category === 'Stock' && isValidDate(purchaseDate)) {
@@ -1088,7 +1088,7 @@ function InvestmentsPage() {
     if (isRealEstate) {
       // Call Groq API via backend to get valuation
       try {
-        const API_BASE_URL = 'http://localhost:5000/api';
+        const API_BASE_URL = 'http://localhost:5001/api';
         const token = localStorage.getItem('token');
 
         const estimateResponse = await fetch(`${API_BASE_URL}/real-estate/evaluate`, {

@@ -822,8 +822,9 @@ exports.deleteTransaction = async (req, res) => {
 // This is INTERNAL REDISTRIBUTION - does NOT affect income, expenses, or spending
 exports.transfer = async (req, res) => {
   try {
-    const { fromAccountId, toAccountId, amount, description, date } = req.body;
+    const { fromAccountId, toAccountId, amount, description } = req.body;
     const userId = req.userId;
+    const transferDate = new Date();
 
     console.log('💸 Transfer Request:', {
       userId,
@@ -917,7 +918,7 @@ exports.transfer = async (req, res) => {
               to: toAccountId,
               amount: transferAmount,
               description: description || 'Transfer',
-              date: date ? new Date(date) : new Date(),
+              date: transferDate,
             },
             fromAccount: {
               id: 'main',
@@ -992,7 +993,7 @@ exports.transfer = async (req, res) => {
               to: 'main',
               amount: transferAmount,
               description: description || 'Transfer',
-              date: date ? new Date(date) : new Date(),
+              date: transferDate,
             },
             fromAccount: {
               id: fromAccountId,
@@ -1068,7 +1069,7 @@ exports.transfer = async (req, res) => {
               to: toAccountId,
               amount: transferAmount,
               description: description || 'Transfer',
-              date: date ? new Date(date) : new Date(),
+              date: transferDate,
             },
             fromAccount: {
               id: fromAccountId,
