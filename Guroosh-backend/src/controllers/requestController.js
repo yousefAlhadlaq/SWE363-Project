@@ -225,10 +225,17 @@ exports.declineRequest = async (req, res) => {
 exports.updateRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const rawStatus = (req.body?.status || req.body?.newStatus || '').toString().trim();
     const userId = req.userId;
 
-    if (!['In Progress', 'Completed', 'Cancelled'].includes(status)) {
+    console.log('🔄 Update request status payload:', req.body);
+
+    const allowedStatuses = ['In Progress', 'Completed', 'Cancelled', 'Closed'];
+    const normalizedStatus = rawStatus
+      ? allowedStatuses.find(opt => opt.toLowerCase() === rawStatus.toLowerCase())
+      : null;
+
+    if (!normalizedStatus) {
       return res.status(400).json({
         error: 'Invalid status'
       });
@@ -250,7 +257,7 @@ exports.updateRequestStatus = async (req, res) => {
       });
     }
 
-    request.status = status;
+    request.status = normalizedStatus;
     await request.save();
 
     res.json({
