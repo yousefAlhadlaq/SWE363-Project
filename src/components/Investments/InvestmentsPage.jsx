@@ -6,6 +6,7 @@ import Modal from '../Shared/Modal';
 import investmentService from '../../services/investmentService';
 import StockSearchInput from './StockSearchInput';
 import MapSelector from './MapSelector';
+import FloatingActionButton from '../Shared/FloatingActionButton';
 
 const categoryOptions = [
   { value: 'Stock', label: 'Stocks' },
@@ -1309,18 +1310,7 @@ function InvestmentsPage() {
           </div>
         </div>
       </div>
-      <div className="fixed bottom-8 right-8 z-50">
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          className="w-14 h-14 bg-yellow-500 hover:bg-yellow-400 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
-        >
-          <svg className="w-6 h-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-          </svg>
-          <span className="sr-only">Add investment</span>
-        </button>
-      </div>
+      <FloatingActionButton onClick={() => setShowAddModal(true)} />
 
       <Modal
         isOpen={showAddModal}

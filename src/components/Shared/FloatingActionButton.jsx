@@ -11,21 +11,22 @@ const FloatingActionButton = ({ onClick, className = '' }) => {
     <button
       onClick={onClick}
       className={`
-        fixed bottom-6 right-6 
-        w-14 h-14 
-        bg-amber-400 hover:bg-amber-500 
+        fixed bottom-8 right-8 
+        w-16 h-16 
+        bg-amber-400 hover:bg-amber-300 
         text-slate-900 
         rounded-full 
-        shadow-2xl 
+        shadow-[0_20px_45px_rgba(251,191,36,0.35)] 
         flex items-center justify-center 
         transition-all duration-200 
-        focus:outline-none focus:ring-4 focus:ring-amber-500/50 
-        z-30
+        hover:scale-110
+        focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 
+        z-50 group
         ${className}
       `}
       aria-label="Add new item"
     >
-      <PlusIcon />
+      <PlusIcon className="w-8 h-8 text-slate-900 group-hover:rotate-90 transition-transform duration-300" />
     </button>
   );
 };

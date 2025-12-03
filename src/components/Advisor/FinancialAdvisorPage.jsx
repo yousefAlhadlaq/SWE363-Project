@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import FinancialSidebar from '../Shared/FinancialSidebar';
 import requestService from '../../services/requestService';
 import Button from '../Shared/Button';
+import FloatingActionButton from '../Shared/FloatingActionButton';
 
 const avatarGradients = [
   'from-teal-500 to-blue-600',
@@ -919,14 +920,7 @@ function FinancialAdvisorPage() {
         </div>
 
         {/* Floating Action Button */}
-        <button
-          onClick={() => setShowReplyModal(true)}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-amber-400 text-slate-900 hover:bg-amber-300 rounded-full shadow-[0_20px_45px_rgba(251,191,36,0.35)] flex items-center justify-center transition-all hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 z-50 group"
-        >
-          <svg className="w-8 h-8 text-slate-900 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
+        <FloatingActionButton onClick={() => setShowReplyModal(true)} />
 
         {/* Reply Modal */}
         {showReplyModal && (

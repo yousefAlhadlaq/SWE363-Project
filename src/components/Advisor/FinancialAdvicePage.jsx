@@ -5,6 +5,7 @@ import Sidebar from '../Shared/Sidebar';
 import requestService from '../../services/requestService';
 import advisorService from '../../services/advisorService';
 import { useAuth } from '../../context/AuthContext';
+import FloatingActionButton from '../Shared/FloatingActionButton';
 
 const avatarGradients = [
   'from-teal-500 to-blue-600',
@@ -645,15 +646,7 @@ function FinancialAdvicePage() {
         </div>
 
         {/* Floating Action Button */}
-        <button
-          onClick={() => setShowRequestModal(true)}
-          disabled={loading}
-          className="fixed bottom-8 right-8 w-14 h-14 bg-yellow-500 hover:bg-yellow-400 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg className="w-7 h-7 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
+        <FloatingActionButton onClick={() => setShowRequestModal(true)} className={loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''} />
 
         {/* Request Modal */}
         {showRequestModal && (
