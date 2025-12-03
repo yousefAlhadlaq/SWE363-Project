@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 import AdminLayout from './AdminLayout';
+import notificationService from '../../services/notificationService';
 
 function NotificationsPanel() {
   const [notification, setNotification] = useState({
@@ -11,24 +12,31 @@ function NotificationsPanel() {
     targetAudience: 'all'
   });
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'System Maintenance',
-      message: 'Scheduled maintenance on Sunday',
-      type: 'warning',
-      date: '2024-01-10',
-      sent: true
-    },
-    {
-      id: 2,
-      title: 'New Feature Released',
-      message: 'Check out our new Zakah calculator',
-      type: 'info',
-      date: '2024-01-08',
-      sent: true
+  const [notifications, setNotifications] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(null);
+  const [statusMessage, setStatusMessage] = useState(null);
+
+  const fetchNotifications = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const response = await notificationService.getAllNotifications(100);
+      const payload = response?.data ?? response ?? {};
+      const fetched = payload.notifications || payload?.data?.notifications || [];
+      setNotifications(fetched);
+    } catch (error) {
+      console.error('Failed to load notifications history:', error);
+      setHistoryError(error?.response?.data?.error || 'Unable to load notification history.');
+    } finally {
+      setHistoryLoading(false);
     }
-  ]);
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const handleChange = (e) => {
     setNotification({
@@ -37,22 +45,38 @@ function NotificationsPanel() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newNotification = {
-      id: notifications.length + 1,
-      ...notification,
-      date: new Date().toISOString().split('T')[0],
-      sent: false
-    };
-    setNotifications([newNotification, ...notifications]);
-    setNotification({
-      title: '',
-      message: '',
-      type: 'info',
-      targetAudience: 'all'
-    });
+    if (isSubmitting) return;
+
+    setStatusMessage(null);
+    setIsSubmitting(true);
+    try {
+      await notificationService.sendAdminNotification(notification);
+      setStatusMessage({ type: 'success', text: 'Notification broadcast successfully.' });
+      setNotification({
+        title: '',
+        message: '',
+        type: 'info',
+        targetAudience: 'all'
+      });
+      fetchNotifications();
+    } catch (error) {
+      console.error('Failed to send notification:', error);
+      setStatusMessage({
+        type: 'error',
+        text: error?.response?.data?.error || 'Failed to send notification.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const audienceLabel = useMemo(() => ({
+    all: 'all',
+    advisors: 'advisors',
+    clients: 'clients'
+  }), []);
 
   const typeChipStyles = {
     info: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-100',
@@ -134,8 +158,17 @@ function NotificationsPanel() {
                 </select>
               </div>
             </div>
-            <Button type="submit" variant="primary" fullWidth>
-              Send Notification
+            {statusMessage && (
+              <p
+                className={`text-sm font-medium ${
+                  statusMessage.type === 'error' ? 'text-rose-400' : 'text-emerald-400'
+                }`}
+              >
+                {statusMessage.text}
+              </p>
+            )}
+            <Button type="submit" variant="primary" fullWidth disabled={isSubmitting}>
+              {isSubmitting ? 'Sending...' : 'Send Notification'}
             </Button>
           </form>
         </section>
@@ -151,45 +184,54 @@ function NotificationsPanel() {
               </h2>
             </div>
             <span className="text-sm text-gray-500">
-              {notifications.length} total records
+              {historyLoading ? 'Loading...' : `${notifications.length} total records`}
             </span>
           </header>
           <div className="space-y-4 max-h-[32rem] overflow-y-auto pr-2">
-            {notifications.map((notif) => (
-              <article
-                key={notif.id}
-                className="p-4 rounded-2xl bg-white/10 border border-white/10"
-              >
-                <div className="flex items-start justify-between gap-4 mb-2">
-                  <div>
-                    <h3 className="text-lg font-semibold">{notif.title}</h3>
-                    <p className="text-sm text-gray-400">{notif.message}</p>
+            {historyError && (
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-400/40 text-rose-200 text-sm">
+                {historyError}
+              </div>
+            )}
+            {!historyError && !historyLoading && notifications.length === 0 && (
+              <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center text-sm text-gray-400">
+                No notifications have been sent yet.
+              </div>
+            )}
+            {!historyLoading && notifications.map((notif) => {
+              const key = notif._id || notif.id;
+              const createdAt = notif.createdAt ? new Date(notif.createdAt).toLocaleString() : notif.date;
+              const type = notif.type || 'info';
+              return (
+                <article
+                  key={key}
+                  className="p-4 rounded-2xl bg-white/10 border border-white/10"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <div>
+                      <h3 className="text-lg font-semibold">{notif.title}</h3>
+                      <p className="text-sm text-gray-400">{notif.message}</p>
+                    </div>
+                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                      {createdAt}
+                    </span>
                   </div>
-                  <span className="text-xs text-gray-500 whitespace-nowrap">
-                    {notif.date}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-3 text-xs font-semibold">
-                  <span
-                    className={`px-3 py-1 rounded-full border ${typeChipStyles[notif.type]}`}
-                  >
-                    {notif.type}
-                  </span>
-                  <span
-                    className={`px-3 py-1 rounded-full border ${
-                      notif.sent
-                        ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-100'
-                        : 'border-slate-400/40 bg-slate-500/10 text-slate-200'
-                    }`}
-                  >
-                    {notif.sent ? 'Sent' : 'Draft'}
-                  </span>
-                  <span className="px-3 py-1 rounded-full border border-white/10 text-gray-300">
-                    Audience: {notif.targetAudience}
-                  </span>
-                </div>
-              </article>
-            ))}
+                  <div className="flex flex-wrap gap-3 text-xs font-semibold">
+                    <span
+                      className={`px-3 py-1 rounded-full border ${typeChipStyles[type] || typeChipStyles.info}`}
+                    >
+                      {type}
+                    </span>
+                    <span className="px-3 py-1 rounded-full border border-emerald-400/50 bg-emerald-400/10 text-emerald-100">
+                      Sent
+                    </span>
+                    <span className="px-3 py-1 rounded-full border border-white/10 text-gray-300">
+                      Audience: {audienceLabel[notif.metadata?.audience] || audienceLabel[notif.targetAudience] || notif.targetAudience}
+                    </span>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       </div>

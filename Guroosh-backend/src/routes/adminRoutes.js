@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { auth, adminAuth } = require('../middleware/auth');
 const adminController = require('../controllers/adminController');
+const notificationController = require('../controllers/notificationController');
 
 router.use(auth, adminAuth);
 
@@ -12,6 +13,7 @@ router.get('/users', adminController.getUsers);
 router.get('/users/:id', adminController.getUserProfile);
 router.patch('/users/:id/status', adminController.toggleUserStatus);
 router.post('/users/:id/reset-password', adminController.resetUserPassword);
+router.post('/notifications', notificationController.createAdminNotification);
 
 // Legacy test route (kept for quick connectivity checks)
 router.get('/test', (req, res) => {

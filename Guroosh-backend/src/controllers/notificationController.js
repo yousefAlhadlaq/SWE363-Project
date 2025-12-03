@@ -1,31 +1,84 @@
 const Notification = require('../models/notification');
-const Settings = require('../models/settings');
+const User = require('../models/user');
 
-// GET /api/notifications - Get all notifications for the logged-in user
-exports.getAllNotifications = async (req, res) => {
+const activeStatusFilter = {
+  $or: [{ status: 'active' }, { status: { $exists: false } }]
+};
+
+const audienceFilters = {
+  all: activeStatusFilter,
+  advisors: {
+    $and: [
+      activeStatusFilter,
+      { $or: [{ role: 'advisor' }, { isAdvisor: true }] }
+    ]
+  },
+  clients: {
+    $and: [
+      activeStatusFilter,
+      { $or: [{ role: 'user' }, { role: 'client' }, { isAdvisor: false }, { isAdvisor: { $exists: false } }] }
+    ]
+  }
+};
+
+exports.createAdminNotification = async (req, res) => {
   try {
-    const { limit = 50, skip = 0, unreadOnly = false } = req.query;
+    const { title, message, type = 'info', targetAudience = 'all' } = req.body;
 
-    // ✅ FIX: Use req.userId (set by auth middleware)
-    const userId = req.userId || req.user._id;
-    console.log('🔍 [NOTIF API] getAllNotifications for userId:', userId);
+    if (!title?.trim() || !message?.trim()) {
+      return res.status(400).json({ success: false, error: 'Title and message are required.' });
+    }
 
-    const query = { user: userId };
+    const filter = audienceFilters[targetAudience] || audienceFilters.all;
+    const recipients = await User.find(filter).select('_id');
+
+    if (!recipients.length) {
+      return res.status(404).json({ success: false, error: 'No users found for the selected audience.' });
+    }
+
+    const recipientIds = new Set(recipients.map((user) => user._id.toString()));
+    recipientIds.add(req.userId.toString());
+
+    const docs = Array.from(recipientIds).map((userId) => ({
+      user: userId,
+      type,
+      category: 'marketingEmails',
+      title: title.trim(),
+      message: message.trim(),
+      metadata: { audience: targetAudience }
+    }));
+
+    await Notification.insertMany(docs);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        created: docs.length,
+        audience: targetAudience
+      }
+    });
+  } catch (error) {
+    console.error('Admin notification broadcast error:', error);
+    res.status(500).json({ success: false, error: 'Failed to send notification.' });
+  }
+};
+
+exports.getNotifications = async (req, res) => {
+  try {
+    const { limit = 50, skip = 0, unreadOnly } = req.query;
+    const query = { user: req.userId };
     if (unreadOnly === 'true') {
       query.read = false;
     }
 
-    const notifications = await Notification.find(query)
-      .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
-      .skip(parseInt(skip));
-
-    console.log('🔍 [NOTIF API] Found', notifications.length, 'notifications');
-
-    const unreadCount = await Notification.getUnreadCount(userId);
-    const totalCount = await Notification.countDocuments({ user: userId });
-
-    console.log('🔍 [NOTIF API] Unread:', unreadCount, 'Total:', totalCount);
+    const [notifications, unreadCount, totalCount] = await Promise.all([
+      Notification.find(query)
+        .sort({ createdAt: -1 })
+        .skip(Number(skip))
+        .limit(Number(limit)),
+      Notification.getUnreadCount(req.userId),
+      Notification.countDocuments({ user: req.userId })
+    ]);
 
     res.json({
       success: true,
@@ -36,277 +89,66 @@ exports.getAllNotifications = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch notifications',
-      error: error.message
-    });
+    console.error('Fetch notifications error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch notifications.' });
   }
 };
 
-// GET /api/notifications/unread-count - Get unread count only
 exports.getUnreadCount = async (req, res) => {
   try {
-    // ✅ FIX: Use req.userId (set by auth middleware)
-    const userId = req.userId || req.user._id;
-    console.log('🔍 [NOTIF API] getUnreadCount for userId:', userId);
-
-    const unreadCount = await Notification.getUnreadCount(userId);
-    console.log('🔍 [NOTIF API] Unread count:', unreadCount);
-
-    res.json({
-      success: true,
-      data: { unreadCount }
-    });
+    const unreadCount = await Notification.getUnreadCount(req.userId);
+    res.json({ success: true, data: { unreadCount } });
   } catch (error) {
-    console.error('Error fetching unread count:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch unread count',
-      error: error.message
-    });
+    console.error('Unread count error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch unread count.' });
   }
 };
 
-// PUT /api/notifications/:id/mark-read - Mark a single notification as read
 exports.markAsRead = async (req, res) => {
   try {
-    const { id } = req.params;
-    const userId = req.userId || req.user._id;
-
-    const notification = await Notification.findOne({
-      _id: id,
-      user: userId
-    });
-
+    const notification = await Notification.findOne({ _id: req.params.id, user: req.userId });
     if (!notification) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notification not found'
-      });
+      return res.status(404).json({ success: false, error: 'Notification not found.' });
     }
-
     await notification.markAsRead();
-
-    const unreadCount = await Notification.getUnreadCount(userId);
-
-    res.json({
-      success: true,
-      message: 'Notification marked as read',
-      data: { notification, unreadCount }
-    });
+    const unreadCount = await Notification.getUnreadCount(req.userId);
+    res.json({ success: true, data: { notification, unreadCount } });
   } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark notification as read',
-      error: error.message
-    });
+    console.error('Mark notification read error:', error);
+    res.status(500).json({ success: false, error: 'Failed to mark notification as read.' });
   }
 };
 
-// PUT /api/notifications/mark-all-read - Mark all notifications as read
 exports.markAllAsRead = async (req, res) => {
   try {
-    const userId = req.userId || req.user._id;
-    await Notification.markAllAsRead(userId);
-
-    res.json({
-      success: true,
-      message: 'All notifications marked as read',
-      data: { unreadCount: 0 }
-    });
+    await Notification.markAllAsRead(req.userId);
+    res.json({ success: true, data: { unreadCount: 0 } });
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark all notifications as read',
-      error: error.message
-    });
+    console.error('Mark all notifications error:', error);
+    res.status(500).json({ success: false, error: 'Failed to mark notifications as read.' });
   }
 };
 
-// DELETE /api/notifications/:id - Delete a single notification
 exports.deleteNotification = async (req, res) => {
   try {
-    const { id } = req.params;
-    const userId = req.userId || req.user._id;
-
-    const notification = await Notification.findOneAndDelete({
-      _id: id,
-      user: userId
-    });
-
-    if (!notification) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notification not found'
-      });
+    const result = await Notification.findOneAndDelete({ _id: req.params.id, user: req.userId });
+    if (!result) {
+      return res.status(404).json({ success: false, error: 'Notification not found.' });
     }
-
-    const unreadCount = await Notification.getUnreadCount(userId);
-
-    res.json({
-      success: true,
-      message: 'Notification deleted',
-      data: { unreadCount }
-    });
+    const unreadCount = await Notification.getUnreadCount(req.userId);
+    res.json({ success: true, data: { unreadCount } });
   } catch (error) {
-    console.error('Error deleting notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete notification',
-      error: error.message
-    });
+    console.error('Delete notification error:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete notification.' });
   }
 };
 
-// DELETE /api/notifications - Clear all notifications
-exports.clearAllNotifications = async (req, res) => {
+exports.clearNotifications = async (req, res) => {
   try {
-    const userId = req.userId || req.user._id;
-    await Notification.deleteMany({ user: userId });
-
-    res.json({
-      success: true,
-      message: 'All notifications cleared',
-      data: { unreadCount: 0 }
-    });
+    await Notification.deleteMany({ user: req.userId });
+    res.json({ success: true, data: { unreadCount: 0 } });
   } catch (error) {
-    console.error('Error clearing notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to clear notifications',
-      error: error.message
-    });
-  }
-};
-
-// PATCH /api/notifications/alert-settings - Update alert settings
-exports.updateAlertSettings = async (req, res) => {
-  try {
-    const { transactionAlerts, budgetReminders, investmentUpdates, marketingEmails } = req.body;
-    const userId = req.userId || req.user._id;
-
-    let settings = await Settings.findOne({ user: userId });
-
-    if (!settings) {
-      // Create default settings if they don't exist
-      settings = new Settings({
-        user: userId,
-        alertSettings: {
-          transactionAlerts: true,
-          budgetReminders: true,
-          investmentUpdates: true,
-          marketingEmails: true
-        }
-      });
-    }
-
-    // Update alert settings
-    if (typeof transactionAlerts === 'boolean') {
-      settings.alertSettings.transactionAlerts = transactionAlerts;
-    }
-    if (typeof budgetReminders === 'boolean') {
-      settings.alertSettings.budgetReminders = budgetReminders;
-    }
-    if (typeof investmentUpdates === 'boolean') {
-      settings.alertSettings.investmentUpdates = investmentUpdates;
-    }
-    if (typeof marketingEmails === 'boolean') {
-      settings.alertSettings.marketingEmails = marketingEmails;
-    }
-
-    await settings.save();
-
-    res.json({
-      success: true,
-      message: 'Alert settings updated',
-      data: { alertSettings: settings.alertSettings }
-    });
-  } catch (error) {
-    console.error('Error updating alert settings:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update alert settings',
-      error: error.message
-    });
-  }
-};
-
-// GET /api/notifications/alert-settings - Get alert settings
-exports.getAlertSettings = async (req, res) => {
-  try {
-    const userId = req.userId || req.user._id;
-    let settings = await Settings.findOne({ user: userId });
-
-    if (!settings) {
-      // Return default settings
-      return res.json({
-        success: true,
-        data: {
-          alertSettings: {
-            transactionAlerts: true,
-            budgetReminders: true,
-            investmentUpdates: true,
-            marketingEmails: true
-          }
-        }
-      });
-    }
-
-    res.json({
-      success: true,
-      data: { alertSettings: settings.alertSettings }
-    });
-  } catch (error) {
-    console.error('Error fetching alert settings:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch alert settings',
-      error: error.message
-    });
-  }
-};
-
-// GET /api/notifications/latest-updates - Get Latest Updates feed (ALL notifications, read or unread)
-exports.getLatestUpdates = async (req, res) => {
-  try {
-    const { limit = 10 } = req.query;
-    const userId = req.userId || req.user._id;
-
-    // Fetch ALL notifications (read and unread) for Latest Updates feed
-    const notifications = await Notification.find({ user: userId })
-      .sort({ createdAt: -1 })
-      .limit(parseInt(limit));
-
-    // Format for Latest Updates feed display
-    const formattedUpdates = notifications.map(notif => ({
-      id: notif._id,
-      merchant: notif.metadata.merchant || notif.title,
-      amount: notif.metadata.amount || 0,
-      timestamp: notif.createdAt,
-      method: notif.metadata.method || 'Transaction',
-      status: notif.metadata.direction || (notif.type === 'investment' ? 'investment' : 'out'),
-      type: notif.type,
-      accountName: notif.metadata.accountName,
-      read: notif.read
-    }));
-
-    res.json({
-      success: true,
-      data: {
-        updates: formattedUpdates,
-        totalCount: notifications.length
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching latest updates:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch latest updates',
-      error: error.message
-    });
+    console.error('Clear notifications error:', error);
+    res.status(500).json({ success: false, error: 'Failed to clear notifications.' });
   }
 };

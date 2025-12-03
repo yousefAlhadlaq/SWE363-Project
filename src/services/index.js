@@ -10,3 +10,4 @@ export { default as adminService } from './adminService';
 export { default as accountService } from './accountService';
 export { default as budgetService } from './budgetService';
 export { default as goalService } from './goalService';
+export { default as externalDataService } from './externalDataService';
