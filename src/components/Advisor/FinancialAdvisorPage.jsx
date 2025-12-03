@@ -109,7 +109,9 @@ function FinancialAdvisorPage() {
       const active = normalized.filter((req) =>
         ['Accepted', 'In Progress'].includes(req.status)
       );
-      const completed = normalized.filter((req) => req.status === 'Completed');
+      const completed = normalized.filter((req) =>
+        ['Completed', 'Closed'].includes(req.status)
+      );
 
       setPendingRequests(pending);
       setActiveRequests(active);
@@ -266,6 +268,11 @@ function FinancialAdvisorPage() {
   };
 
   const handleSendResponse = async () => {
+    if (selectedThread?.status && ['Closed', 'Completed'].includes(selectedThread.status)) {
+      alert('This conversation is closed. You cannot send new messages.');
+      return;
+    }
+
     if (!responseText.trim()) {
       alert('Please enter a response before sending');
       return;

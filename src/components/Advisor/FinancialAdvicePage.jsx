@@ -239,6 +239,11 @@ function FinancialAdvicePage() {
   };
 
   const handleSendReply = async () => {
+    if (selectedThread?.status && ['Closed', 'Completed'].includes(selectedThread.status)) {
+      alert('This conversation is closed. You cannot send new messages.');
+      return;
+    }
+
     if (!replyMessage.trim()) {
       alert('Please enter a message');
       return;
@@ -308,6 +313,8 @@ function FinancialAdvicePage() {
 
   // Thread View
   if (selectedThread) {
+    const conversationClosed = selectedThread.status === 'Closed' || selectedThread.status === 'Completed';
+
     return (
       <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
         {/* Decorative animated background elements */}
@@ -411,6 +418,11 @@ function FinancialAdvicePage() {
 
               {/* Reply Box */}
               <div className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 shadow-sm dark:shadow-none">
+                {conversationClosed && (
+                  <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-100">
+                    This conversation is closed. You can no longer send new messages.
+                  </div>
+                )}
                 <label className="block text-sm font-medium text-slate-800 dark:text-slate-300 mb-3">
                   Add a reply
                 </label>
@@ -420,11 +432,11 @@ function FinancialAdvicePage() {
                   onChange={(e) => setReplyMessage(e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none mb-4 dark:bg-slate-900/50 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                   placeholder="Type your message or follow-up question..."
-                  disabled={loading}
+                  disabled={loading || conversationClosed}
                 />
                 <button
                   onClick={handleSendReply}
-                  disabled={loading}
+                  disabled={loading || conversationClosed}
                   className="px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Sending...' : 'Send Reply'}
