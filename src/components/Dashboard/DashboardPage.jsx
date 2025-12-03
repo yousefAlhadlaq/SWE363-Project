@@ -1757,7 +1757,7 @@ function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {[
                       {
                         key: 'weekly-spend',
@@ -1779,13 +1779,6 @@ function DashboardPage() {
                         amount: dashboardData?.totalBalance || 0,
                         icon: Banknote,
                         hint: 'Across all accounts',
-                      },
-                      {
-                        key: 'credit-card',
-                        label: 'Credit Card Due',
-                        amount: dashboardData?.creditCardDue || 0,
-                        icon: CreditCard,
-                        hint: 'Outstanding balance',
                       },
                     ].map((stat) => {
                       const Icon = stat.icon;
