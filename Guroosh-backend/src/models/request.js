@@ -56,6 +56,18 @@ const requestSchema = new mongoose.Schema({
   draft: {
     type: String,
     default: null
+  },
+  advisorNotes: {
+    type: String,
+    default: ''
+  },
+  deletedByClient: {
+    type: Boolean,
+    default: false
+  },
+  deletedByAdvisor: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
