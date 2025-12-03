@@ -32,6 +32,12 @@ function ExpenseEntry({ onDataRefresh }) {
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const broadcastUpdate = useCallback((name) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(name));
+    }
+  }, []);
+
   const normalizeCategories = useCallback((fetched = []) => (
     fetched.map((category, index) => ({
       id: mapId(category),
@@ -190,6 +196,9 @@ function ExpenseEntry({ onDataRefresh }) {
       setFeedback({ ok: true, message });
       setForm((prev) => ({ ...prev, title: '', amount: '', date: today, notes: '' }));
       notifyParent();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('expenses:updated'));
+      }
     } catch (error) {
       console.error('Save expense error:', error);
       setFeedback({ ok: false, message: error.message || 'Failed to save expense' });
@@ -207,6 +216,7 @@ function ExpenseEntry({ onDataRefresh }) {
     try {
       await accountService.createAccount({ name: newAccountName.trim(), type: 'cash' });
       await fetchAccounts();
+      broadcastUpdate('accounts:updated');
       setFeedback({ ok: true, message: 'Account created successfully' });
       setNewAccountName('');
       setShowAccountField(false);
@@ -234,6 +244,7 @@ function ExpenseEntry({ onDataRefresh }) {
         icon: '🧾'
       });
       await fetchCategories();
+      broadcastUpdate('categories:updated');
       setFeedback({ ok: true, message: 'Category created successfully' });
       setNewCategoryName('');
       setShowCategoryField(false);

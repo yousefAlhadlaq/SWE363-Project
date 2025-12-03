@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from '../Shared/Sidebar';
 import Card from '../Shared/Card';
 import FloatingActionButton from '../Shared/FloatingActionButton';
@@ -6,7 +6,7 @@ import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 import { useAuth } from '../../context/AuthContext';
-import { budgetService, categoryService, expenseService, goalService } from '../../services';
+import { accountService, budgetService, categoryService, expenseService, goalService, externalDataService } from '../../services';
 
 const colorPalette = ['#22d3ee', '#0ea5e9', '#14b8a6', '#2dd4bf', '#34d399', '#67e8f9'];
 
@@ -157,19 +157,88 @@ const normalizeGoals = (list) => {
     .filter(Boolean);
 };
 
+  const buildSeedStorageKey = (userId) => `expenses:seed:${userId || 'guest'}`;
+
+const broadcastUpdate = (eventName, detail) => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(eventName, { detail }));
+};
+
 function ExpensesPage() {
   const { user } = useAuth();
 
-  const [storedCategories, setStoredCategories] = useState(defaultCategoriesSeed);
-  const [storedBudgets, setStoredBudgets] = useState(defaultBudgetsSeed);
-  const [storedExpenses, setStoredExpenses] = useState(defaultExpensesSeed);
-  const [storedGoals, setStoredGoals] = useState(defaultGoalsSeed);
+  const [storedCategories, setStoredCategories] = useState(() => (user ? [] : defaultCategoriesSeed));
+  const [storedBudgets, setStoredBudgets] = useState(() => (user ? [] : defaultBudgetsSeed));
+  const [storedExpenses, setStoredExpenses] = useState(() => (user ? [] : defaultExpensesSeed));
+  const [storedGoals, setStoredGoals] = useState(() => (user ? [] : defaultGoalsSeed));
+  const [accounts, setAccounts] = useState([]);
+  const [centralBankData, setCentralBankData] = useState({
+    status: 'idle',
+    accounts: [],
+    totalBalance: 0,
+    error: null,
+    lastSync: null
+  });
   const [syncInfo, setSyncInfo] = useState({ status: user ? 'loading' : 'guest', lastSuccess: null, error: null });
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [spendModal, setSpendModal] = useState({ open: false, categoryId: null });
+  const [spendForm, setSpendForm] = useState({ title: '', amount: '', date: today, accountId: '', notes: '' });
+  const [spendSaving, setSpendSaving] = useState(false);
+  const [spendError, setSpendError] = useState('');
+  const seedStateRef = useRef({ storageKey: buildSeedStorageKey(user?._id), categories: false, goals: false });
+
+  const loadSeedFlags = useCallback(() => {
+    const storageKey = buildSeedStorageKey(user?._id);
+    if (typeof window === 'undefined') {
+      seedStateRef.current = { storageKey, categories: false, goals: false };
+      return;
+    }
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(storageKey) || '{}');
+      seedStateRef.current = {
+        storageKey,
+        categories: Boolean(stored.categories),
+        goals: Boolean(stored.goals)
+      };
+    } catch (error) {
+      console.warn('Failed to parse seed flags:', error);
+      seedStateRef.current = { storageKey, categories: false, goals: false };
+    }
+  }, [user]);
+
+  const persistSeedFlags = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(
+      seedStateRef.current.storageKey,
+      JSON.stringify({
+        categories: seedStateRef.current.categories,
+        goals: seedStateRef.current.goals
+      })
+    );
+  }, []);
+
+  const markSeeded = useCallback(
+    (type) => {
+      seedStateRef.current[type] = true;
+      persistSeedFlags();
+    },
+    [persistSeedFlags]
+  );
+
+  const shouldSeedDefaults = useCallback((type) => !seedStateRef.current[type], []);
+
+  useEffect(() => {
+    loadSeedFlags();
+  }, [loadSeedFlags]);
 
   const categories = useMemo(() => normalizeCategories(storedCategories), [storedCategories]);
   const budgets = useMemo(() => normalizeBudgets(storedBudgets, categories), [storedBudgets, categories]);
   const expenses = useMemo(() => normalizeExpenses(storedExpenses, categories), [storedExpenses, categories]);
   const goals = useMemo(() => normalizeGoals(storedGoals), [storedGoals]);
+
+  const activeCategoryIds = useMemo(() => {
+    return new Set(categories.filter((category) => category.enabled !== false).map((category) => category.id));
+  }, [categories]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState('category');
@@ -197,7 +266,8 @@ function ExpensesPage() {
         }
       }
     }
-  }, []);
+    markSeeded('categories');
+  }, [markSeeded]);
 
   const seedDefaultGoals = useCallback(async () => {
     for (const template of defaultGoalsSeed) {
@@ -214,7 +284,31 @@ function ExpensesPage() {
         }
       }
     }
-  }, []);
+    markSeeded('goals');
+  }, [markSeeded]);
+
+  const fetchCentralBankAccounts = useCallback(async () => {
+    if (!user) return;
+    setCentralBankData((prev) => ({ ...prev, status: 'loading', error: null }));
+    try {
+      const response = await externalDataService.getCentralBankAccounts();
+      setCentralBankData({
+        status: 'success',
+        accounts: response?.accounts || [],
+        totalBalance: response?.totalBalance || 0,
+        error: null,
+        lastSync: new Date().toISOString()
+      });
+    } catch (error) {
+      setCentralBankData({
+        status: 'error',
+        accounts: [],
+        totalBalance: 0,
+        error: error.response?.data?.error || error.message || 'Failed to reach Central Bank',
+        lastSync: null
+      });
+    }
+  }, [user]);
 
   const syncFromServer = useCallback(async () => {
     if (!user) {
@@ -222,6 +316,7 @@ function ExpensesPage() {
       setStoredBudgets(defaultBudgetsSeed);
       setStoredExpenses(defaultExpensesSeed);
       setStoredGoals(defaultGoalsSeed);
+      setAccounts([]);
       setSyncInfo({ status: 'guest', lastSuccess: null, error: null });
       return;
     }
@@ -229,17 +324,18 @@ function ExpensesPage() {
     setSyncInfo((prev) => ({ ...prev, status: 'loading', error: null }));
 
     try {
-      const [categoriesResponse, budgetsResponse, expensesResponse, goalsResponse] = await Promise.all([
+      const [categoriesResponse, budgetsResponse, expensesResponse, goalsResponse, accountsResponse] = await Promise.all([
         categoryService.getCategories(),
         budgetService.getBudgets(),
         expenseService.getExpenses(),
-        goalService.getGoals()
+        goalService.getGoals(),
+        accountService.getAccounts()
       ]);
 
       let categoryPayload = (categoriesResponse?.data || categoriesResponse?.categories || []).filter(
         (category) => category.type !== 'income'
       );
-      if (!categoryPayload.length) {
+      if (!categoryPayload.length && shouldSeedDefaults('categories')) {
         await seedDefaultCategories();
         const seededCategoriesResponse = await categoryService.getCategories();
         categoryPayload = (seededCategoriesResponse?.data || seededCategoriesResponse?.categories || []).filter(
@@ -248,7 +344,7 @@ function ExpensesPage() {
       }
 
       let goalPayload = goalsResponse?.goals || goalsResponse?.data || [];
-      if (!goalPayload.length) {
+      if (!goalPayload.length && shouldSeedDefaults('goals')) {
         await seedDefaultGoals();
         const seededGoalsResponse = await goalService.getGoals();
         goalPayload = seededGoalsResponse?.goals || seededGoalsResponse?.data || [];
@@ -258,6 +354,16 @@ function ExpensesPage() {
       setStoredBudgets(budgetsResponse?.data || budgetsResponse?.budgets || []);
       setStoredExpenses(expensesResponse?.data || []);
       setStoredGoals(goalPayload);
+      const accountPayload = (accountsResponse?.data || accountsResponse?.accounts || []).map((account) => ({
+        id: mapId(account),
+        name: account.name || 'Account',
+        status: account.status || 'active',
+        isPrimary: account.isPrimary,
+        type: account.type || 'cash'
+      }));
+      setAccounts(accountPayload);
+      broadcastUpdate('categories:updated', { count: categoryPayload.length });
+      broadcastUpdate('accounts:updated', { count: accountPayload.length });
 
       setSyncInfo({ status: 'success', lastSuccess: new Date().toISOString(), error: null });
     } catch (err) {
@@ -274,8 +380,55 @@ function ExpensesPage() {
     syncFromServer();
   }, [syncFromServer]);
 
-  const totalSpent = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
-  const totalBudget = useMemo(() => budgets.reduce((sum, budget) => sum + budget.limit, 0), [budgets]);
+  useEffect(() => {
+    if (!user) return;
+    fetchCentralBankAccounts();
+  }, [fetchCentralBankAccounts, user]);
+
+  useEffect(() => {
+    if (!accounts.length) return;
+    setSpendForm((prev) => ({
+      ...prev,
+      accountId: accounts.find((account) => account.id === prev.accountId)?.id || accounts[0].id
+    }));
+  }, [accounts]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return () => {};
+    const handleRefresh = () => {
+      syncFromServer();
+    };
+    window.addEventListener('expenses:updated', handleRefresh);
+    return () => window.removeEventListener('expenses:updated', handleRefresh);
+  }, [syncFromServer]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return () => {};
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        syncFromServer();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [syncFromServer]);
+
+  const totalSpent = useMemo(
+    () =>
+      expenses.reduce((sum, expense) => {
+        if (!activeCategoryIds.has(expense.categoryId)) return sum;
+        return sum + expense.amount;
+      }, 0),
+    [expenses, activeCategoryIds]
+  );
+  const totalBudget = useMemo(
+    () =>
+      budgets.reduce((sum, budget) => {
+        if (!activeCategoryIds.has(budget.categoryId)) return sum;
+        return sum + budget.limit;
+      }, 0),
+    [budgets, activeCategoryIds]
+  );
   const coverage = totalBudget ? Math.min((totalSpent / totalBudget) * 100, 150) : 0;
 
   const spentByCategory = useMemo(() => {
@@ -341,6 +494,7 @@ function ExpensesPage() {
         id: category.id,
         name: category.name,
         color: category.color ?? colorPalette[index % colorPalette.length],
+        icon: category.icon || defaultIconChoices[index % defaultIconChoices.length],
         spent,
         limit,
         progress,
@@ -380,11 +534,11 @@ function ExpensesPage() {
       day.setDate(today.getDate() - (daysBack - index - 1));
       const key = day.toISOString().split('T')[0];
       const amount = expenses
-        .filter((expense) => expense.date === key)
+        .filter((expense) => expense.date === key && activeCategoryIds.has(expense.categoryId))
         .reduce((sum, expense) => sum + expense.amount, 0);
       return { date: key, amount };
     });
-  }, [expenses]);
+  }, [expenses, activeCategoryIds]);
 
   const maxTrendValue = Math.max(...spendTrend.map((point) => point.amount), 1);
   const sparklineCoords = spendTrend.length
@@ -559,6 +713,7 @@ function ExpensesPage() {
         }
 
         closeModal();
+        broadcastUpdate('categories:updated');
         return;
       }
 
@@ -604,6 +759,7 @@ function ExpensesPage() {
       }
 
       await syncFromServer();
+      broadcastUpdate('categories:updated');
       closeModal();
     } catch (error) {
       console.error('Save category error:', error);
@@ -691,11 +847,13 @@ function ExpensesPage() {
           return { ...category, enabled: !wasEnabled };
         })
       );
+      broadcastUpdate('categories:updated');
       return;
     }
     try {
       await categoryService.toggleCategory(categoryId);
       await syncFromServer();
+      broadcastUpdate('categories:updated');
     } catch (error) {
       console.error('Toggle category error:', error);
       setSyncInfo((prev) => ({
@@ -733,6 +891,110 @@ function ExpensesPage() {
       setCategoryForm({ name: '', budget: '', color: colorPalette[0], icon: defaultIconChoices[0], period: 'monthly' });
     } else {
       setGoalForm({ name: '', targetAmount: '', savedAmount: '', deadline: '' });
+    }
+  };
+
+  const ensureSpendAccountId = useCallback(async (preferredAccountId) => {
+    if (!user) {
+      return null;
+    }
+    if (preferredAccountId) {
+      return preferredAccountId;
+    }
+    if (accounts.length) {
+      return accounts[0].id;
+    }
+    try {
+      const response = await accountService.createAccount({
+        name: 'Cash Wallet',
+        type: 'cash'
+      });
+      const createdId = mapId(response?.data || response?.account);
+      await syncFromServer();
+      broadcastUpdate('accounts:updated', { createdId });
+      return createdId || accounts[0]?.id || '';
+    } catch (error) {
+      throw new Error(error.response?.data?.error || error.message || 'Failed to prepare a cash account');
+    }
+  }, [accounts, syncFromServer, user]);
+
+  const openSpendModal = (categoryId) => {
+    const category = categories.find((item) => item.id === categoryId);
+    setSpendForm((prev) => ({
+      ...prev,
+      title: category ? `${category.name} spend` : prev.title || '',
+      amount: '',
+      date: today,
+      accountId: accounts.find((account) => account.id === prev.accountId)?.id || accounts[0]?.id || '',
+      notes: ''
+    }));
+    setSpendError('');
+    setSpendSaving(false);
+    setSpendModal({ open: true, categoryId });
+  };
+
+  const closeSpendModal = () => {
+    setSpendModal({ open: false, categoryId: null });
+    setSpendSaving(false);
+    setSpendError('');
+    setSpendForm((prev) => ({ ...prev, amount: '', notes: '', title: '', date: today }));
+  };
+
+  const handleSpendSubmit = async (event) => {
+    event.preventDefault();
+    if (!spendModal.categoryId) return;
+    const amountValue = Number(spendForm.amount);
+    if (!amountValue || amountValue <= 0) {
+      setSpendError('Amount must be greater than zero');
+      return;
+    }
+
+    if (!user) {
+      setStoredExpenses((prev) => [
+        {
+          id: createId('exp'),
+          categoryId: spendModal.categoryId,
+          amount: amountValue,
+          date: spendForm.date,
+          title: spendForm.title || 'Manual spend',
+          description: spendForm.notes || ''
+        },
+        ...prev
+      ]);
+      closeSpendModal();
+      return;
+    }
+    setSpendSaving(true);
+    setSpendError('');
+    let accountId;
+    try {
+      accountId = await ensureSpendAccountId(spendForm.accountId);
+      if (!accountId) {
+        throw new Error('No active account available to log this spend');
+      }
+    } catch (error) {
+      setSpendError(error.message || 'We could not prepare an account for this spend');
+      setSpendSaving(false);
+      return;
+    }
+    try {
+      await expenseService.createExpense({
+        title: spendForm.title?.trim() || 'Manual spend',
+        amount: amountValue,
+        date: spendForm.date,
+        categoryId: spendModal.categoryId,
+        accountId,
+        description: spendForm.notes
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('expenses:updated'));
+      }
+      closeSpendModal();
+    } catch (error) {
+      console.error('Quick spend error:', error);
+      setSpendError(error.response?.data?.error || error.message || 'Failed to log spend');
+    } finally {
+      setSpendSaving(false);
     }
   };
 
@@ -1035,96 +1297,114 @@ function ExpensesPage() {
               </Card>
             </div>
 
-            <Card className="rounded-3xl p-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Categories</p>
-                  <h3 className="text-2xl font-semibold text-slate-900 dark:text-white">This month</h3>
+            <div className="space-y-6">
+              <Card className="rounded-3xl p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Categories</p>
+                    <h3 className="text-2xl font-semibold text-slate-900 dark:text-white">This month</h3>
+                  </div>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">{activeCategories.length} active</span>
                 </div>
-                <span className="text-sm text-slate-500 dark:text-slate-400">{activeCategories.length} active</span>
-              </div>
-              <div className="mt-6 space-y-4">
-                {orderedCategories.map((category, index) => {
-                  const showcaseNumber = String(index + 1).padStart(2, '0');
-                  return (
-                    <div
-                      key={category.id}
-                      className="rounded-2xl border border-slate-200/80 bg-white/85 p-4 space-y-4 text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className="w-14 h-14 rounded-2xl border border-slate-200/80 bg-slate-50 text-slate-600 font-semibold tracking-[0.3em] flex items-center justify-center text-sm dark:border-slate-700/60 dark:bg-slate-800/70 dark:text-slate-200">
-                            {showcaseNumber}
+                <div className="mt-6 space-y-4">
+                  {orderedCategories.map((category) => {
+                    return (
+                      <div
+                        key={category.id}
+                        className="rounded-2xl border border-slate-200/80 bg-white/85 p-4 space-y-4 text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-200"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div className="flex items-start gap-4">
+                            <div
+                              className="w-14 h-14 rounded-2xl border border-slate-200/80 bg-slate-50 text-2xl flex items-center justify-center dark:border-slate-700/60 dark:bg-slate-800/70"
+                              style={{
+                                color: category.color,
+                                borderColor: `${category.color}33`,
+                                backgroundColor: `${category.color}1a`
+                              }}
+                              aria-hidden="true"
+                            >
+                              <span className="leading-none" role="img">
+                                {category.icon}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-900 dark:text-white">{category.name}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                {category.limit ? `budget ${formatSar(category.limit)}` : 'No budget set'}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-slate-900 dark:text-white">{category.name}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {category.limit ? `budget ${formatSar(category.limit)}` : 'No budget set'}
-                            </p>
+                          <div className="text-right space-y-1">
+                            <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatSar(category.spent)}</p>
+                            {category.statusTone === 'over' ? (
+                              <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600 dark:bg-[#51201b] dark:text-[#f8b4a0]">
+                                over by {formatSar(category.spent - (category.limit || 0))}
+                              </span>
+                            ) : (
+                              category.limit ? (
+                                <span className="text-xs text-slate-500 dark:text-slate-400">{category.statusLabel}</span>
+                              ) : null
+                            )}
+                            {!category.enabled && (
+                              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+                                Disabled
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div className="text-right space-y-1">
-                          <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatSar(category.spent)}</p>
-                          {category.statusTone === 'over' ? (
-                            <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600 dark:bg-[#51201b] dark:text-[#f8b4a0]">
-                              over by {formatSar(category.spent - (category.limit || 0))}
-                            </span>
-                          ) : (
-                            category.limit ? (
-                              <span className="text-xs text-slate-500 dark:text-slate-400">{category.statusLabel}</span>
-                            ) : null
-                          )}
-                          {!category.enabled && (
-                            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
-                              Disabled
-                            </span>
-                          )}
+                        <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${Math.min(category.progress, 100)}%`,
+                              background:
+                                category.statusTone === 'over'
+                                  ? 'linear-gradient(90deg,#f87171,#fb923c)'
+                                  : category.statusTone === 'warning'
+                                  ? 'linear-gradient(90deg,#fcd34d,#fbbf24)'
+                                  : 'linear-gradient(90deg,#34d399,#22d3ee)'
+                            }}
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            className={`${advisorGhostButtonClasses} text-xs px-3 py-2`}
+                            onClick={() => openSpendModal(category.id)}
+                          >
+                            Log spend
+                          </button>
+                          <button
+                            type="button"
+                            className={`${advisorPrimaryButtonClasses} text-xs px-3 py-2`}
+                            onClick={() => openModal({ tab: 'category', mode: 'edit', targetId: category.id })}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className={`text-xs px-3 py-2 ${
+                              category.enabled ? advisorDangerButtonClasses : advisorGhostButtonClasses
+                            } ${
+                              category.enabled
+                                ? ''
+                                : 'text-emerald-700 border-emerald-200 hover:border-emerald-300 dark:text-emerald-300 dark:border-emerald-500/40'
+                            }`}
+                            onClick={() => handleToggleCategory(category.id)}
+                          >
+                            {category.enabled ? 'Disable' : 'Enable'}
+                          </button>
                         </div>
                       </div>
-                      <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${Math.min(category.progress, 100)}%`,
-                            background:
-                              category.statusTone === 'over'
-                                ? 'linear-gradient(90deg,#f87171,#fb923c)'
-                                : category.statusTone === 'warning'
-                                ? 'linear-gradient(90deg,#fcd34d,#fbbf24)'
-                                : 'linear-gradient(90deg,#34d399,#22d3ee)'
-                          }}
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className={`${advisorPrimaryButtonClasses} text-xs px-3 py-2`}
-                          onClick={() => openModal({ tab: 'category', mode: 'edit', targetId: category.id })}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className={`text-xs px-3 py-2 ${
-                            category.enabled ? advisorDangerButtonClasses : advisorGhostButtonClasses
-                          } ${
-                            category.enabled
-                              ? ''
-                              : 'text-emerald-700 border-emerald-200 hover:border-emerald-300 dark:text-emerald-300 dark:border-emerald-500/40'
-                          }`}
-                          onClick={() => handleToggleCategory(category.id)}
-                        >
-                          {category.enabled ? 'Disable' : 'Enable'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {orderedCategories.length === 0 && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">No categories yet. Use the yellow button to add one.</p>
-                )}
-              </div>
-            </Card>
+                    );
+                  })}
+                  {orderedCategories.length === 0 && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">No categories yet. Use the yellow button to add one.</p>
+                  )}
+                </div>
+              </Card>
+            </div>
           </div>
         </div>
       </main>
@@ -1160,6 +1440,85 @@ function ExpensesPage() {
           </div>
         )}
         {modalTab === 'category' ? CategoryForm : GoalForm}
+      </Modal>
+
+      <Modal
+        isOpen={spendModal.open}
+        onClose={closeSpendModal}
+        title="Log spend"
+        subtitle="Update a category's tracked spending by logging a quick transaction"
+      >
+        <form className="space-y-4" onSubmit={handleSpendSubmit}>
+          <InputField
+            label="Title"
+            name="spend-title"
+            value={spendForm.title}
+            onChange={(event) => setSpendForm((prev) => ({ ...prev, title: event.target.value }))}
+            placeholder="e.g., Pharmacy run"
+            required
+          />
+          <InputField
+            label="Amount (SAR)"
+            type="number"
+            min="0"
+            step="0.01"
+            name="spend-amount"
+            value={spendForm.amount}
+            onChange={(event) => setSpendForm((prev) => ({ ...prev, amount: event.target.value }))}
+            required
+          />
+          <InputField
+            label="Date"
+            type="date"
+            name="spend-date"
+            value={spendForm.date}
+            onChange={(event) => setSpendForm((prev) => ({ ...prev, date: event.target.value }))}
+            required
+          />
+          {user && (
+            <div>
+              <label className="text-sm text-slate-400 mb-1 block">Account</label>
+              {accounts.length ? (
+                <select
+                  value={spendForm.accountId}
+                  onChange={(event) => setSpendForm((prev) => ({ ...prev, accountId: event.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-white/5 dark:text-white"
+                  required
+                >
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-sm text-amber-500">
+                  No accounts yet — we will spin up a cash wallet automatically on your first log.
+                </p>
+              )}
+            </div>
+          )}
+          <InputField
+            label="Notes"
+            name="spend-notes"
+            value={spendForm.notes}
+            onChange={(event) => setSpendForm((prev) => ({ ...prev, notes: event.target.value }))}
+            placeholder="Optional context"
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Spent totals are calculated from logged expenses. Use this quick entry to keep your categories in sync without
+            leaving the page.
+          </p>
+          {spendError && <p className="text-sm text-red-400">{spendError}</p>}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="secondary" onClick={closeSpendModal} disabled={spendSaving}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={spendSaving}>
+              {spendSaving ? 'Saving…' : 'Save entry'}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

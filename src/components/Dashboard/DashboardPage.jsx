@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowUpCircle,
   Banknote,
@@ -21,6 +21,7 @@ import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import SelectMenu from '../Shared/SelectMenu';
 import { useAuth } from '../../context/AuthContext';
+import { accountService, categoryService, expenseService } from '../../services';
 
 const formatSR = (value = 0, digits = 2) =>
   `SR ${Number(value).toLocaleString('en-US', {
@@ -72,7 +73,7 @@ const financialStatusOptions = [
 const financialStatusData = {
   weekly: [
     { label: 'Sun', value: 2 },
-    { label: 'Mon', value: 7 },
+    { label: 'Mon', value: 9 },
     { label: 'Tue', value: 12 },
     { label: 'Wed', value: 18 },
     { label: 'Thu', value: 22 },
@@ -250,6 +251,8 @@ const textAreaClasses =
 
 const latestUpdatesLimit = 6;
 
+const mapId = (value) => (typeof value === 'object' && value !== null ? value._id || value.id : value);
+
 const getOptionLabel = (options, value) =>
   options.find((option) => option.value === value)?.label || value || '—';
 
@@ -293,12 +296,56 @@ function DashboardPage() {
   const [activeAction, setActiveAction] = useState(null);
   const [actionValues, setActionValues] = useState(actionInitialValues);
   const [latestUpdates, setLatestUpdates] = useState(initialLatestUpdates);
+  const [financialSources, setFinancialSources] = useState({
+    categories: categoryOptions,
+    accounts: linkedAccountOptions,
+    loading: false,
+    error: null
+  });
+  const [manualEntryState, setManualEntryState] = useState({ saving: false, error: '', success: '' });
 
   const addLatestUpdate = (update) => {
     setLatestUpdates((prev) =>
       [{ id: Date.now(), ...update }, ...prev].slice(0, latestUpdatesLimit)
     );
   };
+
+  const refreshFinancialSources = useCallback(async () => {
+    if (!user) {
+      setFinancialSources({
+        categories: categoryOptions,
+        accounts: linkedAccountOptions,
+        loading: false,
+        error: null
+      });
+      return;
+    }
+    setFinancialSources((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const [categoriesResponse, accountsResponse] = await Promise.all([
+        categoryService.getCategories(),
+        accountService.getAccounts()
+      ]);
+      const categoryList = (categoriesResponse?.data || categoriesResponse?.categories || [])
+        .filter((category) => category.type !== 'income' && (category.isActive !== false && category.enabled !== false));
+      const accountList = accountsResponse?.data || accountsResponse?.accounts || [];
+      const mappedCategories = categoryList.map((category) => ({
+        value: mapId(category),
+        label: `${category.icon ? `${category.icon} ` : ''}${category.name || 'Category'}`.trim()
+      }));
+      const mappedAccounts = accountList
+        .filter((account) => account.status !== 'inactive')
+        .map((account) => ({ value: mapId(account), label: account.name || 'Account' }));
+      setFinancialSources({ categories: mappedCategories, accounts: mappedAccounts, loading: false, error: null });
+    } catch (error) {
+      setFinancialSources({
+        categories: [],
+        accounts: [],
+        loading: false,
+        error: error.response?.data?.error || error.message || 'Failed to load categories'
+      });
+    }
+  }, [user]);
 
   const displayName = user?.name || user?.fullName || 'Jordan Carter';
   const userInitials = useMemo(() => {
@@ -353,11 +400,93 @@ function DashboardPage() {
   }));
 
   const currentAction = quickActions.find((action) => action.id === activeAction);
+
+  useEffect(() => {
+    refreshFinancialSources();
+  }, [refreshFinancialSources]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return () => {};
+    const handleUpdate = () => refreshFinancialSources();
+    window.addEventListener('categories:updated', handleUpdate);
+    window.addEventListener('accounts:updated', handleUpdate);
+    return () => {
+      window.removeEventListener('categories:updated', handleUpdate);
+      window.removeEventListener('accounts:updated', handleUpdate);
+    };
+  }, [refreshFinancialSources]);
+
+  useEffect(() => {
+    if (!financialSources.categories.length) return;
+    setActionValues((prev) => {
+      const current = prev['manual-entry']?.category;
+      const valid = financialSources.categories.some((option) => option.value === current);
+      if (valid) return prev;
+      const fallback = financialSources.categories[0]?.value || '';
+      if (!fallback) return prev;
+      return {
+        ...prev,
+        'manual-entry': { ...prev['manual-entry'], category: fallback }
+      };
+    });
+  }, [financialSources.categories]);
+
+  useEffect(() => {
+    if (!financialSources.accounts.length) return;
+    setActionValues((prev) => {
+      const current = prev['manual-entry']?.account;
+      const valid = financialSources.accounts.some((option) => option.value === current);
+      if (valid) return prev;
+      const fallback = financialSources.accounts[0]?.value || '';
+      if (!fallback) return prev;
+      return {
+        ...prev,
+        'manual-entry': { ...prev['manual-entry'], account: fallback }
+      };
+    });
+  }, [financialSources.accounts]);
+
+  const ensureManualEntryAccount = useCallback(async (preferredAccountId) => {
+    if (!user) {
+      return null;
+    }
+    if (preferredAccountId) {
+      return preferredAccountId;
+    }
+    if (financialSources.accounts.length) {
+      return financialSources.accounts[0].value;
+    }
+    try {
+      const response = await accountService.createAccount({ name: 'Cash Wallet', type: 'cash' });
+      const createdId = mapId(response?.data || response?.account);
+      await refreshFinancialSources();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('accounts:updated', { detail: { createdId } }));
+      }
+      return createdId;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || error.message || 'Failed to provision an account');
+    }
+  }, [financialSources.accounts, refreshFinancialSources, user]);
+  const handleOpenAction = useCallback(
+    (actionId) => {
+      if (actionId === 'manual-entry' && user) {
+        refreshFinancialSources();
+      }
+      setManualEntryState({ saving: false, error: '', success: '' });
+      setActiveAction(actionId);
+    },
+    [refreshFinancialSources, user]
+  );
+
   const handleCancelAction = (actionId) => {
     if (actionId) {
       resetActionForm(actionId);
     }
     setActiveAction(null);
+    if (actionId === 'manual-entry') {
+      setManualEntryState({ saving: false, error: '', success: '' });
+    }
   };
 
   const updateActionValue = (actionId, field, value) => {
@@ -377,6 +506,89 @@ function DashboardPage() {
     }));
   };
 
+  const handleManualEntrySubmit = async (event) => {
+    event.preventDefault();
+    const data = actionValues['manual-entry'];
+    const amount = parseFloat(data.amount);
+    if (!data.transactionType) {
+      setManualEntryState({ saving: false, error: 'Select a transaction type', success: '' });
+      return;
+    }
+    if (!amount || amount <= 0) {
+      setManualEntryState({ saving: false, error: 'Amount must be greater than zero', success: '' });
+      return;
+    }
+
+    if (!user) {
+      const status = data.transactionType === 'income' ? 'in' : 'out';
+      const transactionLabel = `${data.transactionType.charAt(0).toUpperCase()}${data.transactionType.slice(1)}`;
+      addLatestUpdate({
+        merchant: data.merchant || 'Manual transaction',
+        amount,
+        timestamp: formatTimestamp(data.date),
+        method: `${transactionLabel} • ${getOptionLabel(categoryOptions, data.category)}`,
+        status,
+        icon: PenSquare,
+      });
+      resetActionForm('manual-entry');
+      setManualEntryState({ saving: false, error: '', success: '' });
+      setActiveAction(null);
+      return;
+    }
+
+    if (data.transactionType !== 'expense') {
+      setManualEntryState({ saving: false, error: 'Only expense entries sync to budgets right now.', success: '' });
+      return;
+    }
+    if (!data.category) {
+      setManualEntryState({ saving: false, error: 'Choose a category', success: '' });
+      return;
+    }
+
+    setManualEntryState({ saving: true, error: '', success: '' });
+    let accountId;
+    try {
+      accountId = await ensureManualEntryAccount(data.account);
+      if (!accountId) {
+        throw new Error('No account available for this entry');
+      }
+    } catch (error) {
+      setManualEntryState({ saving: false, error: error.message || 'Failed to prepare an account', success: '' });
+      return;
+    }
+
+    try {
+      await expenseService.createExpense({
+        title: data.merchant?.trim() || 'Manual transaction',
+        amount,
+        date: data.date,
+        categoryId: data.category,
+        accountId,
+        description: data.notes
+      });
+      addLatestUpdate({
+        merchant: data.merchant || 'Manual transaction',
+        amount,
+        timestamp: formatTimestamp(data.date),
+        method: `Expense • ${getOptionLabel(financialSources.categories, data.category)}`,
+        status: 'out',
+        icon: PenSquare
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('expenses:updated'));
+      }
+      resetActionForm('manual-entry');
+      setManualEntryState({ saving: false, error: '', success: '' });
+      setActiveAction(null);
+    } catch (error) {
+      setManualEntryState({
+        saving: false,
+        error: error.response?.data?.error || error.message || 'Failed to save expense',
+        success: ''
+      });
+    }
+  };
+
   const handleSubmitAction = (actionId, event) => {
     event.preventDefault();
 
@@ -390,29 +602,6 @@ function DashboardPage() {
         method: `${getOptionLabel(linkedAccountOptions, data.account)} • Deposit`,
         status: 'in',
         icon: ArrowUpCircle,
-      });
-    }
-
-    if (actionId === 'manual-entry') {
-      const data = actionValues['manual-entry'];
-      const amount = parseFloat(data.amount) || 0;
-      const status =
-        data.transactionType === 'income'
-          ? 'in'
-          : data.transactionType === 'expense'
-          ? 'out'
-          : 'out';
-      const transactionLabel = data.transactionType
-        ? `${data.transactionType.charAt(0).toUpperCase()}${data.transactionType.slice(1)}`
-        : 'Entry';
-
-      addLatestUpdate({
-        merchant: data.merchant || 'Manual transaction',
-        amount,
-        timestamp: formatTimestamp(data.date),
-        method: `${transactionLabel} • ${getOptionLabel(categoryOptions, data.category)}`,
-        status,
-        icon: PenSquare,
       });
     }
 
@@ -560,7 +749,7 @@ function DashboardPage() {
       case 'manual-entry':
         return (
           <form
-            onSubmit={(event) => handleSubmitAction('manual-entry', event)}
+            onSubmit={handleManualEntrySubmit}
             className="space-y-4"
           >
             <SelectMenu
@@ -580,9 +769,14 @@ function DashboardPage() {
               onChange={(event) =>
                 updateActionValue('manual-entry', 'account', event.target.value)
               }
-              options={linkedAccountOptions}
-              required
+              options={user ? financialSources.accounts : linkedAccountOptions}
+              required={!user || Boolean(financialSources.accounts.length)}
             />
+            {user && !financialSources.accounts.length && !financialSources.loading && (
+              <p className="text-xs text-amber-400 -mt-2">
+                No accounts yet. We will create a cash wallet automatically the first time you submit.
+              </p>
+            )}
             <InputField
               label="Amount"
               name="amount"
@@ -603,8 +797,8 @@ function DashboardPage() {
               onChange={(event) =>
                 updateActionValue('manual-entry', 'category', event.target.value)
               }
-              options={categoryOptions}
-              required
+              options={user ? financialSources.categories : categoryOptions}
+              required={!user || Boolean(financialSources.categories.length)}
             />
             <InputField
               label="Merchant / Description"
@@ -641,6 +835,9 @@ function DashboardPage() {
                 className={textAreaClasses}
               />
             </div>
+            {manualEntryState.error && (
+              <p className="text-sm text-red-400">{manualEntryState.error}</p>
+            )}
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="secondary"
@@ -649,7 +846,9 @@ function DashboardPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit">{currentAction.submitLabel}</Button>
+              <Button type="submit" disabled={manualEntryState.saving}>
+                {manualEntryState.saving ? 'Saving…' : currentAction.submitLabel}
+              </Button>
             </div>
           </form>
         );
@@ -951,7 +1150,7 @@ function DashboardPage() {
                       <button
                         type="button"
                         key={action.id}
-                        onClick={() => setActiveAction(action.id)}
+                        onClick={() => handleOpenAction(action.id)}
                         className="w-full flex items-center justify-between gap-3 rounded-2xl border border-slate-700/60 bg-slate-900/30 px-4 py-3 text-left transition hover:border-teal-500/50 hover:bg-slate-900/60"
                       >
                         <div className="flex items-center gap-3">
