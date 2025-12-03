@@ -216,14 +216,12 @@ exports.linkExternalAccount = async (req, res) => {
         throw new Error(depositResponse.data.error || 'Failed to perform initial deposit');
       }
 
-<<<<<<< HEAD
       // Create notification for linked account
       await createLinkAccountNotification(userId, {
         bankName: linkedAccount.bankName,
         accountNumber: linkedAccount.accountNumber,
         initialDeposit: parseFloat(initialDeposit)
       });
-=======
       // Persist locally with the custom account name
       const savedAccount = await ExternalBankAccount.findOneAndUpdate(
         { userId, accountNumber: linkedAccount.accountNumber },
@@ -241,7 +239,6 @@ exports.linkExternalAccount = async (req, res) => {
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
->>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
       return res.status(201).json({
         success: true,
@@ -281,16 +278,13 @@ exports.linkExternalAccount = async (req, res) => {
         }]
       });
 
-<<<<<<< HEAD
       // Create notification for linked account (fallback)
       await createLinkAccountNotification(userId, {
         bankName,
         accountNumber,
         initialDeposit: parseFloat(initialDeposit)
       });
-=======
       console.log('Account created successfully in fallback mode:', newAccount._id);
->>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
       return res.status(201).json({
         success: true,

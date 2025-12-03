@@ -311,12 +311,9 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [linkedAccounts, setLinkedAccounts] = useState([]);
-<<<<<<< HEAD
   const [chartData, setChartData] = useState(financialStatusData.weekly);
-=======
   const [formErrors, setFormErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState(null);
->>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
   // Generate account options dynamically from linked accounts
   // Always include a default "Main Account" option for users without linked accounts
@@ -422,14 +419,9 @@ function DashboardPage() {
 
   // Fetch dashboard data from backend
   const fetchDashboardData = useCallback(async () => {
-<<<<<<< HEAD
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    const token = localStorage.getItem('token');
-=======
     try {
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
       const token = localStorage.getItem('token');
->>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
     // ✅ Validate token exists before making request
     if (!token) {
