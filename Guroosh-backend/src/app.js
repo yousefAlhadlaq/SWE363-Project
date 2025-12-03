@@ -53,6 +53,8 @@ app.use('/api/real-estate', require('./routes/realEstateRoutes'));
 app.use('/api/gold', require('./routes/goldRoutes'));
 app.use('/api/transactions', require('./routes/transactionRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
 // Test route
 app.get('/test', (req, res) => {

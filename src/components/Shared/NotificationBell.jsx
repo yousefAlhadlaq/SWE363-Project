@@ -1,44 +1,88 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Bell, X, Check, AlertCircle, Info } from 'lucide-react';
+import notificationService from '../../services/notificationService';
 
 function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'info',
-      title: 'New Feature Released',
-      message: 'Check out our new Zakah calculator in the Investments section',
-      timestamp: '2 hours ago',
-      read: false
-    },
-    {
-      id: 2,
-      type: 'warning',
-      title: 'System Maintenance',
-      message: 'Scheduled maintenance on Sunday from 2:00 AM to 4:00 AM',
-      timestamp: '5 hours ago',
-      read: false
-    },
-    {
-      id: 3,
-      type: 'success',
-      title: 'Profile Updated',
-      message: 'Your profile information has been successfully updated',
-      timestamp: '1 day ago',
-      read: true
-    },
-    {
-      id: 4,
-      type: 'info',
-      title: 'Tip of the Day',
-      message: 'Did you know you can export your financial reports as PDF?',
-      timestamp: '2 days ago',
-      read: true
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const dropdownRef = useRef(null);
+  const pollIntervalRef = useRef(null);
+
+  // Fetch notifications from backend
+  const fetchNotifications = async () => {
+    try {
+      const response = await notificationService.getAllNotifications();
+
+      if (response.success) {
+        const fetchedNotifications = response.data.notifications.map(notif => ({
+          id: notif._id,
+          type: notif.type,
+          title: notif.title,
+          message: notif.message,
+          timestamp: formatTimestamp(notif.createdAt),
+          read: notif.read
+        }));
+
+        setNotifications(fetchedNotifications);
+        setUnreadCount(response.data.unreadCount);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  // Fetch unread count only (lightweight)
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await notificationService.getUnreadCount();
+
+      if (response.success) {
+        setUnreadCount(response.data.unreadCount);
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
+
+  // Format timestamp to relative time
+  const formatTimestamp = (timestamp) => {
+    const now = new Date();
+    const notifTime = new Date(timestamp);
+    const diffMs = now - notifTime;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return notifTime.toLocaleDateString();
+  };
+
+  // Initial fetch on component mount
+  useEffect(() => {
+    fetchUnreadCount();
+
+    // Poll for new notifications every 30 seconds
+    pollIntervalRef.current = setInterval(fetchUnreadCount, 30000);
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Fetch full notifications when dropdown opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications();
+    }
+  }, [isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -56,8 +100,6 @@ function NotificationBell() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   const getIcon = (type) => {
     switch (type) {
@@ -85,23 +127,71 @@ function NotificationBell() {
     }
   };
 
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(n =>
-      n.id === id ? { ...n, read: true } : n
-    ));
+  const markAsRead = async (id) => {
+    try {
+      setLoading(true);
+      const response = await notificationService.markAsRead(id);
+
+      if (response.success) {
+        setNotifications(notifications.map(n =>
+          n.id === id ? { ...n, read: true } : n
+        ));
+        setUnreadCount(response.data.unreadCount);
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      setLoading(true);
+      const response = await notificationService.markAllAsRead();
+
+      if (response.success) {
+        setNotifications(notifications.map(n => ({ ...n, read: true })));
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  const deleteNotification = async (id) => {
+    try {
+      setLoading(true);
+      const response = await notificationService.deleteNotification(id);
+
+      if (response.success) {
+        setNotifications(notifications.filter(n => n.id !== id));
+        setUnreadCount(response.data.unreadCount);
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const clearAll = () => {
-    setNotifications([]);
-    setIsOpen(false);
+  const clearAll = async () => {
+    try {
+      setLoading(true);
+      const response = await notificationService.clearAllNotifications();
+
+      if (response.success) {
+        setNotifications([]);
+        setUnreadCount(0);
+        setIsOpen(false);
+      }
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -144,7 +234,8 @@ function NotificationBell() {
                 </p>
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors"
+                  disabled={loading}
+                  className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors disabled:opacity-50"
                 >
                   Mark all as read
                 </button>
@@ -193,14 +284,16 @@ function NotificationBell() {
                             {!notification.read && (
                               <button
                                 onClick={() => markAsRead(notification.id)}
-                                className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors"
+                                disabled={loading}
+                                className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors disabled:opacity-50"
                               >
                                 Mark read
                               </button>
                             )}
                             <button
                               onClick={() => deleteNotification(notification.id)}
-                              className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors"
+                              disabled={loading}
+                              className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors disabled:opacity-50"
                             >
                               Delete
                             </button>
@@ -219,7 +312,8 @@ function NotificationBell() {
             <div className="p-3 border-t border-slate-700/50 bg-gradient-to-r from-slate-900/50 to-slate-800/50">
               <button
                 onClick={clearAll}
-                className="w-full px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 hover:text-red-200 text-sm font-medium transition-all"
+                disabled={loading}
+                className="w-full px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 hover:text-red-200 text-sm font-medium transition-all disabled:opacity-50"
               >
                 Clear All Notifications
               </button>

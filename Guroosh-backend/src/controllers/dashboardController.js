@@ -277,6 +277,14 @@ exports.getDashboardData = async (req, res) => {
       gainLossPct: goldData.gainLossPct,
     } : null;
 
+    // ✅ Detect if user is new (no accounts, no transactions, no expenses)
+    const hasNoAccounts = processedAccounts.length === 0;
+    const hasNoTransactions = allTransactions.length === 0;
+    const hasNoExpenses = expensesFromDB.length === 0;
+    const isNewUser = hasNoAccounts && hasNoTransactions && hasNoExpenses;
+
+    console.log(`📊 Dashboard summary: ${processedAccounts.length} accounts, ${allTransactions.length} transactions, isNewUser=${isNewUser}`);
+
     res.json({
       success: true,
       data: {
@@ -296,6 +304,9 @@ exports.getDashboardData = async (req, res) => {
         weeklyChart,
         dailySpendLimit: 1000,
         remainingLimit: Math.max(0, 1000 - (weeklySpend / 7)),
+        isNewUser, // ✅ NEW: Flag for empty states
+        hasNoAccounts, // ✅ NEW: For conditional rendering
+        hasNoTransactions, // ✅ NEW: For conditional rendering
       }
     });
   } catch (error) {

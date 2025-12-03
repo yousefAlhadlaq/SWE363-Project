@@ -1,6 +1,7 @@
 const ExternalBankAccount = require('../models/externalBankAccount');
 const Account = require('../models/account');
 const axios = require('axios');
+const { createLinkAccountNotification } = require('../utils/notificationHelper');
 
 const CENTRAL_BANK_API = process.env.CENTRAL_BANK_API || 'http://localhost:5002/api';
 const sanitizeName = (value = '') => value.trim().replace(/\s+/g, ' ');
@@ -212,6 +213,13 @@ exports.linkExternalAccount = async (req, res) => {
         throw new Error(depositResponse.data.error || 'Failed to perform initial deposit');
       }
 
+      // Create notification for linked account
+      await createLinkAccountNotification(userId, {
+        bankName: linkedAccount.bankName,
+        accountNumber: linkedAccount.accountNumber,
+        initialDeposit: parseFloat(initialDeposit)
+      });
+
       return res.status(201).json({
         success: true,
         message: 'Account created successfully',
@@ -243,6 +251,13 @@ exports.linkExternalAccount = async (req, res) => {
           description: `Initial deposit for ${accountName}`,
           date: new Date()
         }]
+      });
+
+      // Create notification for linked account (fallback)
+      await createLinkAccountNotification(userId, {
+        bankName,
+        accountNumber,
+        initialDeposit: parseFloat(initialDeposit)
       });
 
       return res.status(201).json({

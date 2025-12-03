@@ -6,6 +6,9 @@ import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import ThemeToggleSegmented from '../Shared/ThemeToggleSegmented';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const ProfileSettings = () => {
   const navigate = useNavigate();
@@ -22,6 +25,8 @@ const ProfileSettings = () => {
     language: 'English',
   });
 
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -35,6 +40,32 @@ const ProfileSettings = () => {
   });
   const [editErrors, setEditErrors] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Fetch alert settings on mount
+  useEffect(() => {
+    fetchAlertSettings();
+  }, []);
+
+  // Fetch alert settings from backend
+  const fetchAlertSettings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get(`${API_URL}/notifications/alert-settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        setSettings(prev => ({
+          ...prev,
+          notifications: response.data.data.alertSettings
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching alert settings:', error);
+    }
+  };
 
   // Fix white bar
   useEffect(() => {
@@ -60,14 +91,50 @@ const ProfileSettings = () => {
     }
   }, [showEditModal, user]);
 
-  const handleNotificationToggle = (key) => {
+  const handleNotificationToggle = async (key) => {
+    const newValue = !settings.notifications[key];
+
+    // Optimistic update
     setSettings(prev => ({
       ...prev,
       notifications: {
         ...prev.notifications,
-        [key]: !prev.notifications[key],
+        [key]: newValue,
       },
     }));
+
+    // Save to backend
+    try {
+      setSettingsLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.patch(
+        `${API_URL}/notifications/alert-settings`,
+        {
+          [key]: newValue
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (response.data.success) {
+        console.log('Alert setting updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating alert setting:', error);
+      // Revert on error
+      setSettings(prev => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          [key]: !newValue,
+        },
+      }));
+    } finally {
+      setSettingsLoading(false);
+    }
   };
 
   const handleEditInputChange = (e) => {

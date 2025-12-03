@@ -1,5 +1,6 @@
 const ExternalBankAccount = require('../models/externalBankAccount');
 const axios = require('axios');
+const { createTransactionNotification } = require('../utils/notificationHelper');
 
 // Central Bank API URL
 const CENTRAL_BANK_API = process.env.CENTRAL_BANK_API || 'http://localhost:5002/api';
@@ -164,12 +165,27 @@ exports.transfer = async (req, res) => {
         throw new Error(response.data.error || 'Failed to perform transfer');
       }
 
-      // Get updated account info from Central Bank
-      const accountResponse = await axios.get(`${CENTRAL_BANK_API}/accounts/${userId}`);
-      const accounts = accountResponse.data.accounts || [];
+      // ✅ Create notification for transfer
+      console.log('📤 [TRANSFER] Calling createTransactionNotification for transfer:', {
+        userId,
+        amount: transferAmount,
+        type: 'transfer_out',
+        accountName: 'Transfer'
+      });
 
-      // Calculate new Main Account balance (sum of all real accounts)
-      const newMainBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+      try {
+        await createTransactionNotification(userId, {
+          amount: transferAmount,
+          type: 'transfer_out', // or transfer_in depending on perspective, but usually we notify about the action
+          accountName: 'Transfer',
+          transactionId: `transfer-${Date.now()}`,
+          merchant: description || 'Transfer',
+          method: 'Transfer'
+        });
+        console.log('✅ [TRANSFER] Notification call completed');
+      } catch (notifError) {
+        console.error('⚠️ [TRANSFER] Notification failed, but transfer succeeded:', notifError.message);
+      }
 
       res.status(201).json({
         success: true,
@@ -261,6 +277,14 @@ exports.quickDeposit = async (req, res) => {
       const accountResponse = await axios.get(`${CENTRAL_BANK_API}/accounts/${userId}`);
       const account = accountResponse.data.accounts?.find(acc => acc.id === accountId);
 
+      // Create notification for successful deposit
+      await createTransactionNotification(userId, {
+        amount: parseFloat(amount),
+        type: 'deposit',
+        accountName: account?.bank || 'Unknown',
+        transactionId: accountId
+      });
+
       res.status(201).json({
         success: true,
         data: {
@@ -301,6 +325,14 @@ exports.quickDeposit = async (req, res) => {
       account.totalDeposits += parseFloat(amount);
       account.transactions.push(transaction);
       await account.save();
+
+      // Create notification for successful deposit (fallback)
+      await createTransactionNotification(userId, {
+        amount: parseFloat(amount),
+        type: 'deposit',
+        accountName: account.bank || 'Unknown',
+        transactionId: account._id.toString()
+      });
 
       res.status(201).json({
         success: true,
@@ -385,6 +417,29 @@ exports.manualEntry = async (req, res) => {
       const accountResponse = await axios.get(`${CENTRAL_BANK_API}/accounts/${userId}`);
       const account = accountResponse.data.accounts?.find(acc => acc.id === accountId);
 
+      // ✅ Create notification for manual transaction
+      console.log('📤 [TRANSACTION] Calling createTransactionNotification for manual entry:', {
+        userId,
+        amount: txAmount,
+        type: operationType,
+        accountName: account?.bank || 'Unknown'
+      });
+
+      try {
+        await createTransactionNotification(userId, {
+          amount: txAmount,
+          type: operationType, // 'deposit' or 'payment'
+          accountName: account?.bank || 'Unknown',
+          transactionId: accountId,
+          merchant: description,
+          method: 'Manual Entry'
+        });
+        console.log('✅ [TRANSACTION] Notification call completed for manual entry');
+      } catch (notifError) {
+        console.error('⚠️ [TRANSACTION] Notification failed, but transaction succeeded:', notifError.message);
+        // Don't throw - let transaction succeed even if notification fails
+      }
+
       res.status(201).json({
         success: true,
         data: {
@@ -442,6 +497,29 @@ exports.manualEntry = async (req, res) => {
 
       account.transactions.push(transaction);
       await account.save();
+
+      // ✅ Create notification for manual transaction (fallback path)
+      console.log('📤 [TRANSACTION] Calling createTransactionNotification (fallback):', {
+        userId,
+        amount: txAmount,
+        type: operationType,
+        accountName: account.bank || 'Unknown'
+      });
+
+      try {
+        await createTransactionNotification(userId, {
+          amount: txAmount,
+          type: operationType, // 'deposit' or 'payment'
+          accountName: account.bank || 'Unknown',
+          transactionId: account._id.toString(),
+          merchant: description,
+          method: 'Manual Entry'
+        });
+        console.log('✅ [TRANSACTION] Notification call completed (fallback)');
+      } catch (notifError) {
+        console.error('⚠️ [TRANSACTION] Notification failed (fallback), but transaction succeeded:', notifError.message);
+        // Don't throw - let transaction succeed even if notification fails
+      }
 
       res.status(201).json({
         success: true,
@@ -820,6 +898,17 @@ exports.transfer = async (req, res) => {
         // Main balance stays the same (just redistributed)
         const updatedMainBalance = updatedAccounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
 
+        // ✅ Create notification for transfer TO real account
+        const toAccountName = updatedAccounts.find(acc => acc.id === toAccountId)?.bank || 'Unknown';
+        await createTransactionNotification(userId, {
+          amount: transferAmount,
+          type: 'transfer_in',
+          accountName: toAccountName,
+          transactionId: toAccountId,
+          merchant: description || `Transfer to ${toAccountName}`,
+          method: 'Internal Transfer'
+        });
+
         return res.status(201).json({
           success: true,
           data: {
@@ -884,6 +973,17 @@ exports.transfer = async (req, res) => {
         // Main balance stays the same (just redistributed)
         const updatedMainBalance = updatedAccounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
 
+        // ✅ Create notification for transfer FROM real account
+        const fromAccountName = updatedAccounts.find(acc => acc.id === fromAccountId)?.bank || 'Unknown';
+        await createTransactionNotification(userId, {
+          amount: transferAmount,
+          type: 'transfer_out',
+          accountName: fromAccountName,
+          transactionId: fromAccountId,
+          merchant: description || `Transfer from ${fromAccountName}`,
+          method: 'Internal Transfer'
+        });
+
         return res.status(201).json({
           success: true,
           data: {
@@ -947,6 +1047,18 @@ exports.transfer = async (req, res) => {
 
         // Main balance stays the same (just redistributed)
         const updatedMainBalance = updatedAccounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+
+        // ✅ Create notification for transfer between real accounts
+        const fromAccountName = updatedAccounts.find(acc => acc.id === fromAccountId)?.bank || 'Unknown';
+        const toAccountName = updatedAccounts.find(acc => acc.id === toAccountId)?.bank || 'Unknown';
+        await createTransactionNotification(userId, {
+          amount: transferAmount,
+          type: 'transfer_out', // Outgoing from source
+          accountName: fromAccountName,
+          transactionId: fromAccountId,
+          merchant: description || `Transfer to ${toAccountName}`,
+          method: 'Account Transfer'
+        });
 
         return res.status(201).json({
           success: true,

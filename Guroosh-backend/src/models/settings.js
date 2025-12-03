@@ -42,6 +42,24 @@ const settingsSchema = new mongoose.Schema({
       default: true
     }
   },
+  alertSettings: {
+    transactionAlerts: {
+      type: Boolean,
+      default: true
+    },
+    budgetReminders: {
+      type: Boolean,
+      default: true
+    },
+    investmentUpdates: {
+      type: Boolean,
+      default: true
+    },
+    marketingEmails: {
+      type: Boolean,
+      default: true
+    }
+  },
   privacy: {
     profileVisibility: {
       type: String,

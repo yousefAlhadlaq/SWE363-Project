@@ -1,5 +1,6 @@
 const Investment = require('../models/Investment');
 const externalDataService = require('../services/externalDataService');
+const { createInvestmentNotification } = require('../utils/notificationHelper');
 
 // Daily appreciation rate for Real Estate (0.02% per day = ~7.5% per year)
 const DAILY_APPRECIATION_RATE = 0.0002; // 0.02%
@@ -234,6 +235,17 @@ exports.createInvestment = async (req, res) => {
     const investmentValue = category === 'Real Estate'
       ? currentPrice
       : (currentPrice * amountOwned);
+
+    // ✅ Create notification for investment
+    await createInvestmentNotification(req.userId, {
+      investmentType: category,
+      amount: investmentValue,
+      change: null, // New investment, no change yet
+      investmentId: investment._id,
+      name,
+      quantity: amountOwned,
+      symbol: category === 'Stock' ? name : null,
+    });
 
     // Create a formatted update message for dashboard
     let updateMessage = '';

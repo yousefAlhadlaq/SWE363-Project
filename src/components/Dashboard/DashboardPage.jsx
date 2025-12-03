@@ -7,13 +7,14 @@ import {
   MessageSquare,
   PenSquare,
   PiggyBank,
-  Search,
   ArrowUpRight,
   ArrowDownLeft,
   Wallet,
   Download,
   TrendingUp,
   CreditCard,
+  Inbox,
+  BarChart3,
 } from 'lucide-react';
 import Sidebar from '../Shared/Sidebar';
 import Card from '../Shared/Card';
@@ -21,6 +22,7 @@ import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import SelectMenu from '../Shared/SelectMenu';
+import EmptyState from '../Shared/EmptyState';
 import { useAuth } from '../../context/AuthContext';
 
 const formatSR = (value = 0, digits = 2) =>
@@ -272,7 +274,7 @@ const parseSmsText = (sms = '') => {
 };
 
 function DashboardPage() {
-  const { user } = useAuth();
+  const { user, authLoading } = useAuth(); // ✅ Get authLoading from context
   const [statusRange, setStatusRange] = useState('weekly');
   const [activeAction, setActiveAction] = useState(null);
   const [actionValues, setActionValues] = useState(actionInitialValues);
@@ -282,6 +284,7 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [linkedAccounts, setLinkedAccounts] = useState([]);
+  const [chartData, setChartData] = useState(financialStatusData.weekly);
 
   // Generate account options dynamically from linked accounts
   // Always include a default "Main Account" option for users without linked accounts
@@ -310,50 +313,144 @@ function DashboardPage() {
     return linkedAccountOptions.filter(account => account.value !== 'main');
   }, [linkedAccountOptions]);
 
+  // Fetch analytics chart data
+  const fetchChartData = useCallback(async (range) => {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const token = localStorage.getItem('token');
+
+    // ✅ Validate token exists before making request
+    if (!token) {
+      console.warn('⚠️ Cannot fetch chart data: No token available');
+      return;
+    }
+
+    console.log(`📊 Fetching chart data for range: ${range}`);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/analytics/spending?range=${range}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        console.error('❌ Unauthorized: Token expired or invalid');
+        // Don't clear user here - let auth middleware handle it
+        return;
+      }
+
+      if (!response.ok) {
+        console.error(`❌ Chart fetch failed: ${response.status}`);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success && result.data.chart) {
+        console.log(`✅ Chart data loaded: ${result.data.chart.length} data points, isNewUser=${result.data.isNewUser}`);
+        setChartData(result.data.chart);
+
+        // ✅ Store new user flag from analytics
+        if (result.data.isNewUser !== undefined) {
+          setDashboardData(prev => ({
+            ...prev,
+            chartIsNewUser: result.data.isNewUser,
+          }));
+        }
+      } else {
+        console.warn('⚠️ Chart data missing in response');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching chart data:', error);
+    }
+  }, []); // ✅ No dependencies - function doesn't change
+
   // Fetch dashboard data from backend
   const fetchDashboardData = useCallback(async () => {
-    try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('token');
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const token = localStorage.getItem('token');
 
+    // ✅ Validate token exists before making request
+    if (!token) {
+      console.warn('⚠️ Cannot fetch dashboard data: No token available');
+      setLoading(false);
+      return;
+    }
+
+    console.log('📊 Fetching dashboard data...');
+
+    try {
       const response = await fetch(`${API_BASE_URL}/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setDashboardData(result.data);
-          setLinkedAccounts(result.data.accounts || []);
+      if (response.status === 401) {
+        console.error('❌ Unauthorized: Token expired or invalid');
+        setLoading(false);
+        return;
+      }
 
-          // Update latest updates from backend
-          if (result.data.latestUpdates && result.data.latestUpdates.length > 0) {
-            const formattedUpdates = result.data.latestUpdates.map((update, index) => ({
-              id: update.id || `update-${index}`,
-              merchant: update.merchant,
-              amount: update.amount,
-              timestamp: formatTimestamp(update.timestamp),
-              method: update.method,
-              status: update.status,
-              icon: update.status === 'investment' ? TrendingUp : (update.status === 'in' ? ArrowUpCircle : ArrowUpRight), // Changed ShoppingBag to ArrowUpRight
-            }));
-            setLatestUpdates(formattedUpdates);
-          }
+      if (!response.ok) {
+        console.error(`❌ Dashboard fetch failed: ${response.status}`);
+        setLoading(false);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('✅ Dashboard data loaded');
+        setDashboardData(result.data);
+        setLinkedAccounts(result.data.accounts || []);
+
+        // Update latest updates from backend
+        if (result.data.latestUpdates && result.data.latestUpdates.length > 0) {
+          const formattedUpdates = result.data.latestUpdates.map((update, index) => ({
+            id: update.id || `update-${index}`,
+            merchant: update.merchant,
+            amount: update.amount,
+            timestamp: formatTimestamp(update.timestamp),
+            method: update.method,
+            status: update.status,
+            icon: update.status === 'investment' ? TrendingUp : (update.status === 'in' ? ArrowUpCircle : ArrowUpRight),
+          }));
+          setLatestUpdates(formattedUpdates);
         }
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('❌ Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // ✅ No dependencies - function doesn't change
 
-  // Fetch data on mount
+  // ✅ CRITICAL FIX: Wait for auth to complete, then fetch data
   useEffect(() => {
+    // Don't fetch until auth is initialized
+    if (authLoading) {
+      console.log('⏳ Waiting for auth to complete...');
+      return;
+    }
+
+    // Don't fetch if user is not logged in
+    if (!user) {
+      console.log('❌ No user - skipping data fetch');
+      setLoading(false);
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('❌ No token - skipping data fetch');
+      setLoading(false);
+      return;
+    }
+
+    console.log('✅ Auth ready - fetching dashboard and chart data');
     fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchChartData(statusRange);
+  }, [authLoading, user, statusRange, fetchDashboardData, fetchChartData]);
+  // ✅ Dependencies: authLoading (wait for it), user (refetch on login), statusRange (refetch on change)
 
   // Refresh dashboard when user returns to the page (e.g., after creating an investment)
   useEffect(() => {
@@ -403,6 +500,23 @@ function DashboardPage() {
     );
   };
 
+  // ✅ Show loading state while auth initializes
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen bg-page text-white pt-20">
+        <Sidebar />
+        <div className="flex-1 ml-64 px-6 py-8">
+          <div className="max-w-6xl space-y-6">
+            <div className="text-center py-20">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div>
+              <p className="mt-4 text-gray-400">Loading dashboard...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const displayName = user?.name || user?.fullName || 'Jordan Carter';
   const userInitials = useMemo(() => {
     if (!displayName) return 'U';
@@ -418,7 +532,7 @@ function DashboardPage() {
   }, [displayName]);
 
   // Use real data from backend instead of hardcoded financialStatusData
-  const activeFinancialData = dashboardData?.weeklyChart || financialStatusData[statusRange];
+  const activeFinancialData = chartData;
   const maxFinancialValue = Math.max(
     ...activeFinancialData.map((item) => item.value),
     1
@@ -546,6 +660,7 @@ function DashboardPage() {
 
         // Refresh dashboard data to show new account
         fetchDashboardData();
+        fetchChartData(statusRange);
 
         // Reset form and close modal
         resetActionForm(actionId);
@@ -718,6 +833,7 @@ function DashboardPage() {
 
         // Refresh dashboard data to show updated balance
         fetchDashboardData();
+        fetchChartData(statusRange);
 
         // Reset form and close modal
         resetActionForm(actionId);
@@ -779,6 +895,7 @@ function DashboardPage() {
 
           // Refresh dashboard data to show updated balance
           fetchDashboardData();
+          fetchChartData(statusRange);
 
           // Reset form and close modal
           resetActionForm(actionId);
@@ -1325,14 +1442,6 @@ function DashboardPage() {
                 Welcome back, {displayName.split(' ')[0] || 'there'} 👋
               </h1>
             </div>
-            <div className="relative">
-              <input
-                type="search"
-                placeholder="Search accounts, transactions, or requests..."
-                className="w-full rounded-2xl border border-slate-700/60 bg-slate-900/60 px-5 py-3 pl-12 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
-              <Search className="w-5 h-5 text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" />
-            </div>
           </header>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -1456,7 +1565,17 @@ function DashboardPage() {
 
                 <div className="mt-6 space-y-6">
                   <div className="relative">
-                    {chartPoints.length ? (
+                    {/* ✅ Show empty state if user has no spending data */}
+                    {dashboardData?.chartIsNewUser ? (
+                      <EmptyState
+                        icon={BarChart3}
+                        title="No spending data yet"
+                        subtitle="Start by adding your first transaction or linking a bank account."
+                        actionLabel="Add Transaction"
+                        onAction={() => setActiveAction('manual-entry')}
+                        variant="compact"
+                      />
+                    ) : chartPoints.length ? (
                       <svg
                         viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                         className="w-full h-64"
@@ -1548,33 +1667,45 @@ function DashboardPage() {
               </Card>
 
               <Card title="Latest updates">
-                <div className="space-y-3">
-                  {latestUpdates.map((transaction) => {
-                    const Icon = transaction.icon;
-                    const isCredit = transaction.status === 'in';
-                    const isInvestment = transaction.status === 'investment';
-                    return (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/40 px-4 py-3"
-                      >
-                        <div className="w-12 h-12 rounded-2xl bg-slate-800/70 flex items-center justify-center">
-                          <Icon className={`w-5 h-5 ${isInvestment ? 'text-yellow-400' : 'text-teal-300'}`} />
+                {/* ✅ Show empty state if no transactions */}
+                {dashboardData?.hasNoTransactions || latestUpdates.length === 0 ? (
+                  <EmptyState
+                    icon={Inbox}
+                    title="No transactions available"
+                    subtitle="Your recent activity will appear here."
+                    actionLabel="Add Transaction"
+                    onAction={() => setActiveAction('manual-entry')}
+                    variant="compact"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {latestUpdates.map((transaction) => {
+                      const Icon = transaction.icon;
+                      const isCredit = transaction.status === 'in';
+                      const isInvestment = transaction.status === 'investment';
+                      return (
+                        <div
+                          key={transaction.id}
+                          className="flex items-center gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/40 px-4 py-3"
+                        >
+                          <div className="w-12 h-12 rounded-2xl bg-slate-800/70 flex items-center justify-center">
+                            <Icon className={`w-5 h-5 ${isInvestment ? 'text-yellow-400' : 'text-teal-300'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-white truncate">{transaction.merchant}</p>
+                            <p className="text-xs text-gray-400">{transaction.timestamp} • {transaction.method}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-base font-semibold ${isInvestment ? 'text-yellow-400' : (isCredit ? 'text-teal-300' : 'text-rose-300')}`}>
+                              {isInvestment ? '' : (isCredit ? '+' : '-')}{formatSR(transaction.amount)}
+                            </p>
+                            <p className="text-xs text-gray-500">{isInvestment ? 'Investment' : (isCredit ? 'Incoming' : 'Outgoing')}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-white truncate">{transaction.merchant}</p>
-                          <p className="text-xs text-gray-400">{transaction.timestamp} • {transaction.method}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className={`text-base font-semibold ${isInvestment ? 'text-yellow-400' : (isCredit ? 'text-teal-300' : 'text-rose-300')}`}>
-                            {isInvestment ? '' : (isCredit ? '+' : '-')}{formatSR(transaction.amount)}
-                          </p>
-                          <p className="text-xs text-gray-500">{isInvestment ? 'Investment' : (isCredit ? 'Incoming' : 'Outgoing')}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </Card>
             </div>
 
@@ -1609,24 +1740,31 @@ function DashboardPage() {
               </Card>
 
               <Card title="Your Accounts">
-                <div className="space-y-2">
-                  {linkedAccountOptions.map((account) => (
-                    <div
-                      key={account.value}
-                      className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-slate-900/30 border border-slate-700/40 hover:border-teal-500/30 transition"
-                    >
-                      <span className="text-sm text-gray-300">{account.name}</span>
-                      <span className="text-sm font-semibold text-white">
-                        {formatSR(account.balance)}
-                      </span>
-                    </div>
-                  ))}
-                  {linkedAccountOptions.length === 1 && (
-                    <p className="text-xs text-gray-500 text-center py-2">
-                      Link accounts to see more balances
-                    </p>
-                  )}
-                </div>
+                {/* ✅ Show empty state if no accounts (only Main Account exists) */}
+                {dashboardData?.hasNoAccounts || linkedAccountOptions.length === 1 ? (
+                  <EmptyState
+                    icon={Wallet}
+                    title="No accounts yet"
+                    subtitle="Link your first bank account to get started."
+                    actionLabel="Link Account"
+                    onAction={() => setActiveAction('link-account')}
+                    variant="compact"
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {linkedAccountOptions.map((account) => (
+                      <div
+                        key={account.value}
+                        className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-slate-900/30 border border-slate-700/40 hover:border-teal-500/30 transition"
+                      >
+                        <span className="text-sm text-gray-300">{account.name}</span>
+                        <span className="text-sm font-semibold text-white">
+                          {formatSR(account.balance)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Card>
 
               <Card title="Where did your money go?">
