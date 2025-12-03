@@ -550,23 +550,6 @@ function DashboardPage() {
     );
   };
 
-  // ✅ Show loading state while auth initializes
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen bg-page text-white pt-20">
-        <Sidebar />
-        <div className="flex-1 ml-64 px-6 py-8">
-          <div className="max-w-6xl space-y-6">
-            <div className="text-center py-20">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div>
-              <p className="mt-4 text-gray-400">Loading dashboard...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const displayName = user?.name || user?.fullName || 'Jordan Carter';
   const userInitials = useMemo(() => {
     if (!displayName) return 'U';
@@ -601,10 +584,10 @@ function DashboardPage() {
         ? chartPaddingX + usableWidth / 2
         : chartPaddingX + (index / (activeFinancialData.length - 1)) * usableWidth;
     const normalizedValue = entry.value / maxFinancialValue;
-    const y =
-      chartHeight - chartPaddingY - normalizedValue * usableHeight;
-    return { ...entry, x, y };
-  });
+      const y =
+        chartHeight - chartPaddingY - normalizedValue * usableHeight;
+      return { ...entry, x, y };
+    });
 
   const linePath = chartPoints
     .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
@@ -619,6 +602,23 @@ function DashboardPage() {
   const gridLines = [0.25, 0.5, 0.75].map((ratio) => ({
     y: chartPaddingY + ratio * usableHeight,
   }));
+
+  // ✅ Show loading state while auth initializes
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen bg-page text-white pt-20">
+        <Sidebar />
+        <div className="flex-1 ml-64 px-6 py-8">
+          <div className="max-w-6xl space-y-6">
+            <div className="text-center py-20">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div>
+              <p className="mt-4 text-gray-400">Loading dashboard...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const currentAction = quickActions.find((action) => action.id === activeAction);
   const handleCancelAction = (actionId) => {
