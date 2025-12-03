@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import FinancialSidebar from '../Shared/FinancialSidebar';
 import requestService from '../../services/requestService';
+import Button from '../Shared/Button';
 
 const avatarGradients = [
   'from-teal-500 to-blue-600',
@@ -245,6 +246,24 @@ function FinancialAdvisorPage() {
       .catch((err) => setError(err.message || 'Failed to update request.'));
   };
 
+  const handleEndConversation = async () => {
+    if (!selectedThread) return;
+    const confirmed = window.confirm(
+      'End conversation?\n\nAre you sure you want to end this conversation? You and the client will no longer be able to send new messages on this request.'
+    );
+    if (!confirmed) return;
+
+    try {
+      await requestService.updateRequestStatus(selectedThread.id, 'Closed');
+      await loadThread(selectedThread.id, { silent: true });
+      await fetchAdvisorRequests();
+      setResponseText('');
+      setActiveTab('completed');
+    } catch (err) {
+      setError(err.message || 'Failed to end conversation.');
+    }
+  };
+
   const handleSendResponse = async () => {
     if (!responseText.trim()) {
       alert('Please enter a response before sending');
@@ -316,6 +335,7 @@ function FinancialAdvisorPage() {
     const advisorInfo = selectedThread.participants?.advisor;
     const clientAvatar = getAvatarProps(clientInfo || { fullName: selectedThread.from }, 'Client');
     const advisorAvatar = getAvatarProps(advisorInfo || {}, 'Advisor');
+    const conversationClosed = selectedThread.status === 'Closed' || selectedThread.status === 'Completed';
 
     return (
       <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
@@ -459,6 +479,11 @@ function FinancialAdvisorPage() {
               <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl opacity-0 group-hover:opacity-5 blur transition duration-300"></div>
                 <div className="relative bg-white/90 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
+                  {conversationClosed && (
+                    <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-100">
+                      Conversation closed
+                    </div>
+                  )}
                   <label className="block text-sm font-semibold text-slate-800 dark:text-gray-200 mb-3 tracking-wide">
                     Your Professional Response
                   </label>
@@ -466,7 +491,8 @@ function FinancialAdvisorPage() {
                     rows="6"
                     value={responseText}
                     onChange={(e) => setResponseText(e.target.value)}
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none mb-4 transition-all duration-200 dark:bg-slate-900/60 dark:border-slate-600 dark:text-white dark:placeholder-gray-500"
+                    disabled={conversationClosed}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none mb-4 transition-all duration-200 dark:bg-slate-900/60 dark:border-slate-600 dark:text-white dark:placeholder-gray-500 disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="Provide your professional advice, recommendations, or ask follow-up questions..."
                   />
                   <div className="bg-teal-500/5 dark:bg-teal-500/10 border border-teal-200 dark:border-teal-500/30 rounded-lg p-3 mb-4">
@@ -480,22 +506,33 @@ function FinancialAdvisorPage() {
                   <div className="flex flex-wrap gap-3">
                     <button
                       onClick={handleSendResponse}
-                      className={`${advisorPrimaryButtonClasses} flex items-center gap-2`}
+                      className={`${advisorPrimaryButtonClasses} flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed`}
+                      disabled={conversationClosed}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                       </svg>
                       <span>Send Response</span>
                     </button>
-                    <button className={`${advisorGhostButtonClasses} flex items-center gap-2`}>
+                    <button className={`${advisorGhostButtonClasses} flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed`} disabled={conversationClosed}>
                       Attach Files
                     </button>
                     <button
                       onClick={handleSaveDraft}
-                      className={`${advisorGhostButtonClasses} flex items-center gap-2`}
+                      className={`${advisorGhostButtonClasses} flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed`}
+                      disabled={conversationClosed}
                     >
                       Save Draft
                     </button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      className="!px-4 !py-2.5 rounded-2xl"
+                      onClick={handleEndConversation}
+                      disabled={conversationClosed}
+                    >
+                      End Conversation
+                    </Button>
                   </div>
                 </div>
               </div>
