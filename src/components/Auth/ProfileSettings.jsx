@@ -6,9 +6,8 @@ import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import ThemeToggleSegmented from '../Shared/ThemeToggleSegmented';
-import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const ProfileSettings = () => {
   const navigate = useNavigate();
@@ -52,14 +51,18 @@ const ProfileSettings = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await axios.get(`${API_URL}/notifications/alert-settings`, {
+      const response = await fetch(`${API_URL}/notifications/alert-settings`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (response.data.success) {
+      if (!response.ok) throw new Error('Failed to fetch alert settings');
+
+      const data = await response.json();
+
+      if (data.success) {
         setSettings(prev => ({
           ...prev,
-          notifications: response.data.data.alertSettings
+          notifications: data.data.alertSettings
         }));
       }
     } catch (error) {
@@ -109,17 +112,20 @@ const ProfileSettings = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await axios.patch(
-        `${API_URL}/notifications/alert-settings`,
-        {
-          [key]: newValue
+      const response = await fetch(`${API_URL}/notifications/alert-settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+        body: JSON.stringify({ [key]: newValue })
+      });
 
-      if (response.data.success) {
+      if (!response.ok) throw new Error('Failed to update alert setting');
+
+      const data = await response.json();
+
+      if (data.success) {
         console.log('Alert setting updated successfully');
       }
     } catch (error) {

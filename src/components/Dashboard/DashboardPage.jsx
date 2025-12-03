@@ -12,12 +12,9 @@ import {
   Download,
   TrendingUp,
   CreditCard,
-<<<<<<< HEAD
   Inbox,
   BarChart3,
-=======
   Trash2,
->>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 } from 'lucide-react';
 import Sidebar from '../Shared/Sidebar';
 import Card from '../Shared/Card';
@@ -368,7 +365,7 @@ function DashboardPage() {
 
   // Fetch analytics chart data
   const fetchChartData = useCallback(async (range) => {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
     const token = localStorage.getItem('token');
 
     // ✅ Validate token exists before making request
@@ -419,9 +416,8 @@ function DashboardPage() {
 
   // Fetch dashboard data from backend
   const fetchDashboardData = useCallback(async () => {
-    try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-      const token = localStorage.getItem('token');
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+    const token = localStorage.getItem('token');
 
     // ✅ Validate token exists before making request
     if (!token) {
@@ -805,12 +801,9 @@ function DashboardPage() {
         });
 
         // Refresh dashboard data to show new account
-<<<<<<< HEAD
         fetchDashboardData();
         fetchChartData(statusRange);
-=======
         await fetchDashboardData();
->>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
         // Reset form and close modal
         resetActionForm(actionId);
@@ -1034,35 +1027,14 @@ function DashboardPage() {
           ...prev,
           accounts: prev?.accounts?.filter(acc => (acc.id || acc._id) !== accountId) || [],
         }));
-
-        // Refresh to ensure balances and state are current
+        // Refresh to ensure balance and states are current
         fetchDashboardData();
 
-<<<<<<< HEAD
-          // Add success notification
-          addLatestUpdate({
-            merchant: parsed.merchant || 'Bank SMS',
-            amount: parsed.amount,
-            timestamp: formatTimestamp(),
-            method: `Parsed SMS`,
-            status: parsed.type === 'deposit' ? 'in' : 'out',
-            icon: MessageSquare,
-          });
+        fetchChartData(statusRange);
 
-          // Refresh dashboard data to show updated balance
-          fetchDashboardData();
-          fetchChartData(statusRange);
 
-          // Reset form and close modal
-          resetActionForm(actionId);
-          setActiveAction(null);
-        } else {
-          alert('Could not extract transaction details from SMS. Please try manual entry.');
-        }
-=======
         setSuccessMessage(`Removed ${confirmationLabel}`);
         setTimeout(() => setSuccessMessage(null), 4000);
->>>>>>> f535dea (improving linking bank account funcionality as well as the UI look, adding remove bank account funcionality, in addtion to some usability enhancement)
 
         resetActionForm(actionId);
         setActiveAction(null);
@@ -2127,6 +2099,6 @@ function DashboardPage() {
       </Modal>
     </div>
   );
-}
+};
 
 export default DashboardPage;
