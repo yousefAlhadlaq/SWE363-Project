@@ -3,18 +3,32 @@ import { Settings, LayoutDashboard, Calendar } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
+const avatarGradients = [
+  "from-teal-500 to-blue-600",
+  "from-purple-500 to-pink-600",
+  "from-amber-500 to-orange-500",
+  "from-emerald-500 to-teal-500",
+  "from-indigo-500 to-cyan-500",
+];
+
+const getAvatarProps = (person = {}, fallbackName = "Advisor") => {
+  const name =
+    person.fullName ||
+    person.name ||
+    person.email ||
+    fallbackName;
+
+  const trimmed = (name || "").trim() || fallbackName;
+  const initial = trimmed.charAt(0).toUpperCase() || "A";
+  const hash = Array.from(trimmed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const gradient = avatarGradients[Math.abs(hash) % avatarGradients.length];
+
+  return { name: trimmed, initial, gradient };
+};
+
 function FinancialSidebar() {
   const { user } = useAuth();
-
-  // Get user initials for avatar
-  const getInitials = (name) => {
-    if (!name) return 'A';
-    const parts = name.split(' ');
-    if (parts.length >= 2) {
-      return parts[0][0] + parts[1][0];
-    }
-    return parts[0][0];
-  };
+  const avatar = getAvatarProps(user || {}, "Advisor");
 
   return (
     <div className="fixed top-0 left-0 h-screen w-64 bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl border-r border-slate-200 dark:border-slate-700/50 flex flex-col justify-between z-30 text-slate-900 dark:text-white">
@@ -84,11 +98,11 @@ function FinancialSidebar() {
       {/* Footer */}
       <div className="relative z-10 px-6 py-6 border-t border-slate-200 dark:border-slate-700/50">
         <div className="flex items-center gap-3 mb-3 px-3 py-2 bg-white/80 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700/30 shadow-sm dark:shadow-none">
-          <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-white/40 dark:ring-white/10">
-            {getInitials(user?.name)}
+          <div className={`w-10 h-10 bg-gradient-to-br ${avatar.gradient} rounded-full flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-white/40 dark:ring-white/10`}>
+            {avatar.initial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">{user?.name || 'Advisor'}</p>
+            <p className="text-sm font-semibold truncate">{avatar.name || 'Advisor'}</p>
             <p className="text-xs text-slate-500 dark:text-gray-400 capitalize">{user?.role || 'Advisor'}</p>
           </div>
         </div>

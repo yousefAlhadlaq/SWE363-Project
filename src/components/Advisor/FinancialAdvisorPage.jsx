@@ -2,6 +2,30 @@ import React, { useEffect, useState } from 'react';
 import FinancialSidebar from '../Shared/FinancialSidebar';
 import requestService from '../../services/requestService';
 
+const avatarGradients = [
+  'from-teal-500 to-blue-600',
+  'from-purple-500 to-pink-600',
+  'from-amber-500 to-orange-500',
+  'from-emerald-500 to-teal-500',
+  'from-indigo-500 to-cyan-500',
+];
+
+const getAvatarProps = (person = {}, fallbackName = 'User') => {
+  const name =
+    person.fullName ||
+    person.name ||
+    person.email ||
+    person.sender ||
+    fallbackName;
+
+  const trimmed = (name || '').trim() || fallbackName;
+  const initial = trimmed.charAt(0).toUpperCase() || 'U';
+  const hash = Array.from(trimmed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const gradient = avatarGradients[Math.abs(hash) % avatarGradients.length];
+
+  return { initial, gradient, name: trimmed };
+};
+
 function FinancialAdvisorPage() {
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedThread, setSelectedThread] = useState(null);
@@ -108,16 +132,21 @@ function FinancialAdvisorPage() {
       ]);
 
       const requestData = requestRes.request;
-      const messages = (messagesRes.messages || []).map((msg) => ({
-        id: msg._id,
-        sender: msg.sender?.fullName || 'User',
-        role: msg.senderRole || 'Participant',
-        timestamp: new Date(msg.createdAt).toLocaleString(),
-        content: msg.content,
-        attachments: (msg.attachments || []).map(
-          (file) => file.fileName || 'Attachment'
-        ),
-      }));
+      const messages = (messagesRes.messages || []).map((msg) => {
+        const senderPerson = msg.sender || {};
+        const senderName = senderPerson.fullName || senderPerson.name || senderPerson.email || 'User';
+        return {
+          id: msg._id,
+          sender: senderName,
+          senderUser: senderPerson,
+          role: msg.senderRole || 'Participant',
+          timestamp: new Date(msg.createdAt).toLocaleString(),
+          content: msg.content,
+          attachments: (msg.attachments || []).map(
+            (file) => file.fileName || 'Attachment'
+          ),
+        };
+      });
 
       setSelectedThread({
         id: requestData._id,
@@ -284,6 +313,9 @@ function FinancialAdvisorPage() {
   // Thread View
   if (selectedThread) {
     const clientInfo = selectedThread.participants?.client;
+    const advisorInfo = selectedThread.participants?.advisor;
+    const clientAvatar = getAvatarProps(clientInfo || { fullName: selectedThread.from }, 'Client');
+    const advisorAvatar = getAvatarProps(advisorInfo || {}, 'Advisor');
 
     return (
       <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
@@ -384,9 +416,14 @@ function FinancialAdvisorPage() {
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 to-blue-500 rounded-xl opacity-0 group-hover:opacity-5 blur transition duration-300"></div>
                   <div className="relative bg-white/90 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
                     <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-lg ring-2 ring-white/10">
-                        {message.sender.charAt(0)}
-                      </div>
+                      {(() => {
+                        const senderAvatar = getAvatarProps(message.senderUser || { fullName: message.sender }, message.sender);
+                        return (
+                          <div className={`w-12 h-12 bg-gradient-to-br ${senderAvatar.gradient} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-lg ring-2 ring-white/10`}>
+                            {senderAvatar.initial}
+                          </div>
+                        );
+                      })()}
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-1">
                           <span className="font-semibold text-slate-900 dark:text-white">{message.sender}</span>
@@ -475,11 +512,11 @@ function FinancialAdvisorPage() {
                   Client Information
                 </h3>
                 <div className="flex items-center space-x-3 mb-4 p-3 bg-slate-100 rounded-lg border border-slate-200 dark:bg-slate-900/40 dark:border-slate-700/30">
-                  <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg ring-2 ring-white/10">
-                    {(selectedThread.from || 'C').charAt(0)}
+                  <div className={`w-12 h-12 bg-gradient-to-br ${clientAvatar.gradient} rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg ring-2 ring-white/10`}>
+                    {clientAvatar.initial}
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 dark:text-white">{selectedThread.from}</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">{clientAvatar.name}</p>
                     <p className="text-sm text-slate-600 dark:text-gray-400">Client</p>
                   </div>
                 </div>
