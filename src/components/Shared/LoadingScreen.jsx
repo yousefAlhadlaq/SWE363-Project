@@ -1,36 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 
 function LoadingScreen({ message = 'Loading your dashboard experience...' }) {
-  const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingText, setLoadingText] = useState('Initializing');
 
   useEffect(() => {
+    const texts = ['Initializing', 'Loading Assets', 'Preparing Interface', 'Almost Ready'];
+    let index = 0;
     const interval = setInterval(() => {
-      setLoadingProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 1;
-      });
-    }, 50);
+      index = (index + 1) % texts.length;
+      setLoadingText(texts[index]);
+    }, 1200);
 
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (loadingProgress < 25) {
-      setLoadingText('Initializing');
-    } else if (loadingProgress < 50) {
-      setLoadingText('Loading Assets');
-    } else if (loadingProgress < 75) {
-      setLoadingText('Preparing Interface');
-    } else if (loadingProgress < 100) {
-      setLoadingText('Almost Ready');
-    } else {
-      setLoadingText('Complete!');
-    }
-  }, [loadingProgress]);
 
   const particles = useMemo(
     () =>
@@ -83,15 +65,6 @@ function LoadingScreen({ message = 'Loading your dashboard experience...' }) {
             <span style={{ animationDelay: '0.4s' }}>.</span>
           </div>
           <p className="loading-subtext">{message}</p>
-        </div>
-
-        <div className="progress-section">
-          <div className="progress-bar-container">
-            <div className="progress-bar-fill" style={{ width: `${loadingProgress}%` }}>
-              <div className="progress-shine" />
-            </div>
-          </div>
-          <div className="progress-percentage">{loadingProgress}%</div>
         </div>
       </div>
 

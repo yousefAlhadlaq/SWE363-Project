@@ -3,7 +3,7 @@ const ExternalBankAccount = require('../models/externalBankAccount');
 const ExternalStock = require('../models/externalStock');
 const ExternalGold = require('../models/externalGold');
 const Expense = require('../models/expense');
-const Investment = require('../models/Investment');
+const Investment = require('../models/investment');
 const axios = require('axios');
 
 const CENTRAL_BANK_API = process.env.CENTRAL_BANK_API || 'http://localhost:5002/api';
@@ -425,8 +425,8 @@ exports.getInvestments = async (req, res) => {
         gold: goldData,
         otherInvestments: investments,
         totalValue: (stockData.summary?.totalValue || 0) +
-                    (goldData?.investmentValue || 0) +
-                    investments.reduce((sum, inv) => sum + (inv.currentValue || inv.amount || 0), 0),
+          (goldData?.investmentValue || 0) +
+          investments.reduce((sum, inv) => sum + (inv.currentValue || inv.amount || 0), 0),
       }
     });
   } catch (error) {

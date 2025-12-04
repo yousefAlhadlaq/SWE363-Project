@@ -36,7 +36,8 @@ async function getCurrentGoldPrice() {
 
     throw new Error('Invalid response from Gold API');
   } catch (error) {
-    console.error('Error fetching current gold price:', error.message);
+    // This is expected when API key is missing or rate-limited - use fallback silently
+    console.log('ℹ️  Gold price API unavailable, using fallback price');
     // Fallback to realistic price if API fails
     return 2050 + Math.random() * 50;
   }

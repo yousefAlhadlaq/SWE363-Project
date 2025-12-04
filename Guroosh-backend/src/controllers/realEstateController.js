@@ -6,7 +6,7 @@ const groqService = require('../services/groqService');
  */
 exports.evaluateProperty = async (req, res) => {
   try {
-    const { latitude, longitude, propertyType, area, bedrooms, bathrooms, yearBuilt } = req.body;
+    const { latitude, longitude, propertyType, area } = req.body;
 
     // Validation
     if (!latitude || !longitude) {
@@ -30,31 +30,12 @@ exports.evaluateProperty = async (req, res) => {
       });
     }
 
-    // For apartments, bedrooms and bathrooms should be provided
-    if (propertyType === 'Apartment') {
-      if (!bedrooms || bedrooms <= 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'Number of bedrooms is required for apartments'
-        });
-      }
-      if (!bathrooms || bathrooms <= 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'Number of bathrooms is required for apartments'
-        });
-      }
-    }
-
     // Call Groq service to evaluate the property
     const evaluation = await groqService.evaluateRealEstate({
       latitude,
       longitude,
       propertyType,
-      area,
-      bedrooms,
-      bathrooms,
-      yearBuilt
+      area
     });
 
     if (!evaluation.success) {

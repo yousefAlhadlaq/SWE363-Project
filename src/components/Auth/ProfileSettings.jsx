@@ -20,7 +20,7 @@ const ProfileSettings = () => {
       investmentUpdates: true,
       marketingEmails: true,
     },
-    currency: 'USD',
+    currency: 'SAR',
     language: 'English',
   });
 
@@ -29,7 +29,7 @@ const ProfileSettings = () => {
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  
+
   // Edit profile form - UPDATED to include fullName
   const [editForm, setEditForm] = useState({
     fullName: '',
@@ -314,7 +314,7 @@ const ProfileSettings = () => {
                       ))}
                     </select>
                     <p className="text-xs text-slate-500 dark:text-gray-400 mt-2">
-                      Example: <span className="text-slate-900 dark:text-white">$1,234.56</span>
+                      Example: <span className="text-slate-900 dark:text-white">SAR 1,234.56</span>
                     </p>
                   </div>
 
@@ -374,20 +374,18 @@ const ProfileSettings = () => {
               {/* Notifications */}
               <div className="card p-4 md:p-6 shadow-xl">
                 <h3 className="text-slate-900 dark:text-white font-medium mb-4">Transaction alerts</h3>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600 dark:text-gray-300 text-sm">Transaction alerts</span>
                     <button
                       onClick={() => handleNotificationToggle('transactionAlerts')}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        settings.notifications.transactionAlerts ? 'bg-teal-500' : 'bg-slate-400 dark:bg-gray-600'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.notifications.transactionAlerts ? 'bg-teal-500' : 'bg-slate-400 dark:bg-gray-600'
+                        }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          settings.notifications.transactionAlerts ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.notifications.transactionAlerts ? 'translate-x-6' : 'translate-x-1'
+                          }`}
                       />
                     </button>
                   </div>
@@ -396,14 +394,12 @@ const ProfileSettings = () => {
                     <span className="text-slate-600 dark:text-gray-300 text-sm">Budget reminders</span>
                     <button
                       onClick={() => handleNotificationToggle('budgetReminders')}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        settings.notifications.budgetReminders ? 'bg-teal-500' : 'bg-slate-400 dark:bg-gray-600'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.notifications.budgetReminders ? 'bg-teal-500' : 'bg-slate-400 dark:bg-gray-600'
+                        }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          settings.notifications.budgetReminders ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.notifications.budgetReminders ? 'translate-x-6' : 'translate-x-1'
+                          }`}
                       />
                     </button>
                   </div>
@@ -412,14 +408,12 @@ const ProfileSettings = () => {
                     <span className="text-slate-600 dark:text-gray-300 text-sm">Investment updates</span>
                     <button
                       onClick={() => handleNotificationToggle('investmentUpdates')}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        settings.notifications.investmentUpdates ? 'bg-teal-500' : 'bg-slate-400 dark:bg-gray-600'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.notifications.investmentUpdates ? 'bg-teal-500' : 'bg-slate-400 dark:bg-gray-600'
+                        }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          settings.notifications.investmentUpdates ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.notifications.investmentUpdates ? 'translate-x-6' : 'translate-x-1'
+                          }`}
                       />
                     </button>
                   </div>
@@ -428,14 +422,12 @@ const ProfileSettings = () => {
                     <span className="text-slate-600 dark:text-gray-300 text-sm">Marketing emails</span>
                     <button
                       onClick={() => handleNotificationToggle('marketingEmails')}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        settings.notifications.marketingEmails ? 'bg-teal-500' : 'bg-slate-400 dark:bg-gray-600'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.notifications.marketingEmails ? 'bg-teal-500' : 'bg-slate-400 dark:bg-gray-600'
+                        }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          settings.notifications.marketingEmails ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.notifications.marketingEmails ? 'translate-x-6' : 'translate-x-1'
+                          }`}
                       />
                     </button>
                   </div>
@@ -566,9 +558,8 @@ const ProfileSettings = () => {
               placeholder="Street, City, State/Province, ZIP/Postal, Country"
               disabled={saving}
               rows="3"
-              className={`w-full px-4 py-3 bg-slate-700/50 border ${
-                editErrors.address ? 'border-red-500' : 'border-slate-600'
-              } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all resize-none`}
+              className={`w-full px-4 py-3 bg-slate-700/50 border ${editErrors.address ? 'border-red-500' : 'border-slate-600'
+                } rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all resize-none`}
             />
             {editErrors.address && (
               <p className="mt-1 text-sm text-red-400">{editErrors.address}</p>
@@ -586,7 +577,7 @@ const ProfileSettings = () => {
             >
               {saving ? 'Saving...' : 'Save changes'}
             </Button>
-            
+
             <button
               onClick={() => setShowEditModal(false)}
               disabled={saving}
@@ -614,7 +605,7 @@ const ProfileSettings = () => {
           >
             Cancel
           </Button>
-          
+
           <Button
             variant="danger"
             fullWidth

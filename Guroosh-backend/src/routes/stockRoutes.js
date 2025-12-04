@@ -3,6 +3,19 @@ const router = express.Router();
 const YahooFinance = require('yahoo-finance2').default;
 const yahooFinance = new YahooFinance();
 
+// USD to SAR conversion rate (fixed rate: 1 USD = 3.75 SAR)
+const USD_TO_SAR = 3.75;
+
+// Saudi stock exchanges
+const SAUDI_EXCHANGES = ['SAU', 'Tadawul', 'Saudi Stock Exchange'];
+
+// Helper to check if a stock is Saudi
+const isSaudiStock = (symbol, exchange) => {
+  return symbol.endsWith('.SR') || SAUDI_EXCHANGES.some(ex =>
+    exchange?.toLowerCase().includes(ex.toLowerCase())
+  );
+};
+
 // Search stocks - uses Yahoo Finance search API
 router.get('/search-stocks', async (req, res) => {
   try {
@@ -43,7 +56,7 @@ router.get('/search-stocks', async (req, res) => {
   }
 });
 
-// Get stock quote (current price)
+// Get stock quote (current price) - returns prices in SAR
 router.get('/quote/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
@@ -58,18 +71,26 @@ router.get('/quote/:symbol', async (req, res) => {
       });
     }
 
+    // Check if it's a Saudi stock (already in SAR)
+    const exchange = quote.exchange || quote.fullExchangeName || '';
+    const isInSAR = isSaudiStock(symbol, exchange);
+    const conversionRate = isInSAR ? 1 : USD_TO_SAR;
+
     res.json({
       success: true,
       quote: {
         symbol: quote.symbol,
-        price: quote.regularMarketPrice,
-        open: quote.regularMarketOpen,
-        high: quote.regularMarketDayHigh,
-        low: quote.regularMarketDayLow,
+        price: quote.regularMarketPrice * conversionRate,
+        open: quote.regularMarketOpen * conversionRate,
+        high: quote.regularMarketDayHigh * conversionRate,
+        low: quote.regularMarketDayLow * conversionRate,
         volume: quote.regularMarketVolume,
-        previousClose: quote.regularMarketPreviousClose,
-        change: quote.regularMarketChange,
-        changePercent: quote.regularMarketChangePercent
+        previousClose: quote.regularMarketPreviousClose * conversionRate,
+        change: quote.regularMarketChange * conversionRate,
+        changePercent: quote.regularMarketChangePercent,
+        currency: 'SAR',
+        originalCurrency: isInSAR ? 'SAR' : 'USD',
+        conversionRate: conversionRate
       }
     });
   } catch (error) {
@@ -155,18 +176,24 @@ router.get('/historical/:symbol/:date', async (req, res) => {
       });
     }
 
+    // Check if it's a Saudi stock (already in SAR)
+    const isInSAR = isSaudiStock(symbol, '');
+    const conversionRate = isInSAR ? 1 : USD_TO_SAR;
+
     const dataDate = new Date(closestData.date);
     res.json({
       success: true,
       historical: {
         symbol: symbol,
         date: dataDate.toISOString().split('T')[0],
-        open: closestData.open,
-        high: closestData.high,
-        low: closestData.low,
-        close: closestData.close,
-        adjustedClose: closestData.adjclose || closestData.close,
-        volume: closestData.volume
+        open: closestData.open * conversionRate,
+        high: closestData.high * conversionRate,
+        low: closestData.low * conversionRate,
+        close: closestData.close * conversionRate,
+        adjustedClose: (closestData.adjclose || closestData.close) * conversionRate,
+        volume: closestData.volume,
+        currency: 'SAR',
+        originalCurrency: isInSAR ? 'SAR' : 'USD'
       }
     });
   } catch (error) {
