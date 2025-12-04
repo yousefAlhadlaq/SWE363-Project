@@ -16,7 +16,7 @@ function FinancialSettingsPage() {
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showRecoveryCodesModal, setShowRecoveryCodesModal] = useState(false);
-  
+
   // Profile state
   const [profile, setProfile] = useState({
     fullName: user?.fullName || 'Alex Morgan',
@@ -48,7 +48,7 @@ function FinancialSettingsPage() {
   // Preferences state
   const [preferences, setPreferences] = useState({
     language: 'English',
-    currency: 'USD',
+    currency: 'SAR',
     timezone: 'UTC'
   });
 
@@ -341,6 +341,7 @@ function FinancialSettingsPage() {
                       onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-900 focus:ring-2 focus:ring-brand-aqua focus:border-transparent dark:bg-white/10 dark:border-white/20 dark:text-white/80"
                     >
+                      <option>SAR</option>
                       <option>USD</option>
                       <option>EUR</option>
                       <option>GBP</option>
@@ -380,7 +381,7 @@ function FinancialSettingsPage() {
                   checked={security.twoFactor}
                   onChange={handleSecurityToggle}
                 />
-                <button 
+                <button
                   onClick={handleOpenRecoveryCodes}
                   className="w-full px-4 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg transition-all text-sm hover:border-teal-400 hover:bg-teal-50 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-white/20"
                 >
@@ -488,9 +489,8 @@ function FinancialSettingsPage() {
                 rows="3"
                 placeholder="Street, City, State/Province, ZIP, Country"
                 disabled={saving}
-                className={`w-full rounded-lg border px-4 py-3 text-sm text-white bg-brand-deep/60 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-aqua transition ${
-                  editErrors.address ? 'border-red-500' : 'border-white/10'
-                }`}
+                className={`w-full rounded-lg border px-4 py-3 text-sm text-white bg-brand-deep/60 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-brand-aqua transition ${editErrors.address ? 'border-red-500' : 'border-white/10'
+                  }`}
               />
               {editErrors.address && (
                 <p className="mt-1 text-sm text-red-300">{editErrors.address}</p>
@@ -575,12 +575,12 @@ function FinancialSettingsPage() {
                 <p className="text-slate-600 text-sm mb-4 dark:text-white/60">
                   Save these codes in a safe place. You can use them to access your account if you lose your authentication device.
                 </p>
-                
+
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2 dark:bg-brand-deep/60 dark:border-white/10">
                   {['ABCD-1234-EFGH', '5678-IJKL-9012', 'MNOP-3456-QRST', '7890-UVWX-YZAB', 'CDEF-1234-GHIJ', '5678-KLMN-OPQR'].map((code, index) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-white rounded dark:bg-white/5">
                       <span className="font-mono text-slate-900 dark:text-white">{code}</span>
-                      <button 
+                      <button
                         onClick={() => {
                           navigator.clipboard.writeText(code);
                           console.log('Copied:', code);
@@ -624,14 +624,12 @@ const ToggleItem = ({ label, checked, onChange }) => {
       <span className="text-sm text-slate-700 dark:text-white/80">{label}</span>
       <button
         onClick={onChange}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          checked ? 'bg-teal-500 dark:bg-brand-aqua' : 'bg-slate-200 dark:bg-white/20'
-        }`}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-teal-500 dark:bg-brand-aqua' : 'bg-slate-200 dark:bg-white/20'
+          }`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-            checked ? 'translate-x-6' : 'translate-x-1'
-          }`}
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
+            }`}
         />
       </button>
     </div>

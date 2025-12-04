@@ -35,8 +35,6 @@
     "test": "jest --watchAll --verbose",
     "start:all": "node start-all.js",
     "start:bank": "node mock-servers/centralBankServer.js",
-    "start:crypto": "node mock-servers/cryptoExchangeServer.js",
-    "start:realestate": "node mock-servers/realEstateServer.js",
     "seed:external": "node scripts/seedExternalData.js"
   }
 }

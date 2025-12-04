@@ -157,7 +157,7 @@ const normalizeGoals = (list) => {
     .filter(Boolean);
 };
 
-  const buildSeedStorageKey = (userId) => `expenses:seed:${userId || 'guest'}`;
+const buildSeedStorageKey = (userId) => `expenses:seed:${userId || 'guest'}`;
 
 const broadcastUpdate = (eventName, detail) => {
   if (typeof window === 'undefined') return;
@@ -394,7 +394,7 @@ function ExpensesPage() {
   }, [accounts]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return () => {};
+    if (typeof window === 'undefined') return () => { };
     const handleRefresh = () => {
       syncFromServer();
     };
@@ -403,7 +403,7 @@ function ExpensesPage() {
   }, [syncFromServer]);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return () => {};
+    if (typeof document === 'undefined') return () => { };
     const handleVisibility = () => {
       if (!document.hidden) {
         syncFromServer();
@@ -543,33 +543,33 @@ function ExpensesPage() {
   const maxTrendValue = Math.max(...spendTrend.map((point) => point.amount), 1);
   const sparklineCoords = spendTrend.length
     ? spendTrend.map((point, index) => {
-        const x = (index / Math.max(spendTrend.length - 1, 1)) * 100;
-        const y = 40 - (point.amount / maxTrendValue) * 40;
-        return { x, y: Math.max(0, y) };
-      })
+      const x = (index / Math.max(spendTrend.length - 1, 1)) * 100;
+      const y = 40 - (point.amount / maxTrendValue) * 40;
+      return { x, y: Math.max(0, y) };
+    })
     : [
-        { x: 0, y: 40 },
-        { x: 100, y: 40 }
-      ];
+      { x: 0, y: 40 },
+      { x: 100, y: 40 }
+    ];
   const sparklinePoints = sparklineCoords.map((point) => `${point.x},${point.y}`).join(' ');
   const sparklineAreaPath = `M ${sparklineCoords[0].x} 40 ${sparklineCoords
     .map((point) => `L ${point.x} ${point.y}`)
     .join(' ')} L ${sparklineCoords[sparklineCoords.length - 1].x} 40 Z`;
   const trendLabels = spendTrend.length
     ? [0, Math.floor(spendTrend.length / 2), spendTrend.length - 1]
-        .filter((value, index, self) => self.indexOf(value) === index)
-        .map((index) => ({
-          label: formatShortDate(spendTrend[index]?.date),
-          x: sparklineCoords[index]?.x ?? 0
-        }))
+      .filter((value, index, self) => self.indexOf(value) === index)
+      .map((index) => ({
+        label: formatShortDate(spendTrend[index]?.date),
+        x: sparklineCoords[index]?.x ?? 0
+      }))
     : [{ label: formatShortDate(new Date().toISOString().split('T')[0]), x: 0 }];
 
   const remainingBudget = Math.max(totalBudget - totalSpent, 0);
   const goalCompletionAverage = goalsWithProgress.length
     ? Math.round(
-        goalsWithProgress.reduce((sum, goal) => sum + goal.progress, 0) /
-          goalsWithProgress.length
-      )
+      goalsWithProgress.reduce((sum, goal) => sum + goal.progress, 0) /
+      goalsWithProgress.length
+    )
     : 0;
   const cappedCoverage = Math.min(coverage, 130);
 
@@ -1117,14 +1117,35 @@ function ExpensesPage() {
     </form>
   );
 
+  // Show full-page spinner while initial data is loading
+  if (user && syncInfo.status === 'loading' && !syncInfo.lastSuccess) {
+    return (
+      <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-20">
+        <Sidebar />
+        <main className="flex-1 ml-64 relative">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-teal-500/20 rounded-full"></div>
+                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-teal-500 rounded-full animate-spin"></div>
+                <div className="absolute inset-2 w-12 h-12 bg-teal-500/10 rounded-full animate-pulse"></div>
+              </div>
+              <p className="text-gray-400 text-sm animate-pulse">Loading expenses...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-20">
       <Sidebar />
       <main className="flex-1 ml-64 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-white via-white to-white dark:from-slate-900 dark:via-slate-900/70 dark:to-slate-900" aria-hidden />
-    <div className="absolute -top-28 right-0 w-80 h-80 bg-emerald-400/20 blur-[140px] dark:bg-emerald-400/15" aria-hidden />
-    <div className="absolute top-1/3 -left-28 w-72 h-72 bg-cyan-400/10 blur-[160px] dark:bg-cyan-500/10" aria-hidden />
-  <div className="relative w-full max-w-[1700px] px-4 sm:px-8 lg:px-12 py-10 space-y-8">
+        <div className="absolute -top-28 right-0 w-80 h-80 bg-emerald-400/20 blur-[140px] dark:bg-emerald-400/15" aria-hidden />
+        <div className="absolute top-1/3 -left-28 w-72 h-72 bg-cyan-400/10 blur-[160px] dark:bg-cyan-500/10" aria-hidden />
+        <div className="relative w-full max-w-[1700px] px-4 sm:px-8 lg:px-12 py-10 space-y-8">
           <div className="space-y-1">
             <p className="text-3xl font-semibold text-slate-900 dark:text-white">Spending</p>
             <div className="flex gap-4 text-sm text-slate-500 dark:text-slate-400">
@@ -1362,8 +1383,8 @@ function ExpensesPage() {
                                 category.statusTone === 'over'
                                   ? 'linear-gradient(90deg,#f87171,#fb923c)'
                                   : category.statusTone === 'warning'
-                                  ? 'linear-gradient(90deg,#fcd34d,#fbbf24)'
-                                  : 'linear-gradient(90deg,#34d399,#22d3ee)'
+                                    ? 'linear-gradient(90deg,#fcd34d,#fbbf24)'
+                                    : 'linear-gradient(90deg,#34d399,#22d3ee)'
                             }}
                           />
                         </div>
@@ -1384,13 +1405,11 @@ function ExpensesPage() {
                           </button>
                           <button
                             type="button"
-                            className={`text-xs px-3 py-2 ${
-                              category.enabled ? advisorDangerButtonClasses : advisorGhostButtonClasses
-                            } ${
-                              category.enabled
+                            className={`text-xs px-3 py-2 ${category.enabled ? advisorDangerButtonClasses : advisorGhostButtonClasses
+                              } ${category.enabled
                                 ? ''
                                 : 'text-emerald-700 border-emerald-200 hover:border-emerald-300 dark:text-emerald-300 dark:border-emerald-500/40'
-                            }`}
+                              }`}
                             onClick={() => handleToggleCategory(category.id)}
                           >
                             {category.enabled ? 'Disable' : 'Enable'}
@@ -1424,11 +1443,10 @@ function ExpensesPage() {
                 key={tab}
                 type="button"
                 onClick={() => handleTabChange(tab)}
-                className={`flex-1 py-2 rounded-full text-sm font-medium transition ${
-                  modalTab === tab
+                className={`flex-1 py-2 rounded-full text-sm font-medium transition ${modalTab === tab
                     ? 'bg-amber-100 text-amber-900 dark:bg-[#8bd7c8] dark:text-slate-900'
                     : 'text-slate-500 dark:text-slate-200'
-                }`}
+                  }`}
               >
                 {tab === 'category' ? 'Category' : 'Goal'}
               </button>

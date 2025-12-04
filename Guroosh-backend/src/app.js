@@ -65,12 +65,14 @@ app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/external', require('./routes/externalDataRoutes'));
 app.use('/api/cities', require('./routes/cityRoutes'));
 app.use('/api/stocks', require('./routes/stockRoutes'));
+app.use('/api/crypto', require('./routes/cryptoRoutes'));
 app.use('/api/real-estate', require('./routes/realEstateRoutes'));
 app.use('/api/gold', require('./routes/goldRoutes'));
 app.use('/api/transactions', require('./routes/transactionRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/zakat', require('./routes/zakatRoutes'));
 
 // Test route
 app.get('/test', (req, res) => {

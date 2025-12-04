@@ -3,7 +3,7 @@ import './StockSearchInput.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
-const StockSearchInput = ({ onStockSelected, initialValue = '' }) => {
+const CryptoSearchInput = ({ onCryptoSelected, initialValue = '' }) => {
   const [searchQuery, setSearchQuery] = useState(initialValue);
   const [searchResults, setSearchResults] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -22,15 +22,15 @@ const StockSearchInput = ({ onStockSelected, initialValue = '' }) => {
     setIsLoading(true);
     const timeoutId = setTimeout(async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/stocks/search-stocks?q=${encodeURIComponent(searchQuery)}`);
+        const response = await fetch(`${API_BASE_URL}/crypto/search-crypto?q=${encodeURIComponent(searchQuery)}`);
         const data = await response.json();
 
-        if (data.success && data.stocks) {
-          setSearchResults(data.stocks);
-          setIsDropdownOpen(data.stocks.length > 0);
+        if (data.success && data.cryptos) {
+          setSearchResults(data.cryptos);
+          setIsDropdownOpen(data.cryptos.length > 0);
         }
       } catch (error) {
-        console.error('Error searching stocks:', error);
+        console.error('Error searching cryptocurrencies:', error);
         setSearchResults([]);
       } finally {
         setIsLoading(false);
@@ -61,22 +61,22 @@ const StockSearchInput = ({ onStockSelected, initialValue = '' }) => {
     setSearchQuery(e.target.value);
   };
 
-  const handleStockSelect = (stock) => {
-    setSearchQuery(stock.symbol);
+  const handleCryptoSelect = (crypto) => {
+    setSearchQuery(crypto.symbol);
     setIsDropdownOpen(false);
-    onStockSelected(stock);
+    onCryptoSelected(crypto);
   };
 
   return (
     <div className="stock-search-container">
-      <label className="stock-search-label">Search for a stock</label>
+      <label className="stock-search-label">Search for a cryptocurrency</label>
       <input
         ref={inputRef}
         type="text"
         className="stock-search-input"
         value={searchQuery}
         onChange={handleInputChange}
-        placeholder="Enter stock symbol or company name..."
+        placeholder="Enter crypto name or symbol (e.g., Bitcoin, BTC, ETH)..."
         autoComplete="off"
       />
 
@@ -86,15 +86,15 @@ const StockSearchInput = ({ onStockSelected, initialValue = '' }) => {
 
       {isDropdownOpen && searchResults.length > 0 && (
         <div ref={dropdownRef} className="stock-search-dropdown">
-          {searchResults.map((stock) => (
+          {searchResults.map((crypto) => (
             <div
-              key={stock.symbol}
+              key={crypto.symbol}
               className="stock-search-item"
-              onClick={() => handleStockSelect(stock)}
+              onClick={() => handleCryptoSelect(crypto)}
             >
-              <div className="stock-symbol">{stock.symbol}</div>
-              <div className="stock-name">{stock.name}</div>
-              <div className="stock-region">{stock.region}</div>
+              <div className="stock-symbol">{crypto.symbol}</div>
+              <div className="stock-name">{crypto.name}</div>
+              <div className="stock-region">{crypto.exchange}</div>
             </div>
           ))}
         </div>
@@ -102,11 +102,11 @@ const StockSearchInput = ({ onStockSelected, initialValue = '' }) => {
 
       {isDropdownOpen && searchQuery && searchResults.length === 0 && !isLoading && (
         <div ref={dropdownRef} className="stock-search-dropdown">
-          <div className="stock-search-empty">No stocks found</div>
+          <div className="stock-search-empty">No cryptocurrencies found</div>
         </div>
       )}
     </div>
   );
 };
 
-export default StockSearchInput;
+export default CryptoSearchInput;

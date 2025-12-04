@@ -4,8 +4,13 @@ import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
 import investmentService from '../../services/investmentService';
+import zakatService from '../../services/zakatService';
 import StockSearchInput from './StockSearchInput';
+import CryptoSearchInput from './CryptoSearchInput';
 import MapSelector from './MapSelector';
+import FloatingActionButton from '../Shared/FloatingActionButton';
+import ProfessionalInvestmentChart from './ProfessionalInvestmentChart';
+import ZakatResultsModal from './ZakatResultsModal';
 
 const categoryOptions = [
   { value: 'Stock', label: 'Stocks' },
@@ -39,11 +44,14 @@ const defaultUnitLabels = {
 
 const getDefaultUnitLabel = (category) => defaultUnitLabels[category] || 'units';
 
+// USD to SAR conversion rate (fixed rate: 1 USD = 3.75 SAR)
+const USD_TO_SAR = 3.75;
+
 const formatCurrency = (value = 0, { fractionDigits = 0 } = {}) => {
   const safeValue = Number.isFinite(value) ? value : 0;
-  return safeValue.toLocaleString('en-US', {
+  return safeValue.toLocaleString('en-SA', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'SAR',
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   });
@@ -130,9 +138,6 @@ const initialFormState = {
   latitude: null,
   longitude: null,
   propertyType: 'Villa',
-  yearBuilt: '',
-  bedrooms: '',
-  bathrooms: '',
 };
 
 const getCurrentValue = (investment) => {
@@ -334,11 +339,10 @@ const InvestmentChart = ({
               <button
                 type="button"
                 onClick={() => onFilterCategory(value)}
-                className={`text-xs px-2 py-1 rounded-full border transition ${
-                  isFocused
-                    ? 'bg-teal-500/20 text-teal-200 border-teal-400/60'
-                    : 'text-gray-400 border-slate-600 hover:text-white hover:border-teal-400/50'
-                }`}
+                className={`text-xs px-2 py-1 rounded-full border transition ${isFocused
+                  ? 'bg-teal-500/20 text-teal-200 border-teal-400/60'
+                  : 'text-gray-400 border-slate-600 hover:text-white hover:border-teal-400/50'
+                  }`}
               >
                 {isFocused ? 'Focused' : 'Focus'}
               </button>
@@ -385,9 +389,9 @@ const InvestmentTrendChart = ({
   const allValues = selectedSeries
     ? selectedSeries.data.map((point) => point.value)
     : [
-        ...totalSeries.map((point) => point.value),
-        ...categorySeries.flatMap((series) => series.data.map((point) => point.value)),
-      ];
+      ...totalSeries.map((point) => point.value),
+      ...categorySeries.flatMap((series) => series.data.map((point) => point.value)),
+    ];
   const maxValue = Math.max(...allValues, 1);
   const minValue = Math.min(...allValues);
   const range = maxValue - minValue || maxValue * 0.05 || 1;
@@ -460,10 +464,10 @@ const InvestmentTrendChart = ({
                 fontSize="11"
                 textAnchor="end"
               >
-            {formatCurrency(line.value, { fractionDigits: 0 })}
-          </text>
-        </g>
-      ))}
+                {formatCurrency(line.value, { fractionDigits: 0 })}
+              </text>
+            </g>
+          ))}
 
           <line
             x1={paddingX}
@@ -540,24 +544,24 @@ const InvestmentTrendChart = ({
                   <path
                     d={series.linePath}
                     fill="none"
-                  stroke={series.color}
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="round"
-                  opacity={opacity}
-                />
-                {series.coordinates.map((point, idx) => (
-                  <circle
-                    key={`${series.key}-${point.label}-${idx}`}
-                    cx={point.x}
-                    cy={point.y}
-                    r={isFocused ? 3 : 1.8}
-                    fill={series.color}
+                    stroke={series.color}
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
                     opacity={opacity}
                   />
-                ))}
-              </g>
-            );
-          })}
+                  {series.coordinates.map((point, idx) => (
+                    <circle
+                      key={`${series.key}-${point.label}-${idx}`}
+                      cx={point.x}
+                      cy={point.y}
+                      r={isFocused ? 3 : 1.8}
+                      fill={series.color}
+                      opacity={opacity}
+                    />
+                  ))}
+                </g>
+              );
+            })}
 
           {/* X-axis baseline and labels aligned to visible series */}
           <line
@@ -599,11 +603,10 @@ const InvestmentTrendChart = ({
               key={series.key}
               type="button"
               onClick={() => onFilterCategory(series.key)}
-              className={`w-full px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-2 justify-center transition ${
-                isActive
-                  ? 'bg-teal-500/10 text-teal-200 border-teal-400/60'
-                  : 'text-gray-400 border-slate-700/70 hover:text-white hover:border-teal-500/40'
-              }`}
+              className={`w-full px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-2 justify-center transition ${isActive
+                ? 'bg-teal-500/10 text-teal-200 border-teal-400/60'
+                : 'text-gray-400 border-slate-700/70 hover:text-white hover:border-teal-500/40'
+                }`}
             >
               <span
                 className="inline-block w-2 h-2 rounded-full"
@@ -626,6 +629,8 @@ function InvestmentsPage() {
   const [errors, setErrors] = useState({});
   const [showAddModal, setShowAddModal] = useState(false);
   const [showZakahModal, setShowZakahModal] = useState(false);
+  const [zakatResults, setZakatResults] = useState(null);
+  const [loadingZakat, setLoadingZakat] = useState(false);
   const [categoryModal, setCategoryModal] = useState({ open: false, category: null });
   const [filteredCategory, setFilteredCategory] = useState(null);
   const [cities, setCities] = useState([]);
@@ -679,7 +684,7 @@ function InvestmentsPage() {
     const fetchCities = async () => {
       try {
         setLoadingCities(true);
-        const API_BASE_URL = 'http://localhost:5001/api';
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
         const response = await fetch(`${API_BASE_URL}/cities`);
         const data = await response.json();
 
@@ -812,6 +817,26 @@ function InvestmentsPage() {
     setZakahSelections(categoryOptions.reduce((acc, { value }) => ({ ...acc, [value]: true }), {}));
   };
 
+  const handleCalculateZakat = async () => {
+    try {
+      setLoadingZakat(true);
+      const result = await zakatService.calculateZakat();
+
+      if (result.success) {
+        setZakatResults(result);
+        // Close the old simple modal and open the detailed results modal
+        setShowZakahModal(false);
+      } else {
+        alert(result.error || 'Failed to calculate Zakat');
+      }
+    } catch (error) {
+      console.error('Error calculating Zakat:', error);
+      alert(error.message || 'Failed to calculate Zakat. Please try again.');
+    } finally {
+      setLoadingZakat(false);
+    }
+  };
+
   const zakahBase = useMemo(
     () =>
       categoryOptions.reduce(
@@ -843,9 +868,6 @@ function InvestmentsPage() {
       currentPrice: '',
       location: '',
       propertyType: 'Villa',
-      yearBuilt: '',
-      bedrooms: '',
-      bathrooms: '',
     }));
     setErrors({});
     setSelectedStock(null);
@@ -858,7 +880,7 @@ function InvestmentsPage() {
       name: `${stock.name} (${stock.symbol})`,
     }));
 
-    const API_BASE_URL = 'http://localhost:5001/api';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
     // Fetch current stock quote
     try {
@@ -916,6 +938,71 @@ function InvestmentsPage() {
     }
   };
 
+  const handleCryptoSelected = async (crypto) => {
+    setSelectedStock(crypto); // Reuse selectedStock state for crypto as well
+    setForm((prev) => ({
+      ...prev,
+      name: `${crypto.name} (${crypto.symbol})`,
+    }));
+
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+
+    // Fetch current crypto quote
+    try {
+      setLoadingStockQuote(true);
+      const response = await fetch(`${API_BASE_URL}/crypto/quote/${crypto.symbol}`);
+      const data = await response.json();
+
+      if (data.success && data.quote) {
+        // Set current price from API
+        const price = data.quote.price.toString();
+        setForm((prev) => ({
+          ...prev,
+          currentPrice: price,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching crypto quote:', error);
+    } finally {
+      setLoadingStockQuote(false);
+    }
+
+    // If purchase date is already set, fetch historical price
+    if (form.purchaseDate && isValidDate(form.purchaseDate)) {
+      try {
+        setLoadingHistoricalPrice(true);
+        const response = await fetch(
+          `${API_BASE_URL}/crypto/historical/${crypto.symbol}/${form.purchaseDate}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.historical) {
+          // Use adjusted close
+          setForm((prev) => ({
+            ...prev,
+            buyPrice: data.historical.adjustedClose.toString(),
+          }));
+          setErrors((prev) => ({ ...prev, buyPrice: '', purchaseDate: '' }));
+        } else {
+          setErrors((prev) => ({
+            ...prev,
+            purchaseDate: data.error || 'No historical data available for this date',
+          }));
+          setForm((prev) => ({ ...prev, buyPrice: '' }));
+        }
+      } catch (error) {
+        console.error('Error fetching historical crypto price:', error);
+        setErrors((prev) => ({
+          ...prev,
+          purchaseDate: 'Could not fetch historical price for this date',
+        }));
+        setForm((prev) => ({ ...prev, buyPrice: '' }));
+      } finally {
+        setLoadingHistoricalPrice(false);
+      }
+    }
+  };
+
   const handlePurchaseDateChange = async (event) => {
     const purchaseDate = event.target.value;
     setForm((prev) => ({ ...prev, purchaseDate }));
@@ -924,7 +1011,7 @@ function InvestmentsPage() {
       setErrors((prev) => ({ ...prev, purchaseDate: '' }));
     }
 
-    const API_BASE_URL = 'http://localhost:5001/api';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
     // If stock is selected and date is valid, fetch historical price
     if (selectedStock && purchaseDate && form.category === 'Stock' && isValidDate(purchaseDate)) {
@@ -953,6 +1040,43 @@ function InvestmentsPage() {
         }
       } catch (error) {
         console.error('Error fetching historical price:', error);
+        setErrors((prev) => ({
+          ...prev,
+          purchaseDate: 'Could not fetch historical price for this date',
+        }));
+        setForm((prev) => ({ ...prev, buyPrice: '' }));
+      } finally {
+        setLoadingHistoricalPrice(false);
+      }
+    }
+
+    // If crypto is selected and date is valid, fetch historical price
+    if (selectedStock && purchaseDate && form.category === 'Crypto' && isValidDate(purchaseDate)) {
+      try {
+        setLoadingHistoricalPrice(true);
+        const response = await fetch(
+          `${API_BASE_URL}/crypto/historical/${selectedStock.symbol}/${purchaseDate}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.historical) {
+          // Use adjusted close
+          setForm((prev) => ({
+            ...prev,
+            buyPrice: data.historical.adjustedClose.toString(),
+          }));
+          // Clear any previous errors
+          setErrors((prev) => ({ ...prev, buyPrice: '', purchaseDate: '' }));
+        } else {
+          // Handle case where no data is available for this date
+          setErrors((prev) => ({
+            ...prev,
+            purchaseDate: data.error || 'No historical data available for this date',
+          }));
+          setForm((prev) => ({ ...prev, buyPrice: '' }));
+        }
+      } catch (error) {
+        console.error('Error fetching historical crypto price:', error);
         setErrors((prev) => ({
           ...prev,
           purchaseDate: 'Could not fetch historical price for this date',
@@ -1023,9 +1147,6 @@ function InvestmentsPage() {
     const areaValue = parseFloat(form.areaSqm);
     const buyPriceValue = parseFloat(form.buyPrice);
     const currentPriceValue = parseFloat(form.currentPrice);
-    const yearBuiltValue = parseInt(form.yearBuilt);
-    const bedroomsValue = parseInt(form.bedrooms);
-    const bathroomsValue = parseInt(form.bathrooms);
 
     if (isRealEstate) {
       if (!form.latitude || !form.longitude) {
@@ -1037,15 +1158,6 @@ function InvestmentsPage() {
       if (!form.propertyType) {
         validationErrors.propertyType = 'Property type is required';
       }
-      // Bedrooms and bathrooms are required for Apartments
-      if (form.propertyType === 'Apartment') {
-        if (!bedroomsValue || bedroomsValue <= 0) {
-          validationErrors.bedrooms = 'Number of bedrooms is required for apartments';
-        }
-        if (!bathroomsValue || bathroomsValue <= 0) {
-          validationErrors.bathrooms = 'Number of bathrooms is required for apartments';
-        }
-      }
       // Purchase price is optional for Real Estate
     } else {
       if (!amountOwnedValue || amountOwnedValue <= 0) {
@@ -1054,6 +1166,8 @@ function InvestmentsPage() {
       if (!buyPriceValue || buyPriceValue <= 0) {
         if (form.category === 'Stock') {
           validationErrors.purchaseDate = 'Select a valid purchase date to fetch historical price';
+        } else if (form.category === 'Crypto') {
+          validationErrors.purchaseDate = 'Select a purchase date to fetch crypto prices';
         } else if (form.category === 'Gold') {
           validationErrors.purchaseDate = 'Select a purchase date to fetch gold prices';
         } else {
@@ -1066,6 +1180,8 @@ function InvestmentsPage() {
             validationErrors.purchaseDate || 'Select a purchase date to fetch gold prices';
         } else if (form.category === 'Stock') {
           validationErrors.currentPrice = 'Search for a stock to fetch current price';
+        } else if (form.category === 'Crypto') {
+          validationErrors.currentPrice = 'Search for a crypto to fetch current price';
         } else {
           validationErrors.currentPrice = "Enter today's price";
         }
@@ -1088,7 +1204,7 @@ function InvestmentsPage() {
     if (isRealEstate) {
       // Call Groq API via backend to get valuation
       try {
-        const API_BASE_URL = 'http://localhost:5001/api';
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
         const token = localStorage.getItem('token');
 
         const estimateResponse = await fetch(`${API_BASE_URL}/real-estate/evaluate`, {
@@ -1102,9 +1218,6 @@ function InvestmentsPage() {
             longitude: form.longitude,
             propertyType: form.propertyType,
             area: areaValue,
-            bedrooms: bedroomsValue || null,
-            bathrooms: bathroomsValue || null,
-            yearBuilt: yearBuiltValue || null,
           }),
         });
 
@@ -1120,9 +1233,6 @@ function InvestmentsPage() {
         investmentData.longitude = form.longitude;
         investmentData.areaSqm = areaValue;
         investmentData.propertyType = form.propertyType;
-        investmentData.yearBuilt = yearBuiltValue || null;
-        investmentData.bedrooms = bedroomsValue || null;
-        investmentData.bathrooms = bathroomsValue || null;
         investmentData.amountOwned = 1; // Backend requires this field
 
         // Store user's purchase price if provided; otherwise leave null
@@ -1177,6 +1287,27 @@ function InvestmentsPage() {
     }
   };
 
+  // Show full-page spinner while initial data is loading
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-20">
+        <Sidebar />
+        <div className="flex-1 ml-64 px-5 py-6">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-teal-500/20 rounded-full"></div>
+                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-teal-500 rounded-full animate-spin"></div>
+                <div className="absolute inset-2 w-12 h-12 bg-teal-500/10 rounded-full animate-pulse"></div>
+              </div>
+              <p className="text-gray-400 text-sm animate-pulse">Loading investments...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-20">
@@ -1184,273 +1315,283 @@ function InvestmentsPage() {
 
         <div className="flex-1 ml-64 px-5 py-6">
           <div className="w-full max-w-5xl space-y-5">
-          <header>
-            <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">
-              Portfolio
-            </p>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white">
-                  Investment Overview
-                </h1>
+            <header>
+              <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">
+                Portfolio
+              </p>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-white">
+                    Investment Overview
+                  </h1>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-widest text-gray-400">
+                    Portfolio Value
+                  </p>
+                  <p className="text-2xl font-semibold text-teal-300">
+                    {formatCurrency(totalValue)}
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-widest text-gray-400">
-                  Portfolio Value
-                </p>
-                <p className="text-2xl font-semibold text-teal-300">
-                  {formatCurrency(totalValue)}
-                </p>
-              </div>
-            </div>
-          </header>
+            </header>
 
 
-      <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm uppercase tracking-widest text-gray-400">
-                  Performance
-                </p>
-                <h2 className="text-xl font-semibold text-white">Portfolio over time</h2>
-                <p className="text-sm text-gray-400">
-                  Visualize your investment growth across any period.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {timeRangeOptions.map((option) => {
-                  const isActive = option.key === selectedRange;
-                  return (
-                    <button
-                      key={option.key}
-                      type="button"
-                      onClick={() => setSelectedRange(option.key)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
-                        isActive
+            <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm uppercase tracking-widest text-gray-400">
+                    Performance
+                  </p>
+                  <h2 className="text-xl font-semibold text-white">Portfolio over time</h2>
+                  <p className="text-sm text-gray-400">
+                    Visualize your investment growth across any period.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {timeRangeOptions.map((option) => {
+                    const isActive = option.key === selectedRange;
+                    return (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => setSelectedRange(option.key)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${isActive
                           ? 'bg-teal-500/20 text-teal-300 border-teal-400/40 shadow-[0_0_25px_rgba(94,234,212,0.3)]'
                           : 'text-gray-400 border-slate-700/70 hover:text-white hover:border-teal-500/40'
-                      }`}
+                          }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-3 space-y-3">
+                <ProfessionalInvestmentChart
+                  investments={investments}
+                  selectedRange={selectedRange}
+                  filteredCategory={filteredCategory}
+                  onFilterCategory={handleFilterCategory}
+                />
+                <div className="flex flex-wrap items-center gap-4 text-sm">
+                  <div>
+                    <p className="text-xs uppercase tracking-widest text-gray-400">Latest value</p>
+                    <p className="text-2xl font-semibold text-white mt-1">
+                      {formatCurrency(trendStats.latest)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-widest text-gray-400">Change</p>
+                    <p
+                      className={`text-lg font-semibold ${trendStats.changeAbs >= 0 ? 'text-teal-300' : 'text-rose-400'
+                        }`}
                     >
-                      {option.label}
-                    </button>
-                  );
-                })}
+                      {formatSignedCurrency(trendStats.changeAbs)}{' '}
+                      <span className="text-sm text-gray-400">
+                        ({trendStats.changePct >= 0 ? '+' : ''}
+                        {trendStats.changePct.toFixed(2)}%)
+                      </span>
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500 ml-auto">
+                    Viewing · <span className="text-teal-200">{filteredCategoryLabel}</span>
+                  </p>
+                </div>
               </div>
-            </div>
+            </section>
 
-            <div className="mt-3 space-y-3">
-              <InvestmentTrendChart
-                labels={baseTrendData.map((point) => point.label)}
-                totalSeries={baseTrendData}
-                categorySeries={categorySeries}
-                filteredCategory={filteredCategory}
+            <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
+              <div className="flex items-center justify-between mb-2.5">
+                <div>
+                  <p className="text-sm uppercase tracking-widest text-gray-400">Investment Allocation</p>
+                </div>
+              </div>
+              <InvestmentChart
+                distribution={distribution}
+                total={totalValue}
+                onSelectCategory={handleOpenCategoryModal}
                 onFilterCategory={handleFilterCategory}
+                filteredCategory={filteredCategory}
               />
-              <div className="flex flex-wrap items-center gap-4 text-sm">
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-gray-400">Latest value</p>
-                  <p className="text-2xl font-semibold text-white mt-1">
-                    {formatCurrency(trendStats.latest)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-gray-400">Change</p>
-                  <p
-                    className={`text-lg font-semibold ${
-                      trendStats.changeAbs >= 0 ? 'text-teal-300' : 'text-rose-400'
-                    }`}
-                  >
-                    {formatSignedCurrency(trendStats.changeAbs)}{' '}
-                    <span className="text-sm text-gray-400">
-                      ({trendStats.changePct >= 0 ? '+' : ''}
-                      {trendStats.changePct.toFixed(2)}%)
-                    </span>
-                  </p>
-                </div>
-                <p className="text-xs text-gray-500 ml-auto">
-                  Viewing · <span className="text-teal-200">{filteredCategoryLabel}</span>
-                </p>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
-            <div className="flex items-center justify-between mb-2.5">
-              <div>
-                <p className="text-sm uppercase tracking-widest text-gray-400">Investment Allocation</p>
+            <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm uppercase tracking-widest text-gray-400">Zakah Calculator</p>
+                  <p className="text-xs text-gray-400">Calculate Zakat based on Saudi Arabian regulations (2.5% rate, Nisab threshold)</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="px-4"
+                  onClick={handleCalculateZakat}
+                  disabled={loadingZakat || investments.length === 0}
+                >
+                  {loadingZakat ? 'Calculating...' : 'Calculate Zakah'}
+                </Button>
               </div>
-            </div>
-            <InvestmentChart
-              distribution={distribution}
-              total={totalValue}
-              onSelectCategory={handleOpenCategoryModal}
-              onFilterCategory={handleFilterCategory}
-              filteredCategory={filteredCategory}
-            />
-          </section>
-
-          <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm uppercase tracking-widest text-gray-400">Zakah Calculator</p>
-                <p className="text-xs text-gray-400">Open to include/exclude categories and view 2.5% due.</p>
-              </div>
-              <Button
-                type="button"
-                variant="primary"
-                className="px-4"
-                onClick={() => setShowZakahModal(true)}
-              >
-                Calculate Zakah
-              </Button>
-            </div>
-          </section>
+            </section>
 
           </div>
         </div>
       </div>
-      <div className="fixed bottom-8 right-8 z-50">
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          className="w-14 h-14 bg-yellow-500 hover:bg-yellow-400 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
-        >
-          <svg className="w-6 h-6 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-          </svg>
-          <span className="sr-only">Add investment</span>
-        </button>
-      </div>
+      <FloatingActionButton onClick={() => setShowAddModal(true)} />
 
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         title="Add investment"
-      subtitle="Track a new asset across stocks, property, crypto, or gold."
-      maxWidth="max-w-3xl"
-    >
-      <form className="space-y-4" onSubmit={handleAddInvestment}>
-        {form.category === 'Stock' ? (
-          <div className="space-y-4">
-            <StockSearchInput
-              onStockSelected={handleStockSelected}
-              initialValue={selectedStock ? selectedStock.symbol : ''}
-            />
-            {selectedStock && (
-              <InputField
-                label="Investment name"
-                name="name"
-                value={form.name}
-                onChange={handleFormChange('name')}
-                placeholder="e.g., Tech Growth ETF"
-                error={errors.name}
+        subtitle="Track a new asset across stocks, property, crypto, or gold."
+        maxWidth="max-w-3xl"
+      >
+        <form className="space-y-4" onSubmit={handleAddInvestment}>
+          {form.category === 'Stock' ? (
+            <div className="space-y-4">
+              <StockSearchInput
+                onStockSelected={handleStockSelected}
+                initialValue={selectedStock ? selectedStock.symbol : ''}
               />
-            )}
-            {loadingStockQuote && (
-              <p className="text-sm text-teal-300">Fetching current stock price...</p>
-            )}
-          </div>
-        ) : (
-          <InputField
-            label="Investment name"
-            name="name"
-            value={form.name}
-            onChange={handleFormChange('name')}
-            placeholder="e.g., Tech Growth ETF"
-            error={errors.name}
-          />
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">
-            Type
-          </label>
-          <select
-            value={form.category}
-            onChange={handleCategoryChange}
-            className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-          >
-            {categoryOptions.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <InputField
-          label="Purchase date"
-          type="date"
-          name="purchaseDate"
-          value={form.purchaseDate}
-          onChange={
-            form.category === 'Stock' || form.category === 'Gold'
-              ? handlePurchaseDateChange
-              : handleFormChange('purchaseDate')
-          }
-          placeholder="Select purchase date"
-          error={errors.purchaseDate}
-        />
-        {loadingHistoricalPrice && (
-          <p className="text-sm text-teal-300">
-            {form.category === 'Gold'
-              ? `Fetching gold prices for ${form.purchaseDate}...`
-              : `Fetching historical stock price for ${form.purchaseDate}...`}
-          </p>
-        )}
-        {form.category === 'Gold' && (
-          <p className="text-xs text-gray-400">
-            Gold prices are auto-fetched after you pick a purchase date.
-          </p>
-        )}
-
-        {isRealEstateSelected ? (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
-                Select Property Location on Map <span className="text-red-400">*</span>
-              </label>
-              <MapSelector
-                onLocationSelect={(position) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    latitude: position.lat,
-                    longitude: position.lng,
-                  }));
-                  if (errors.location) {
-                    setErrors((prev) => ({ ...prev, location: '' }));
-                  }
-                }}
-                initialPosition={
-                  form.latitude && form.longitude
-                    ? { lat: form.latitude, lng: form.longitude }
-                    : null
-                }
-              />
-              {errors.location && (
-                <p className="text-sm text-red-400 mt-1">{errors.location}</p>
+              {selectedStock && (
+                <InputField
+                  label="Investment name"
+                  name="name"
+                  value={form.name}
+                  onChange={handleFormChange('name')}
+                  placeholder="e.g., Tech Growth ETF"
+                  error={errors.name}
+                />
+              )}
+              {loadingStockQuote && (
+                <p className="text-sm text-teal-300">Fetching current stock price...</p>
               )}
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
-                Property Type
-              </label>
-              <select
-                value={form.propertyType}
-                onChange={handleFormChange('propertyType')}
-                className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-              >
-                <option value="Villa">Villa</option>
-                <option value="Apartment">Apartment</option>
-                <option value="Townhouse">Townhouse</option>
-                <option value="Commercial">Commercial</option>
-                <option value="Land">Land</option>
-                <option value="Other">Other</option>
-              </select>
+          ) : form.category === 'Crypto' ? (
+            <div className="space-y-4">
+              <CryptoSearchInput
+                onCryptoSelected={handleCryptoSelected}
+                initialValue={selectedStock ? selectedStock.symbol : ''}
+              />
+              {selectedStock && (
+                <InputField
+                  label="Investment name"
+                  name="name"
+                  value={form.name}
+                  onChange={handleFormChange('name')}
+                  placeholder="e.g., Bitcoin Portfolio"
+                  error={errors.name}
+                />
+              )}
+              {loadingStockQuote && (
+                <p className="text-sm text-teal-300">Fetching current crypto price...</p>
+              )}
             </div>
+          ) : (
+            <InputField
+              label="Investment name"
+              name="name"
+              value={form.name}
+              onChange={handleFormChange('name')}
+              placeholder="e.g., Tech Growth ETF"
+              error={errors.name}
+            />
+          )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">
+              Type
+            </label>
+            <select
+              value={form.category}
+              onChange={handleCategoryChange}
+              className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+            >
+              {categoryOptions.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <InputField
+            label="Purchase date"
+            type="date"
+            name="purchaseDate"
+            value={form.purchaseDate}
+            onChange={
+              form.category === 'Stock' || form.category === 'Gold' || form.category === 'Crypto'
+                ? handlePurchaseDateChange
+                : handleFormChange('purchaseDate')
+            }
+            placeholder="Select purchase date"
+            error={errors.purchaseDate}
+          />
+          {loadingHistoricalPrice && (
+            <p className="text-sm text-teal-300">
+              {form.category === 'Gold'
+                ? `Fetching gold prices for ${form.purchaseDate}...`
+                : form.category === 'Crypto'
+                  ? `Fetching historical crypto price for ${form.purchaseDate}...`
+                  : `Fetching historical stock price for ${form.purchaseDate}...`}
+            </p>
+          )}
+          {form.category === 'Gold' && (
+            <p className="text-xs text-gray-400">
+              Gold prices are auto-fetched after you pick a purchase date.
+            </p>
+          )}
+          {form.category === 'Crypto' && (
+            <p className="text-xs text-gray-400">
+              Crypto prices are auto-fetched after you pick a purchase date.
+            </p>
+          )}
+
+          {isRealEstateSelected ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Select Property Location on Map <span className="text-red-400">*</span>
+                </label>
+                <MapSelector
+                  onLocationSelect={(position) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      latitude: position.lat,
+                      longitude: position.lng,
+                    }));
+                    if (errors.location) {
+                      setErrors((prev) => ({ ...prev, location: '' }));
+                    }
+                  }}
+                  initialPosition={
+                    form.latitude && form.longitude
+                      ? { lat: form.latitude, lng: form.longitude }
+                      : null
+                  }
+                />
+                {errors.location && (
+                  <p className="text-sm text-red-400 mt-1">{errors.location}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  Property Type
+                </label>
+                <select
+                  value={form.propertyType}
+                  onChange={handleFormChange('propertyType')}
+                  className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="Villa">Villa</option>
+                  <option value="Apartment">Apartment</option>
+                  <option value="Land">Land</option>
+                </select>
+              </div>
+
               <InputField
                 label="Area (m²)"
                 type="number"
@@ -1460,114 +1601,100 @@ function InvestmentsPage() {
                 placeholder="e.g., 320"
                 error={errors.areaSqm}
               />
-              <InputField
-                label="Year Built"
-                type="number"
-                name="yearBuilt"
-                value={form.yearBuilt}
-                onChange={handleFormChange('yearBuilt', true)}
-                placeholder="e.g., 2015"
-              />
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InputField
-                label="Bedrooms"
+                label="Purchase price (optional)"
                 type="number"
-                name="bedrooms"
-                value={form.bedrooms}
-                onChange={handleFormChange('bedrooms', true)}
-                placeholder="e.g., 4"
+                name="buyPrice"
+                value={form.buyPrice}
+                onChange={handleFormChange('buyPrice', true)}
+                placeholder="e.g., 720000 - Leave blank to use estimated value"
+                error={errors.buyPrice}
               />
+            </>
+          ) : (
+            <>
               <InputField
-                label="Bathrooms"
+                label={`Amount (${selectedUnitLabel})`}
                 type="number"
-                name="bathrooms"
-                value={form.bathrooms}
-                onChange={handleFormChange('bathrooms', true)}
-                placeholder="e.g., 3"
+                name="amountOwned"
+                value={form.amountOwned}
+                onChange={handleFormChange('amountOwned', true)}
+                placeholder={`Number of ${selectedUnitLabel}`}
+                error={errors.amountOwned}
               />
-            </div>
 
-            <InputField
-              label="Purchase price (optional)"
-              type="number"
-              name="buyPrice"
-              value={form.buyPrice}
-              onChange={handleFormChange('buyPrice', true)}
-              placeholder="e.g., 720000 - Leave blank to use estimated value"
-              error={errors.buyPrice}
-            />
-          </>
-        ) : (
-          <>
-            <InputField
-              label={`Amount (${selectedUnitLabel})`}
-              type="number"
-              name="amountOwned"
-              value={form.amountOwned}
-              onChange={handleFormChange('amountOwned', true)}
-              placeholder={`Number of ${selectedUnitLabel}`}
-              error={errors.amountOwned}
-            />
-
-            {form.category === 'Stock' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">
-                  Purchase price / unit (from API)
-                </label>
-                <div className="w-full px-3 py-2 bg-slate-700/30 border border-slate-600 rounded-md text-white">
-                  {form.buyPrice ? `$${parseFloat(form.buyPrice).toFixed(2)}` : 'Select purchase date to fetch price'}
+              {form.category === 'Stock' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                    Purchase price / unit (from API)
+                  </label>
+                  <div className="w-full px-3 py-2 bg-slate-700/30 border border-slate-600 rounded-md text-white">
+                    {form.buyPrice ? `$${parseFloat(form.buyPrice).toFixed(2)}` : 'Select purchase date to fetch price'}
+                  </div>
+                  {form.buyPrice && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Historical price automatically fetched from Yahoo Finance (adjusted for splits)
+                    </p>
+                  )}
                 </div>
-                {form.buyPrice && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Historical price automatically fetched from Yahoo Finance (adjusted for splits)
-                  </p>
-                )}
-              </div>
-            ) : form.category === 'Gold' ? null : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InputField
-                  label="Purchase price / unit"
-                  type="number"
-                  name="buyPrice"
-                  value={form.buyPrice}
-                  onChange={handleFormChange('buyPrice', true)}
-                  placeholder="e.g., 420"
-                  error={errors.buyPrice}
-                />
-                <InputField
-                  label="Today's price / unit"
-                  type="number"
-                  name="currentPrice"
-                  value={form.currentPrice}
-                  onChange={handleFormChange('currentPrice', true)}
-                  placeholder="e.g., 465"
-                  error={errors.currentPrice}
-                />
-              </div>
-            )}
-          </>
-        )}
+              ) : form.category === 'Crypto' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                    Purchase price / unit (from API)
+                  </label>
+                  <div className="w-full px-3 py-2 bg-slate-700/30 border border-slate-600 rounded-md text-white">
+                    {form.buyPrice ? `$${parseFloat(form.buyPrice).toFixed(2)}` : 'Select purchase date to fetch price'}
+                  </div>
+                  {form.buyPrice && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Historical price automatically fetched from Yahoo Finance
+                    </p>
+                  )}
+                </div>
+              ) : form.category === 'Gold' ? null : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InputField
+                    label="Purchase price / unit"
+                    type="number"
+                    name="buyPrice"
+                    value={form.buyPrice}
+                    onChange={handleFormChange('buyPrice', true)}
+                    placeholder="e.g., 420"
+                    error={errors.buyPrice}
+                  />
+                  <InputField
+                    label="Today's price / unit"
+                    type="number"
+                    name="currentPrice"
+                    value={form.currentPrice}
+                    onChange={handleFormChange('currentPrice', true)}
+                    placeholder="e.g., 465"
+                    error={errors.currentPrice}
+                  />
+                </div>
+              )}
+            </>
+          )}
 
-        {errors.general && (
-          <p className="text-sm text-red-400">{errors.general}</p>
-        )}
+          {errors.general && (
+            <p className="text-sm text-red-400">{errors.general}</p>
+          )}
 
-        <div className="flex justify-end gap-3 pt-4">
-          <Button
-            type="button"
-            variant="secondary"
-            className="px-6"
-            onClick={() => setShowAddModal(false)}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" className="px-6">
-            Save investment
-          </Button>
-        </div>
-      </form>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              className="px-6"
+              onClick={() => setShowAddModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" className="px-6">
+              Save investment
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       <Modal
@@ -1640,106 +1767,110 @@ function InvestmentsPage() {
         isOpen={categoryModal.open}
         onClose={handleCloseCategoryModal}
         title={`${activeCategoryLabel} holdings`}
-      subtitle="Detailed breakdown of every asset inside this category."
-      maxWidth="max-w-4xl"
-    >
-      {categoryInvestments.length ? (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="rounded-lg border border-slate-700/60 p-4 bg-slate-900/40">
-              <p className="text-xs uppercase tracking-widest text-gray-400">Current value</p>
-              <p className="text-lg font-semibold text-white mt-1">
-                {formatCurrency(categoryTotals.current)}
-              </p>
-            </div>
-            <div className="rounded-lg border border-slate-700/60 p-4 bg-slate-900/40">
-              <p className="text-xs uppercase tracking-widest text-gray-400">Invested</p>
-              <p className="text-lg font-semibold text-white mt-1">
-                {formatCurrency(categoryTotals.purchase)}
-              </p>
-            </div>
-            <div className="rounded-lg border border-slate-700/60 p-4 bg-slate-900/40">
-              <p className="text-xs uppercase tracking-widest text-gray-400">Performance</p>
-              <p
-                className={`text-lg font-semibold ${
-                  categoryTotals.diff >= 0 ? 'text-teal-300' : 'text-rose-400'
-                } mt-1`}
-              >
-                {formatSignedCurrency(categoryTotals.diff)} ({categoryTotals.pct >= 0 ? '+' : ''}
-                {categoryTotals.pct.toFixed(2)}%)
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3 max-h-[50vh] overflow-auto pr-1">
-            {categoryInvestments.map((investment) => {
-              const { current, diff, pct } = getPerformanceDelta(investment);
-              const isRealEstate = investment.category === 'Real Estate';
-              const pricePerSqm = getPricePerSquareMeter(investment);
-              const unitLabel = investment.unitLabel || getDefaultUnitLabel(investment.category);
-              const amountOwnedValue =
-                typeof investment.amountOwned === 'number' && !Number.isNaN(investment.amountOwned)
-                  ? formatHoldingsAmount(investment.amountOwned)
-                  : null;
-
-              return (
-                <div
-                  key={investment.id}
-                  className="rounded-lg border border-slate-700/70 bg-slate-900/30 p-4 flex flex-col gap-2"
+        subtitle="Detailed breakdown of every asset inside this category."
+        maxWidth="max-w-4xl"
+      >
+        {categoryInvestments.length ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="rounded-lg border border-slate-700/60 p-4 bg-slate-900/40">
+                <p className="text-xs uppercase tracking-widest text-gray-400">Current value</p>
+                <p className="text-lg font-semibold text-white mt-1">
+                  {formatCurrency(categoryTotals.current)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-700/60 p-4 bg-slate-900/40">
+                <p className="text-xs uppercase tracking-widest text-gray-400">Invested</p>
+                <p className="text-lg font-semibold text-white mt-1">
+                  {formatCurrency(categoryTotals.purchase)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-700/60 p-4 bg-slate-900/40">
+                <p className="text-xs uppercase tracking-widest text-gray-400">Performance</p>
+                <p
+                  className={`text-lg font-semibold ${categoryTotals.diff >= 0 ? 'text-teal-300' : 'text-rose-400'
+                    } mt-1`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-white">{investment.name}</p>
-                      <p className="text-xs text-gray-400">{investment.category}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs uppercase tracking-widest text-gray-500">Value</p>
-                      <p className="text-base font-semibold text-teal-200">
-                        {formatCurrency(current)}
-                      </p>
-                      <p
-                        className={`text-xs font-semibold ${
-                          diff >= 0 ? 'text-teal-300' : 'text-rose-400'
-                        }`}
-                      >
-                        {formatSignedCurrency(diff)} ({diff >= 0 ? '+' : ''}
-                        {pct.toFixed(2)}%)
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-300">
-                    {isRealEstate ? (
-                      <>
-                        <p>Area: {investment.areaSqm ? `${formatHoldingsAmount(investment.areaSqm)} m²` : 'Not specified'}</p>
-                        <p>Purchased at: {formatCurrency(investment.buyPrice)}</p>
-                        <p>Purchased on: {formatDate(investment.purchaseDate)}</p>
-                        <p>Today: {formatCurrency(investment.currentPrice)}</p>
-                        {pricePerSqm && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {formatCurrency(pricePerSqm, { fractionDigits: 0 })} per m²
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <p>
-                          Holdings: {amountOwnedValue ?? '—'} {unitLabel}
+                  {formatSignedCurrency(categoryTotals.diff)} ({categoryTotals.pct >= 0 ? '+' : ''}
+                  {categoryTotals.pct.toFixed(2)}%)
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[50vh] overflow-auto pr-1">
+              {categoryInvestments.map((investment) => {
+                const { current, diff, pct } = getPerformanceDelta(investment);
+                const isRealEstate = investment.category === 'Real Estate';
+                const pricePerSqm = getPricePerSquareMeter(investment);
+                const unitLabel = investment.unitLabel || getDefaultUnitLabel(investment.category);
+                const amountOwnedValue =
+                  typeof investment.amountOwned === 'number' && !Number.isNaN(investment.amountOwned)
+                    ? formatHoldingsAmount(investment.amountOwned)
+                    : null;
+
+                return (
+                  <div
+                    key={investment.id}
+                    className="rounded-lg border border-slate-700/70 bg-slate-900/30 p-4 flex flex-col gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-white">{investment.name}</p>
+                        <p className="text-xs text-gray-400">{investment.category}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs uppercase tracking-widest text-gray-500">Value</p>
+                        <p className="text-base font-semibold text-teal-200">
+                          {formatCurrency(current)}
                         </p>
-                        <p>Purchased on: {formatDate(investment.purchaseDate)}</p>
-                        <p>Purchased @ {formatCurrency(investment.buyPrice, { fractionDigits: 2 })} / unit</p>
-                        <p>Today @ {formatCurrency(investment.currentPrice, { fractionDigits: 2 })} / unit</p>
-                      </>
-                    )}
+                        <p
+                          className={`text-xs font-semibold ${diff >= 0 ? 'text-teal-300' : 'text-rose-400'
+                            }`}
+                        >
+                          {formatSignedCurrency(diff)} ({diff >= 0 ? '+' : ''}
+                          {pct.toFixed(2)}%)
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-300">
+                      {isRealEstate ? (
+                        <>
+                          <p>Area: {investment.areaSqm ? `${formatHoldingsAmount(investment.areaSqm)} m²` : 'Not specified'}</p>
+                          <p>Purchased at: {formatCurrency(investment.buyPrice)}</p>
+                          <p>Purchased on: {formatDate(investment.purchaseDate)}</p>
+                          <p>Today: {formatCurrency(investment.currentPrice)}</p>
+                          {pricePerSqm && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {formatCurrency(pricePerSqm, { fractionDigits: 0 })} per m²
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <p>
+                            Holdings: {amountOwnedValue ?? '—'} {unitLabel}
+                          </p>
+                          <p>Purchased on: {formatDate(investment.purchaseDate)}</p>
+                          <p>Purchased @ {formatCurrency(investment.buyPrice, { fractionDigits: 2 })} / unit</p>
+                          <p>Today @ {formatCurrency(investment.currentPrice, { fractionDigits: 2 })} / unit</p>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        <p className="text-sm text-gray-400">No holdings recorded for this category yet.</p>
-      )}
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-gray-400">No holdings recorded for this category yet.</p>
+        )}
       </Modal>
+
+      <ZakatResultsModal
+        isOpen={!!zakatResults}
+        onClose={() => setZakatResults(null)}
+        zakatData={zakatResults}
+      />
     </>
   );
 }

@@ -6,7 +6,7 @@ const { auth } = require('../middleware/auth');
 // All routes require authentication
 router.use(auth);
 
-// GET /api/analytics/spending?range=weekly|monthly|yearly
+// GET /api/analytics/spending?range=weekly|monthly|yearly|all
 router.get('/spending', analyticsController.getSpendingAnalytics);
 
 module.exports = router;

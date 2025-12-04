@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import FinancialSidebar from '../Shared/FinancialSidebar';
 import requestService from '../../services/requestService';
 import Button from '../Shared/Button';
+import FloatingActionButton from '../Shared/FloatingActionButton';
 
 const avatarGradients = [
   'from-teal-500 to-blue-600',
@@ -45,6 +46,8 @@ function FinancialAdvisorPage() {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [activeRequests, setActiveRequests] = useState([]);
   const [completedRequests, setCompletedRequests] = useState([]);
+  const [notesSaving, setNotesSaving] = useState(false);
+  const notesSaveTimeout = useRef(null);
 
   const advisorPrimaryButtonClasses =
     'px-4 py-2.5 text-sm font-semibold rounded-2xl bg-emerald-500 text-white shadow-[0_18px_30px_rgba(16,185,129,0.35)] hover:bg-emerald-400 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300';
@@ -65,6 +68,8 @@ function FinancialAdvisorPage() {
         return 'bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-purple-500/10 dark:border-purple-500/30 dark:text-purple-200';
       case 'Completed':
         return 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-200';
+      case 'Declined':
+        return 'bg-rose-50 text-rose-700 border border-rose-100 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-200';
       default:
         return 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-700/30 dark:text-slate-300 dark:border-slate-600/30';
     }
@@ -83,18 +88,20 @@ function FinancialAdvisorPage() {
     }
   };
 
-  const normalizeRequest = (request) => ({
-    id: request._id,
-    status: request.status,
-    title: request.title,
-    from: request.client?.fullName || 'Client',
-    timestamp: new Date(request.createdAt).toLocaleString(),
-    topic: request.topic,
-    urgency: request.urgency,
-    description: request.description,
-    budget: request.budget || '—',
-    raw: request,
-  });
+const normalizeRequest = (request) => ({
+  id: request._id,
+  status: request.status,
+  title: request.title,
+  from: request.client?.fullName || 'Client',
+  timestamp: new Date(request.createdAt).toLocaleString(),
+  topic: request.topic,
+  urgency: request.urgency,
+  description: request.description,
+  budget: request.budget || '—',
+  raw: request,
+  deletedByAdvisor: request.deletedByAdvisor,
+  deletedByClient: request.deletedByClient,
+});
 
   const fetchAdvisorRequests = async () => {
     setLoadingRequests(true);
@@ -103,12 +110,15 @@ function FinancialAdvisorPage() {
       const response = await requestService.getAllRequests();
       const requests = response.requests || [];
       const normalized = requests.map(normalizeRequest);
+      const visible = normalized.filter(req => !req.deletedByAdvisor);
 
-      const pending = normalized.filter((req) => req.status === 'Pending');
-      const active = normalized.filter((req) =>
+      const pending = visible.filter((req) => req.status === 'Pending');
+      const active = visible.filter((req) =>
         ['Accepted', 'In Progress'].includes(req.status)
       );
-      const completed = normalized.filter((req) => req.status === 'Completed');
+      const completed = visible.filter((req) =>
+        ['Completed', 'Closed', 'Declined'].includes(req.status)
+      );
 
       setPendingRequests(pending);
       setActiveRequests(active);
@@ -149,6 +159,8 @@ function FinancialAdvisorPage() {
         };
       });
 
+      const notesValue = requestData.advisorNotes ?? requestData.draft ?? '';
+
       setSelectedThread({
         id: requestData._id,
         status: requestData.status,
@@ -158,6 +170,7 @@ function FinancialAdvisorPage() {
         urgency: requestData.urgency,
         budget: requestData.budget || '—',
         description: requestData.description,
+        advisorNotes: notesValue,
         timestamp: new Date(requestData.createdAt).toLocaleString(),
         attachments: requestData.attachments || [],
         participants: {
@@ -246,6 +259,26 @@ function FinancialAdvisorPage() {
       .catch((err) => setError(err.message || 'Failed to update request.'));
   };
 
+  const handleNotesChange = (value) => {
+    setSelectedThread(prev => prev ? { ...prev, advisorNotes: value } : prev);
+    if (notesSaveTimeout.current) {
+      clearTimeout(notesSaveTimeout.current);
+    }
+    notesSaveTimeout.current = setTimeout(() => handleNotesSave(value), 600);
+  };
+
+  const handleNotesSave = async (value) => {
+    if (!selectedThread?.id) return;
+    setNotesSaving(true);
+    try {
+      await requestService.saveDraft(selectedThread.id, value);
+    } catch (err) {
+      console.error('Failed to save notes', err);
+    } finally {
+      setNotesSaving(false);
+    }
+  };
+
   const handleEndConversation = async () => {
     if (!selectedThread) return;
     const confirmed = window.confirm(
@@ -265,6 +298,11 @@ function FinancialAdvisorPage() {
   };
 
   const handleSendResponse = async () => {
+    if (selectedThread?.status && ['Closed', 'Completed'].includes(selectedThread.status)) {
+      alert('This conversation is closed. You cannot send new messages.');
+      return;
+    }
+
     if (!responseText.trim()) {
       alert('Please enter a response before sending');
       return;
@@ -381,7 +419,12 @@ function FinancialAdvisorPage() {
             <div className="relative bg-white/90 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 mb-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-300 shadow-sm dark:shadow-none">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{selectedThread.title}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{selectedThread.title}</h2>
+                  {selectedThread.description && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 max-w-3xl mb-2">
+                      {selectedThread.description}
+                    </p>
+                  )}
                   <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-slate-600 dark:text-gray-400">
                     <span className="flex items-center gap-1">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -623,42 +666,6 @@ function FinancialAdvisorPage() {
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-teal-500 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Quick Actions
-                </h3>
-                <div className="space-y-2">
-                  <button className="w-full px-4 py-2.5 text-left bg-white border border-slate-200 text-slate-900 rounded-lg transition-all text-sm hover-border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white dark:hover:border-teal-500/50 group">
-                    <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-slate-500 group-hover:text-teal-500 dark:text-gray-400 dark:group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      View Client History
-                    </span>
-                  </button>
-                  <button className="w-full px-4 py-2.5 text-left bg-white border border-slate-200 text-slate-900 rounded-lg transition-all text-sm hover-border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white dark:hover:border-teal-500/50 group">
-                    <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-slate-500 group-hover:text-teal-500 dark:text-gray-400 dark:group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Schedule Meeting
-                    </span>
-                  </button>
-                  <button className="w-full px-4 py-2.5 text-left bg-white border border-slate-200 text-slate-900 rounded-lg transition-all text-sm hover-border-teal-400 hover:bg-teal-50 dark:bg-slate-700/50 dark:border-slate-600/50 dark:text-white dark:hover:border-teal-500/50 group">
-                    <span className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-slate-500 group-hover:text-teal-500 dark:text-gray-400 dark:group-hover:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Request More Info
-                    </span>
-                  </button>
-                </div>
-              </div>
-
               {/* Private Notes */}
               <div className="bg-white/90 dark:bg-slate-800/60 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-200 shadow-sm dark:shadow-none">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
@@ -669,9 +676,13 @@ function FinancialAdvisorPage() {
                 </h3>
                 <textarea
                   rows="4"
+                  value={selectedThread?.advisorNotes || ''}
+                  onChange={(e) => handleNotesChange(e.target.value)}
+                  onBlur={(e) => handleNotesSave(e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none text-sm transition-all duration-200 dark:bg-slate-900/60 dark:border-slate-600 dark:text-white dark:placeholder-gray-500"
                   placeholder="Add private notes about this request (not visible to client)..."
                 />
+                {notesSaving && <p className="text-xs text-gray-400 mt-2">Saving...</p>}
               </div>
             </div>
           </div>
@@ -919,14 +930,7 @@ function FinancialAdvisorPage() {
         </div>
 
         {/* Floating Action Button */}
-        <button
-          onClick={() => setShowReplyModal(true)}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-amber-400 text-slate-900 hover:bg-amber-300 rounded-full shadow-[0_20px_45px_rgba(251,191,36,0.35)] flex items-center justify-center transition-all hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/60 z-50 group"
-        >
-          <svg className="w-8 h-8 text-slate-900 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
+        <FloatingActionButton onClick={() => setShowReplyModal(true)} />
 
         {/* Reply Modal */}
         {showReplyModal && (

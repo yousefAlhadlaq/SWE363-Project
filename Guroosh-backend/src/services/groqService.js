@@ -10,40 +10,26 @@ const groq = new Groq({
  * @param {Object} propertyData - Property information
  * @param {number} propertyData.latitude - Property latitude
  * @param {number} propertyData.longitude - Property longitude
- * @param {string} propertyData.propertyType - Type of property (Land, Apartment, Villa, etc.)
+ * @param {string} propertyData.propertyType - Type of property (Land, Apartment, Villa)
  * @param {number} propertyData.area - Property area in square meters
- * @param {number} [propertyData.bedrooms] - Number of bedrooms (for apartments/houses)
- * @param {number} [propertyData.bathrooms] - Number of bathrooms (for apartments/houses)
- * @param {number} [propertyData.yearBuilt] - Year the property was built
  * @returns {Promise<Object>} Evaluation result with estimated value
  */
 exports.evaluateRealEstate = async (propertyData) => {
   try {
-    const { latitude, longitude, propertyType, area, bedrooms, bathrooms, yearBuilt } = propertyData;
+    const { latitude, longitude, propertyType, area } = propertyData;
 
-    // Build a detailed prompt for Groq
-    let prompt = `You are a real estate valuation expert specializing in Saudi Arabian properties. Provide a realistic market value estimate for the following property:
+    // Build a simplified prompt for Groq using Moonshot AI model
+    const prompt = `You are a real estate valuation expert specializing in Saudi Arabian properties. Provide a realistic market value estimate for the following property:
 
 Location: Latitude ${latitude}, Longitude ${longitude}
 Property Type: ${propertyType}
-Area: ${area} square meters`;
+Area: ${area} square meters
 
-    if (bedrooms) {
-      prompt += `\nBedrooms: ${bedrooms}`;
-    }
-    if (bathrooms) {
-      prompt += `\nBathrooms: ${bathrooms}`;
-    }
-    if (yearBuilt) {
-      prompt += `\nYear Built: ${yearBuilt}`;
-    }
-
-    prompt += `\n\nBased on current Saudi Arabian real estate market conditions (2025), provide:
+Based on current Saudi Arabian real estate market conditions (2025), provide:
 1. A realistic estimated market value in SAR (Saudi Riyals)
-2. Consider location quality based on coordinates (proximity to city centers, amenities)
-3. Account for property type and size
-4. For apartments, consider number of bedrooms and bathrooms
-5. Adjust for property age if year built is provided
+2. Consider location quality based on coordinates (proximity to city centers, amenities, development)
+3. Account for property type (${propertyType}) and size (${area} sqm)
+4. Consider regional market trends and property demand
 
 Respond ONLY with a valid JSON object in this exact format (no additional text):
 {
@@ -56,17 +42,16 @@ Respond ONLY with a valid JSON object in this exact format (no additional text):
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
-          role: 'system',
-          content: 'You are a professional real estate appraiser with expertise in Saudi Arabian property markets. Always respond with valid JSON only.'
-        },
-        {
           role: 'user',
           content: prompt
         }
       ],
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.3, // Lower temperature for more consistent valuations
-      max_tokens: 500,
+      model: 'moonshotai/kimi-k2-instruct-0905',
+      temperature: 0.6,
+      max_completion_tokens: 4096,
+      top_p: 1,
+      stream: false,
+      stop: null
     });
 
     const response = chatCompletion.choices[0]?.message?.content;

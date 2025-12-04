@@ -67,4 +67,4 @@ const investmentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Investment', investmentSchema);
+module.exports = mongoose.models.Investment || mongoose.model('Investment', investmentSchema);

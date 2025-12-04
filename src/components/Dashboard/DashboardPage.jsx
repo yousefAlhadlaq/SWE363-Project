@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   ArrowUpCircle,
   Banknote,
@@ -24,7 +24,7 @@ import InputField from '../Shared/InputField';
 import SelectMenu from '../Shared/SelectMenu';
 import EmptyState from '../Shared/EmptyState';
 import { useAuth } from '../../context/AuthContext';
-import { accountService, categoryService, expenseService } from '../../services';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const formatSR = (value = 0, digits = 2) =>
   `SR ${Number(value).toLocaleString('en-US', {
@@ -36,31 +36,8 @@ const financialStatusOptions = [
   { key: 'weekly', label: 'Weekly' },
   { key: 'monthly', label: 'Monthly' },
   { key: 'yearly', label: 'Yearly' },
+  { key: 'all', label: 'All years' },
 ];
-
-const financialStatusData = {
-  weekly: [
-    { label: 'Sun', value: 2 },
-    { label: 'Mon', value: 9 },
-    { label: 'Tue', value: 12 },
-    { label: 'Wed', value: 18 },
-    { label: 'Thu', value: 22 },
-    { label: 'Fri', value: 27 },
-    { label: 'Sat', value: 10 },
-  ],
-  monthly: [
-    { label: 'Week 1', value: 12 },
-    { label: 'Week 2', value: 19 },
-    { label: 'Week 3', value: 27 },
-    { label: 'Week 4', value: 32 },
-  ],
-  yearly: [
-    { label: 'Q1', value: 52 },
-    { label: 'Q2', value: 61 },
-    { label: 'Q3', value: 78 },
-    { label: 'Q4', value: 88 },
-  ],
-};
 
 const initialLatestUpdates = [
   {
@@ -261,8 +238,6 @@ const textAreaClasses =
 
 const latestUpdatesLimit = 6;
 
-const mapId = (value) => (typeof value === 'object' && value !== null ? value._id || value.id : value);
-
 const getOptionLabel = (options, value) =>
   options.find((option) => option.value === value)?.label || value || '—';
 
@@ -306,56 +281,305 @@ function DashboardPage() {
   const [activeAction, setActiveAction] = useState(null);
   const [actionValues, setActionValues] = useState(actionInitialValues);
   const [latestUpdates, setLatestUpdates] = useState(initialLatestUpdates);
-  const [financialSources, setFinancialSources] = useState({
-    categories: categoryOptions,
-    accounts: linkedAccountOptions,
-    loading: false,
-    error: null
-  });
-  const [manualEntryState, setManualEntryState] = useState({ saving: false, error: '', success: '' });
+  const [linkingAccount, setLinkingAccount] = useState(false);
+  const [linkAccountStep, setLinkAccountStep] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [linkedAccounts, setLinkedAccounts] = useState([]);
+  const [chartData, setChartData] = useState([]);
+  const [formErrors, setFormErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  // Generate account options dynamically from linked accounts
+  // Always include a default "Main Account" option for users without linked accounts
+  // Use useMemo to ensure UI refreshes when balances change
+  const linkedAccountOptions = useMemo(() => {
+    const mainBalance = dashboardData?.totalBalance || 0;
+    const mainBankLabel = 'Main Account';
+    const mainAccountName = 'Main Account (Default)';
+
+    const mainAccountOption = {
+      value: 'main',
+      label: `${mainBankLabel} — ${mainAccountName} — ${formatSR(mainBalance)}`,
+      name: mainAccountName,
+      accountName: mainAccountName,
+      bank: mainBankLabel,
+      balance: mainBalance,
+      isAccountOption: true,
+      logo: null,
+    };
+
+    return [
+      mainAccountOption,
+      ...linkedAccounts.map(account => {
+        const bankLabel = account.bank || account.bankName || 'Bank';
+        const accountNameRaw =
+          account.accountName ||
+          account.name ||
+          account.nickname ||
+          account.nickName ||
+          '';
+        const accountNickname = accountNameRaw.trim() || 'Unnamed';
+        const balanceValue = account.balance || 0;
+
+        return {
+          value: account.id || account._id,  // Use the actual account ID from backend
+          bank: bankLabel,
+          accountName: accountNickname,
+          balance: balanceValue,
+          label: `${bankLabel} — ${accountNickname} — ${formatSR(balanceValue)}`,
+          name: `${bankLabel} — ${accountNickname} — ${formatSR(balanceValue)}`,
+          logo: account.bankLogo || account.logo || account.bank_logo,
+          isAccountOption: true,
+        };
+      })
+    ];
+  }, [dashboardData?.totalBalance, linkedAccounts]);
+
+  // Filter out Main Account for transfer/deposit/manual actions
+  const realAccountOptions = useMemo(() => {
+    return linkedAccountOptions.filter(account => account.value !== 'main');
+  }, [linkedAccountOptions]);
+
+  // Fetch analytics chart data
+  const fetchChartData = useCallback(async (range) => {
+    const token = localStorage.getItem('token');
+
+    // ✅ Validate token exists before making request
+    if (!token) {
+      console.warn('⚠️ Cannot fetch chart data: No token available');
+      return;
+    }
+
+    console.log(`📊 Fetching chart data for range: ${range}`);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/analytics/spending?range=${range}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        console.error('❌ Unauthorized: Token expired or invalid');
+        // Don't clear user here - let auth middleware handle it
+        return;
+      }
+
+      if (!response.ok) {
+        console.error(`❌ Chart fetch failed: ${response.status}`);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success && result.data.chart) {
+        console.log(`✅ Chart data loaded: ${result.data.chart.length} data points, isNewUser=${result.data.isNewUser}`);
+        setChartData(result.data.chart);
+
+        // ✅ Store new user flag from analytics
+        if (result.data.isNewUser !== undefined) {
+          setDashboardData(prev => ({
+            ...prev,
+            chartIsNewUser: result.data.isNewUser,
+          }));
+        }
+      } else {
+        console.warn('⚠️ Chart data missing in response');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching chart data:', error);
+    }
+  }, []); // ✅ No dependencies - function doesn't change
+
+  // Fetch dashboard data from backend
+  const fetchDashboardData = useCallback(async () => {
+    const token = localStorage.getItem('token');
+
+    // ✅ Validate token exists before making request
+    if (!token) {
+      console.warn('⚠️ Cannot fetch dashboard data: No token available');
+      setLoading(false);
+      return;
+    }
+
+    console.log('📊 Fetching dashboard data...');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        console.error('❌ Unauthorized: Token expired or invalid');
+        setLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        console.error(`❌ Dashboard fetch failed: ${response.status}`);
+        setLoading(false);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('✅ Dashboard data loaded');
+        setDashboardData(result.data);
+        setLinkedAccounts(result.data.accounts || []);
+
+        // Update latest updates from backend
+        if (result.data.latestUpdates && result.data.latestUpdates.length > 0) {
+          const formattedUpdates = result.data.latestUpdates.map((update, index) => ({
+            id: update.id || `update-${index}`,
+            merchant: update.merchant,
+            amount: update.amount,
+            timestamp: formatTimestamp(update.timestamp),
+            method: update.method,
+            status: update.status,
+            icon: update.status === 'investment' ? TrendingUp : (update.status === 'in' ? ArrowUpCircle : ArrowUpRight),
+          }));
+          setLatestUpdates(formattedUpdates);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // ✅ No dependencies - function doesn't change
+
+  // ✅ CRITICAL FIX: Wait for auth to complete, then fetch data
+  useEffect(() => {
+    // Don't fetch until auth is initialized
+    if (authLoading) {
+      console.log('⏳ Waiting for auth to complete...');
+      return;
+    }
+
+    // Don't fetch if user is not logged in
+    if (!user) {
+      console.log('❌ No user - skipping data fetch');
+      setLoading(false);
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('❌ No token - skipping data fetch');
+      setLoading(false);
+      return;
+    }
+
+    console.log('✅ Auth ready - fetching dashboard and chart data');
+    fetchDashboardData();
+    fetchChartData(statusRange);
+  }, [authLoading, user, statusRange, fetchDashboardData, fetchChartData]);
+  // ✅ Dependencies: authLoading (wait for it), user (refetch on login), statusRange (refetch on change)
+
+  // Refresh dashboard when user returns to the page (e.g., after creating an investment)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchDashboardData();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchDashboardData();
+    };
+
+    // Listen for page visibility changes (tab switching)
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    // Listen for window focus events (clicking back into the app)
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchDashboardData]);
+
+  const mapTransactions = useCallback(
+    (transactions = []) =>
+      transactions.map((transaction, index) => {
+        const amount = Number(transaction.amount ?? transaction.value ?? 0);
+        const status = transaction.status || transaction.direction || (transaction.type === 'credit' ? 'in' : 'out');
+        const icon = status === 'in' ? ArrowUpCircle : ArrowUpRight; // Changed ShoppingBag to ArrowUpRight
+        return {
+          id: transaction.id || `tx-${index}`,
+          merchant: transaction.merchant || transaction.description || 'Transaction',
+          amount,
+          timestamp: formatTimestamp(transaction.timestamp || transaction.createdAt || transaction.date),
+          method: transaction.method || transaction.category || transaction.type || '—',
+          status: status === 'credit' ? 'in' : status === 'debit' ? 'out' : status || 'out',
+          icon,
+        };
+      }),
+    []
+  );
+
+  const normalizeChartData = useMemo(() => {
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    const deriveLabel = (entry, index, parsedDate) => {
+      if (entry?.label) return entry.label;
+      if (statusRange === 'weekly') {
+        return daysOfWeek[index % 7];
+      }
+      if (statusRange === 'monthly') {
+        if (parsedDate) return parsedDate.getDate().toString();
+        if (entry?.day) return String(entry.day);
+        return String(index + 1);
+      }
+      if (statusRange === 'yearly') {
+        if (parsedDate) return months[parsedDate.getMonth()];
+        if (entry?.monthIndex !== undefined) return months[entry.monthIndex % 12];
+        if (entry?.month) return entry.month;
+        return months[index % 12];
+      }
+      // all years
+      if (parsedDate) return parsedDate.getFullYear().toString();
+      if (entry?.year !== undefined) return String(entry.year);
+      return `Year ${index + 1}`;
+    };
+
+    const deriveTooltip = (parsedDate, label, amount) => {
+      if (parsedDate) {
+        const day = parsedDate.getDate();
+        const month = months[parsedDate.getMonth()];
+        const year = parsedDate.getFullYear();
+
+        if (statusRange === 'all') {
+          // All years: "2024 – SR 1,000.00"
+          return `${year} – ${formatSR(amount)}`;
+        }
+        // Other ranges: "5 Jan 2025"
+        return `${day} ${month} ${year}`;
+      }
+      return label;
+    };
+
+    return (chartData || []).map((entry, index) => {
+      const parsedDate = entry?.date ? new Date(entry.date) : null;
+      const amount = Number(entry.amount ?? entry.value ?? entry.total ?? 0);
+      const label = deriveLabel(entry, index, parsedDate);
+      const tooltip = deriveTooltip(parsedDate, label, amount);
+      return {
+        value: amount,
+        label,
+        tooltip,
+      };
+    });
+  }, [chartData, statusRange]);
 
   const addLatestUpdate = (update) => {
     setLatestUpdates((prev) =>
       [{ id: Date.now(), ...update }, ...prev].slice(0, latestUpdatesLimit)
     );
   };
-
-  const refreshFinancialSources = useCallback(async () => {
-    if (!user) {
-      setFinancialSources({
-        categories: categoryOptions,
-        accounts: linkedAccountOptions,
-        loading: false,
-        error: null
-      });
-      return;
-    }
-    setFinancialSources((prev) => ({ ...prev, loading: true, error: null }));
-    try {
-      const [categoriesResponse, accountsResponse] = await Promise.all([
-        categoryService.getCategories(),
-        accountService.getAccounts()
-      ]);
-      const categoryList = (categoriesResponse?.data || categoriesResponse?.categories || [])
-        .filter((category) => category.type !== 'income' && (category.isActive !== false && category.enabled !== false));
-      const accountList = accountsResponse?.data || accountsResponse?.accounts || [];
-      const mappedCategories = categoryList.map((category) => ({
-        value: mapId(category),
-        label: `${category.icon ? `${category.icon} ` : ''}${category.name || 'Category'}`.trim()
-      }));
-      const mappedAccounts = accountList
-        .filter((account) => account.status !== 'inactive')
-        .map((account) => ({ value: mapId(account), label: account.name || 'Account' }));
-      setFinancialSources({ categories: mappedCategories, accounts: mappedAccounts, loading: false, error: null });
-    } catch (error) {
-      setFinancialSources({
-        categories: [],
-        accounts: [],
-        loading: false,
-        error: error.response?.data?.error || error.message || 'Failed to load categories'
-      });
-    }
-  }, [user]);
 
   const displayName = user?.name || user?.fullName || 'Jordan Carter';
   const userInitials = useMemo(() => {
@@ -372,54 +596,64 @@ function DashboardPage() {
   }, [displayName]);
 
   // Use real data from backend instead of hardcoded financialStatusData
-  const activeFinancialData = chartData;
+  const normalizedChart = normalizeChartData;
+  const activeFinancialData = normalizedChart;
   const maxFinancialValue = Math.max(
-    ...activeFinancialData.map((item) => item.value),
+    ...normalizedChart.map((item) => item.value),
     1
   );
 
   const chartWidth = 720;
   const chartHeight = 240;
-  const chartPaddingX = 40;
+  const chartPaddingLeft = 70; // Extra space for Y-axis labels
+  const chartPaddingRight = 40;
   const chartPaddingY = 26;
-  const usableWidth = chartWidth - chartPaddingX * 2;
+  const usableWidth = chartWidth - chartPaddingLeft - chartPaddingRight;
   const usableHeight = chartHeight - chartPaddingY * 2;
 
-  const chartPoints = activeFinancialData.map((entry, index) => {
+  const chartPoints = normalizedChart.map((entry, index) => {
     const x =
-      activeFinancialData.length === 1
-        ? chartPaddingX + usableWidth / 2
-        : chartPaddingX + (index / (activeFinancialData.length - 1)) * usableWidth;
+      normalizedChart.length === 1
+        ? chartPaddingLeft + usableWidth / 2
+        : chartPaddingLeft + (index / (normalizedChart.length - 1)) * usableWidth;
     const normalizedValue = entry.value / maxFinancialValue;
-      const y =
-        chartHeight - chartPaddingY - normalizedValue * usableHeight;
-      return { ...entry, x, y };
-    });
+    const y =
+      chartHeight - chartPaddingY - normalizedValue * usableHeight;
+    return { ...entry, x, y };
+  });
 
   const linePath = chartPoints
     .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
     .join(' ');
 
   const areaPath = chartPoints.length
-    ? `${linePath} L ${chartPoints[chartPoints.length - 1].x.toFixed(2)} ${
-        chartHeight - chartPaddingY
-      } L ${chartPoints[0].x.toFixed(2)} ${chartHeight - chartPaddingY} Z`
+    ? `${linePath} L ${chartPoints[chartPoints.length - 1].x.toFixed(2)} ${chartHeight - chartPaddingY
+    } L ${chartPoints[0].x.toFixed(2)} ${chartHeight - chartPaddingY} Z`
     : '';
 
-  const gridLines = [0.25, 0.5, 0.75].map((ratio) => ({
-    y: chartPaddingY + ratio * usableHeight,
-  }));
+  // Calculate Y-axis grid lines and labels
+  const yAxisTicks = [0, 0.25, 0.5, 0.75, 1.0].map((ratio) => {
+    const value = maxFinancialValue * (1 - ratio); // Inverted because Y increases downward in SVG
+    const y = chartPaddingY + ratio * usableHeight;
+    return { y, value };
+  });
 
-  // ✅ Show loading state while auth initializes
-  if (authLoading) {
+  const gridLines = yAxisTicks.slice(1, -1); // Skip top (1.0) and bottom (0) for grid lines
+
+  // ✅ Show loading state while auth initializes OR data is loading
+  if (authLoading || loading) {
     return (
       <div className="flex min-h-screen bg-page text-white pt-20">
         <Sidebar />
         <div className="flex-1 ml-64 px-6 py-8">
-          <div className="max-w-6xl space-y-6">
-            <div className="text-center py-20">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div>
-              <p className="mt-4 text-gray-400">Loading dashboard...</p>
+          <div className="max-w-6xl flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-teal-500/20 rounded-full"></div>
+                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-teal-500 rounded-full animate-spin"></div>
+                <div className="absolute inset-2 w-12 h-12 bg-teal-500/10 rounded-full animate-pulse"></div>
+              </div>
+              <p className="text-gray-400 text-sm animate-pulse">Loading dashboard...</p>
             </div>
           </div>
         </div>
@@ -428,93 +662,13 @@ function DashboardPage() {
   }
 
   const currentAction = quickActions.find((action) => action.id === activeAction);
-
-  useEffect(() => {
-    refreshFinancialSources();
-  }, [refreshFinancialSources]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return () => {};
-    const handleUpdate = () => refreshFinancialSources();
-    window.addEventListener('categories:updated', handleUpdate);
-    window.addEventListener('accounts:updated', handleUpdate);
-    return () => {
-      window.removeEventListener('categories:updated', handleUpdate);
-      window.removeEventListener('accounts:updated', handleUpdate);
-    };
-  }, [refreshFinancialSources]);
-
-  useEffect(() => {
-    if (!financialSources.categories.length) return;
-    setActionValues((prev) => {
-      const current = prev['manual-entry']?.category;
-      const valid = financialSources.categories.some((option) => option.value === current);
-      if (valid) return prev;
-      const fallback = financialSources.categories[0]?.value || '';
-      if (!fallback) return prev;
-      return {
-        ...prev,
-        'manual-entry': { ...prev['manual-entry'], category: fallback }
-      };
-    });
-  }, [financialSources.categories]);
-
-  useEffect(() => {
-    if (!financialSources.accounts.length) return;
-    setActionValues((prev) => {
-      const current = prev['manual-entry']?.account;
-      const valid = financialSources.accounts.some((option) => option.value === current);
-      if (valid) return prev;
-      const fallback = financialSources.accounts[0]?.value || '';
-      if (!fallback) return prev;
-      return {
-        ...prev,
-        'manual-entry': { ...prev['manual-entry'], account: fallback }
-      };
-    });
-  }, [financialSources.accounts]);
-
-  const ensureManualEntryAccount = useCallback(async (preferredAccountId) => {
-    if (!user) {
-      return null;
-    }
-    if (preferredAccountId) {
-      return preferredAccountId;
-    }
-    if (financialSources.accounts.length) {
-      return financialSources.accounts[0].value;
-    }
-    try {
-      const response = await accountService.createAccount({ name: 'Cash Wallet', type: 'cash' });
-      const createdId = mapId(response?.data || response?.account);
-      await refreshFinancialSources();
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('accounts:updated', { detail: { createdId } }));
-      }
-      return createdId;
-    } catch (error) {
-      throw new Error(error.response?.data?.error || error.message || 'Failed to provision an account');
-    }
-  }, [financialSources.accounts, refreshFinancialSources, user]);
-  const handleOpenAction = useCallback(
-    (actionId) => {
-      if (actionId === 'manual-entry' && user) {
-        refreshFinancialSources();
-      }
-      setManualEntryState({ saving: false, error: '', success: '' });
-      setActiveAction(actionId);
-    },
-    [refreshFinancialSources, user]
-  );
-
   const handleCancelAction = (actionId) => {
     if (actionId) {
       resetActionForm(actionId);
     }
     setActiveAction(null);
-    if (actionId === 'manual-entry') {
-      setManualEntryState({ saving: false, error: '', success: '' });
-    }
+    setLinkingAccount(false);
+    setLinkAccountStep(1);
   };
 
   const updateActionValue = (actionId, field, value) => {
@@ -536,90 +690,53 @@ function DashboardPage() {
     }));
   };
 
-  const handleManualEntrySubmit = async (event) => {
-    event.preventDefault();
-    const data = actionValues['manual-entry'];
-    const amount = parseFloat(data.amount);
-    if (!data.transactionType) {
-      setManualEntryState({ saving: false, error: 'Select a transaction type', success: '' });
-      return;
-    }
-    if (!amount || amount <= 0) {
-      setManualEntryState({ saving: false, error: 'Amount must be greater than zero', success: '' });
-      return;
-    }
-
-    if (!user) {
-      const status = data.transactionType === 'income' ? 'in' : 'out';
-      const transactionLabel = `${data.transactionType.charAt(0).toUpperCase()}${data.transactionType.slice(1)}`;
-      addLatestUpdate({
-        merchant: data.merchant || 'Manual transaction',
-        amount,
-        timestamp: formatTimestamp(data.date),
-        method: `${transactionLabel} • ${getOptionLabel(categoryOptions, data.category)}`,
-        status,
-        icon: PenSquare,
-      });
-      resetActionForm('manual-entry');
-      setManualEntryState({ saving: false, error: '', success: '' });
-      setActiveAction(null);
-      return;
-    }
-
-    if (data.transactionType !== 'expense') {
-      setManualEntryState({ saving: false, error: 'Only expense entries sync to budgets right now.', success: '' });
-      return;
-    }
-    if (!data.category) {
-      setManualEntryState({ saving: false, error: 'Choose a category', success: '' });
-      return;
-    }
-
-    setManualEntryState({ saving: true, error: '', success: '' });
-    let accountId;
-    try {
-      accountId = await ensureManualEntryAccount(data.account);
-      if (!accountId) {
-        throw new Error('No account available for this entry');
-      }
-    } catch (error) {
-      setManualEntryState({ saving: false, error: error.message || 'Failed to prepare an account', success: '' });
-      return;
-    }
-
-    try {
-      await expenseService.createExpense({
-        title: data.merchant?.trim() || 'Manual transaction',
-        amount,
-        date: data.date,
-        categoryId: data.category,
-        accountId,
-        description: data.notes
-      });
-      addLatestUpdate({
-        merchant: data.merchant || 'Manual transaction',
-        amount,
-        timestamp: formatTimestamp(data.date),
-        method: `Expense • ${getOptionLabel(financialSources.categories, data.category)}`,
-        status: 'out',
-        icon: PenSquare
-      });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('expenses:updated'));
-      }
-      resetActionForm('manual-entry');
-      setManualEntryState({ saving: false, error: '', success: '' });
-      setActiveAction(null);
-    } catch (error) {
-      setManualEntryState({
-        saving: false,
-        error: error.response?.data?.error || error.message || 'Failed to save expense',
-        success: ''
-      });
+  const handleNextStep = () => {
+    if (linkAccountStep < 3) {
+      setLinkAccountStep(linkAccountStep + 1);
     }
   };
 
-  const handleSubmitAction = (actionId, event) => {
+  const handlePreviousStep = () => {
+    if (linkAccountStep > 1) {
+      setLinkAccountStep(linkAccountStep - 1);
+    }
+  };
+
+  const handleManualEntryTypeChange = (transactionType) => {
+    setActionValues(prev => ({
+      ...prev,
+      'manual-entry': {
+        ...getManualEntryInitialValues(),
+        transactionType,
+      },
+    }));
+  };
+
+  const validateManualEntry = (data) => {
+    const amount = parseFloat(data.amount);
+
+    if (!data.transactionType) {
+      return 'Please select a transaction type';
+    }
+
+    if (data.transactionType === 'expense') {
+      if (!data.account) return 'Expense account is required';
+      if (!data.amount || Number.isNaN(amount) || amount <= 0) return 'Expense amount must be greater than 0';
+      if (!data.category) return 'Expense category is required';
+      if (!data.merchant) return 'Merchant or description is required for expenses';
+      if (!data.date) return 'Expense date is required';
+    } else if (data.transactionType === 'income') {
+      if (!data.account) return 'Income receiving account is required';
+      if (!data.amount || Number.isNaN(amount) || amount <= 0) return 'Income amount must be greater than 0';
+      if (!data.category) return 'Income category is required';
+      if (!data.merchant) return 'Income source or description is required';
+      if (!data.date) return 'Income date is required';
+    }
+
+    return null;
+  };
+
+  const handleSubmitAction = async (actionId, event) => {
     event.preventDefault();
 
     if (actionId === 'link-account') {
@@ -659,7 +776,6 @@ function DashboardPage() {
 
       try {
         // Call backend API to create account
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
         const token = localStorage.getItem('token');
 
         console.log('Creating account with data:', {
@@ -844,17 +960,181 @@ function DashboardPage() {
       return;
     }
 
-    if (actionId === 'parse-sms') {
-      const data = actionValues['parse-sms'];
-      const parsed = parseSmsText(data.sms);
-      addLatestUpdate({
-        merchant: parsed.merchant || 'Bank SMS',
-        amount: parsed.amount,
-        timestamp: formatTimestamp(),
-        method: `${getOptionLabel(bankOptions, data.bank)} • Parsed SMS`,
-        status: parsed.isCredit ? 'in' : 'out',
-        icon: MessageSquare,
-      });
+    if (actionId === 'manual-entry') {
+      const data = actionValues['manual-entry'];
+      const validationError = validateManualEntry(data);
+
+      // Type-specific validation
+      if (validationError) {
+        alert(validationError);
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+
+        // Handle EXPENSE and INCOME
+        const direction = data.transactionType === 'income' ? 'incoming' : 'outgoing';
+
+        const response = await fetch(`${API_BASE_URL}/transactions/manual`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            accountId: data.account,
+            amount: parseFloat(data.amount),
+            name: data.merchant || 'Manual transaction',
+            date: data.date,
+            category: data.category,
+            direction,
+          }),
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to create manual entry');
+        }
+
+        // Add success notification
+        const amount = parseFloat(data.amount) || 0;
+        const status = direction === 'incoming' ? 'in' : 'out';
+        const transactionLabel = data.transactionType.charAt(0).toUpperCase() + data.transactionType.slice(1);
+        const categoryOptions = data.transactionType === 'income' ? incomeCategoryOptions : expenseCategoryOptions;
+
+        addLatestUpdate({
+          merchant: data.merchant || 'Manual transaction',
+          amount,
+          timestamp: formatTimestamp(data.date),
+          method: `${transactionLabel} • ${getOptionLabel(categoryOptions, data.category)}`,
+          status,
+          icon: PenSquare,
+        });
+
+        // Refresh dashboard data to show updated balance
+        fetchDashboardData();
+        fetchChartData(statusRange);
+
+        // Reset form and close modal
+        resetActionForm(actionId);
+        setActiveAction(null);
+
+      } catch (error) {
+        console.error('Error creating manual entry:', error);
+        alert(`Failed to create ${data.transactionType}: ${error.message}`);
+      }
+
+      return;
+    }
+
+    if (actionId === 'remove-account') {
+      const { accountId } = actionValues['remove-account'];
+
+      if (!accountId) {
+        alert('Please select an account to remove');
+        return;
+      }
+
+      const selectedOption = linkedAccountOptions.find(opt => opt.value === accountId);
+      const confirmationLabel = selectedOption?.label || 'this account';
+      const token = localStorage.getItem('token');
+
+      const confirmed = window.confirm(`Are you sure you want to remove ${confirmationLabel}?`);
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/accounts/external/${accountId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok || result.success === false) {
+          throw new Error(result.error || 'Failed to remove account');
+        }
+
+        // Optimistically update local state
+        setLinkedAccounts(prev => prev.filter(acc => (acc.id || acc._id) !== accountId));
+        setDashboardData(prev => ({
+          ...prev,
+          accounts: prev?.accounts?.filter(acc => (acc.id || acc._id) !== accountId) || [],
+        }));
+        // Refresh to ensure balance and states are current
+        fetchDashboardData();
+
+        fetchChartData(statusRange);
+
+
+        setSuccessMessage(`Removed ${confirmationLabel}`);
+        setTimeout(() => setSuccessMessage(null), 4000);
+
+        resetActionForm(actionId);
+        setActiveAction(null);
+      } catch (error) {
+        console.error('Error removing account:', error);
+        alert(`Failed to remove account: ${error.message}`);
+      }
+
+      return;
+    }
+
+    if (actionId === 'export') {
+      const { format, startDate, endDate } = actionValues.export;
+
+      // Validation
+      if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+        // toast.error is not defined, using alert for now
+        alert('Start date cannot be after end date');
+        return;
+      }
+
+      // Trigger download
+      const queryParams = new URLSearchParams();
+      if (startDate) queryParams.append('startDate', startDate);
+      if (endDate) queryParams.append('endDate', endDate);
+      queryParams.append('format', format);
+
+      const endpoint = format === 'pdf' ? '/export/pdf' : '/export/csv';
+      const downloadUrl = `${API_BASE_URL}${endpoint}?${queryParams.toString()}`;
+
+      try {
+        const response = await fetch(downloadUrl, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Export failed: ${errorText}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        // toast.success is not defined, using alert for now
+        alert('Report downloaded successfully');
+        handleCancelAction('export');
+        setActiveAction(null);
+      } catch (error) {
+        console.error('Export error:', error);
+        // toast.error is not defined, using alert for now
+        alert(`Failed to download report: ${error.message}`);
+      }
+      return;
     }
 
     resetActionForm(actionId);
@@ -1123,77 +1403,10 @@ function DashboardPage() {
 
         return (
           <form
-            onSubmit={handleManualEntrySubmit}
+            onSubmit={(event) => handleSubmitAction('manual-entry', event)}
             className="space-y-4"
           >
-            <SelectMenu
-              label="Transaction Type"
-              name="transactionType"
-              value={actionValues['manual-entry'].transactionType}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'transactionType', event.target.value)
-              }
-              options={transactionTypeOptions}
-              required
-            />
-            <SelectMenu
-              label="Account"
-              name="account"
-              value={actionValues['manual-entry'].account}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'account', event.target.value)
-              }
-              options={user ? financialSources.accounts : linkedAccountOptions}
-              required={!user || Boolean(financialSources.accounts.length)}
-            />
-            {user && !financialSources.accounts.length && !financialSources.loading && (
-              <p className="text-xs text-amber-400 -mt-2">
-                No accounts yet. We will create a cash wallet automatically the first time you submit.
-              </p>
-            )}
-            <InputField
-              label="Amount"
-              name="amount"
-              type="number"
-              min="0"
-              step="0.01"
-              value={actionValues['manual-entry'].amount}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'amount', event.target.value)
-              }
-              placeholder="0.00"
-              required
-            />
-            <SelectMenu
-              label="Category"
-              name="category"
-              value={actionValues['manual-entry'].category}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'category', event.target.value)
-              }
-              options={user ? financialSources.categories : categoryOptions}
-              required={!user || Boolean(financialSources.categories.length)}
-            />
-            <InputField
-              label="Merchant / Description"
-              name="merchant"
-              value={actionValues['manual-entry'].merchant}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'merchant', event.target.value)
-              }
-              placeholder="e.g., Apple Store"
-              required
-            />
-            <InputField
-              label="Date"
-              name="date"
-              type="date"
-              value={actionValues['manual-entry'].date}
-              onChange={(event) =>
-                updateActionValue('manual-entry', 'date', event.target.value)
-              }
-              required
-            />
+            {/* Transaction Type Selector */}
             <div>
               <p className="block text-sm font-medium text-gray-400 mb-2">
                 Transaction Type
@@ -1220,9 +1433,155 @@ function DashboardPage() {
                 })}
               </div>
             </div>
-            {manualEntryState.error && (
-              <p className="text-sm text-red-400">{manualEntryState.error}</p>
+
+            {/* EXPENSE FORM */}
+            {transactionType === 'expense' && (
+              <>
+                <SelectMenu
+                  label="Account"
+                  name="account"
+                  value={actionValues['manual-entry'].account}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'account', event.target.value)
+                  }
+                  options={realAccountOptions}
+                  required
+                />
+                <InputField
+                  label="Amount"
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={actionValues['manual-entry'].amount}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'amount', event.target.value)
+                  }
+                  placeholder="0.00"
+                  required
+                />
+                <SelectMenu
+                  label="Category"
+                  name="category"
+                  value={actionValues['manual-entry'].category}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'category', event.target.value)
+                  }
+                  options={expenseCategoryOptions}
+                  required
+                />
+                <InputField
+                  label="Merchant / Description"
+                  name="merchant"
+                  value={actionValues['manual-entry'].merchant}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'merchant', event.target.value)
+                  }
+                  placeholder="e.g., Apple Store"
+                  required
+                />
+                <InputField
+                  label="Date"
+                  name="date"
+                  type="date"
+                  value={actionValues['manual-entry'].date}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'date', event.target.value)
+                  }
+                  required
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    name="notes"
+                    value={actionValues['manual-entry'].notes}
+                    onChange={(event) =>
+                      updateActionValue('manual-entry', 'notes', event.target.value)
+                    }
+                    placeholder="Add any additional details..."
+                    className={textAreaClasses}
+                  />
+                </div>
+              </>
             )}
+
+            {/* INCOME FORM */}
+            {transactionType === 'income' && (
+              <>
+                <SelectMenu
+                  label="Account"
+                  name="account"
+                  value={actionValues['manual-entry'].account}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'account', event.target.value)
+                  }
+                  options={realAccountOptions}
+                  required
+                />
+                <InputField
+                  label="Amount"
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={actionValues['manual-entry'].amount}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'amount', event.target.value)
+                  }
+                  placeholder="0.00"
+                  required
+                />
+                <SelectMenu
+                  label="Income Category"
+                  name="category"
+                  value={actionValues['manual-entry'].category}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'category', event.target.value)
+                  }
+                  options={incomeCategoryOptions}
+                  required
+                />
+                <InputField
+                  label="Source / Description"
+                  name="merchant"
+                  value={actionValues['manual-entry'].merchant}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'merchant', event.target.value)
+                  }
+                  placeholder="e.g., Monthly Salary, Bonus"
+                  required
+                />
+                <InputField
+                  label="Date"
+                  name="date"
+                  type="date"
+                  value={actionValues['manual-entry'].date}
+                  onChange={(event) =>
+                    updateActionValue('manual-entry', 'date', event.target.value)
+                  }
+                  required
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    name="notes"
+                    value={actionValues['manual-entry'].notes}
+                    onChange={(event) =>
+                      updateActionValue('manual-entry', 'notes', event.target.value)
+                    }
+                    placeholder="Add any additional details..."
+                    className={textAreaClasses}
+                  />
+                </div>
+              </>
+            )}
+
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="secondary"
@@ -1231,9 +1590,7 @@ function DashboardPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={manualEntryState.saving}>
-                {manualEntryState.saving ? 'Saving…' : currentAction.submitLabel}
-              </Button>
+              <Button type="submit">{currentAction.submitLabel}</Button>
             </div>
           </form>
         );
@@ -1283,22 +1640,20 @@ function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => updateActionValue('export', 'format', 'csv')}
-                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${
-                    actionValues.export.format === 'csv'
+                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${actionValues.export.format === 'csv'
                       ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
                       : 'bg-slate-800/50 border-slate-700 text-gray-400 hover:border-slate-600'
-                  }`}
+                    }`}
                 >
                   CSV (Excel)
                 </button>
                 <button
                   type="button"
                   onClick={() => updateActionValue('export', 'format', 'pdf')}
-                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${
-                    actionValues.export.format === 'pdf'
+                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${actionValues.export.format === 'pdf'
                       ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
                       : 'bg-slate-800/50 border-slate-700 text-gray-400 hover:border-slate-600'
-                  }`}
+                    }`}
                 >
                   PDF Document
                 </button>
@@ -1492,18 +1847,17 @@ function DashboardPage() {
               <Card title="Your financial status">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-gray-400">
-                    Track weekly, monthly, or yearly spending performance.
+                    Track weekly, monthly, yearly, or multi-year spending performance.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {financialStatusOptions.map((option) => (
                       <button
                         key={option.key}
                         type="button"
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
-                          statusRange === option.key
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${statusRange === option.key
                             ? 'bg-teal-500/20 text-teal-200 border-teal-400/60 shadow-[0_0_25px_rgba(94,234,212,0.3)]'
                             : 'text-gray-400 border-slate-700/70 hover:text-white hover:border-teal-400/40'
-                        }`}
+                          }`}
                         onClick={() => setStatusRange(option.key)}
                       >
                         {option.label}
@@ -1544,8 +1898,8 @@ function DashboardPage() {
                           <line
                             // eslint-disable-next-line react/no-array-index-key
                             key={`grid-${index}`}
-                            x1={chartPaddingX}
-                            x2={chartWidth - chartPaddingX}
+                            x1={chartPaddingLeft}
+                            x2={chartWidth - chartPaddingRight}
                             y1={line.y}
                             y2={line.y}
                             stroke="rgba(148,163,184,0.15)"
@@ -1575,8 +1929,45 @@ function DashboardPage() {
                               stroke="#0f172a"
                               strokeWidth={2}
                             />
+                            {point.tooltip && (
+                              <title>{point.tooltip}</title>
+                            )}
                           </g>
                         ))}
+
+                        {chartPoints.map((point, idx) => (
+                          <text
+                            key={`xlabel-${idx}`}
+                            x={point.x}
+                            y={chartHeight - chartPaddingY + 16}
+                            textAnchor="middle"
+                            className="text-[10px] fill-gray-400"
+                          >
+                            {point.label}
+                          </text>
+                        ))}
+
+                        {/* Y-axis tick labels */}
+                        {yAxisTicks.map((tick, idx) => (
+                          <text
+                            key={`ylabel-${idx}`}
+                            x={chartPaddingLeft - 8}
+                            y={tick.y + 3}
+                            textAnchor="end"
+                            className="text-[10px] fill-gray-400"
+                          >
+                            {formatSR(tick.value, 0)}
+                          </text>
+                        ))}
+
+                        <text
+                          x={chartPaddingLeft - 8}
+                          y={chartPaddingY - 10}
+                          textAnchor="end"
+                          className="text-[10px] fill-gray-400 font-medium"
+                        >
+                          Amount (SR)
+                        </text>
                       </svg>
                     ) : (
                       <div className="h-48 flex items-center justify-center rounded-xl border border-dashed border-slate-700/50 text-gray-500 text-sm">
@@ -1585,16 +1976,6 @@ function DashboardPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {activeFinancialData.map((entry) => (
-                      <div key={entry.label} className="text-center">
-                        <p className="text-lg font-semibold text-white">{entry.value}</p>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">
-                          {entry.label}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -1667,7 +2048,7 @@ function DashboardPage() {
                       <button
                         type="button"
                         key={action.id}
-                        onClick={() => handleOpenAction(action.id)}
+                        onClick={() => setActiveAction(action.id)}
                         className="w-full flex items-center justify-between gap-3 rounded-2xl border border-slate-700/60 bg-slate-900/30 px-4 py-3 text-left transition hover:border-teal-500/50 hover:bg-slate-900/60"
                       >
                         <div className="flex items-center gap-3">

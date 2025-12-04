@@ -1,6 +1,6 @@
 const User = require('../models/user');
 const Expense = require('../models/expense');
-const Investment = require('../models/Investment');
+const Investment = require('../models/investment');
 const Request = require('../models/request');
 const Meeting = require('../models/meeting');
 const AdvisorRequest = require('../models/advisorRequest');

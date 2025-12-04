@@ -1,5 +1,6 @@
 // API Configuration and Base Setup
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5001/api';
+console.log('API_BASE_URL:', API_BASE_URL); // Debugging log
 
 // Get token from localStorage
 const getToken = () => {
