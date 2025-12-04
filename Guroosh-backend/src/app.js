@@ -6,11 +6,39 @@ const path = require('path');
 const app = express();
 
 // Middleware
-app.use(helmet()); // Security headers
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+// CORS must come before helmet to ensure headers are set correctly
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174'
+    ];
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all origins for development
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// Configure helmet to not interfere with CORS
+app.use(helmet({
+  crossOriginResourcePolicy: false,
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -39,6 +67,10 @@ app.use('/api/cities', require('./routes/cityRoutes'));
 app.use('/api/stocks', require('./routes/stockRoutes'));
 app.use('/api/real-estate', require('./routes/realEstateRoutes'));
 app.use('/api/gold', require('./routes/goldRoutes'));
+app.use('/api/transactions', require('./routes/transactionRoutes'));
+app.use('/api/export', require('./routes/exportRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
 // Test route
 app.get('/test', (req, res) => {
@@ -50,8 +82,17 @@ app.get('/test', (req, res) => {
 
 // 404 handler
 app.use((req, res, next) => {
+  console.log('❌ 404 Not Found:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    headers: req.headers
+  });
   res.status(404).json({
-    error: 'Route not found'
+    error: 'Route not found',
+    path: req.path,
+    method: req.method
   });
 });
 

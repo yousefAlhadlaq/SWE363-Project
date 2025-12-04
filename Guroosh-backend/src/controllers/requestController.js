@@ -69,9 +69,11 @@ exports.getAllRequests = async (req, res) => {
     // If user is advisor, show requests assigned to them
     if (user.isAdvisor) {
       query.advisor = userId;
+      query.deletedByAdvisor = { $ne: true };
     } else {
       // If regular user, show their own requests
       query.client = userId;
+      query.deletedByClient = { $ne: true };
     }
 
     // Filter by status if provided
@@ -225,10 +227,17 @@ exports.declineRequest = async (req, res) => {
 exports.updateRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const rawStatus = (req.body?.status || req.body?.newStatus || '').toString().trim();
     const userId = req.userId;
 
-    if (!['In Progress', 'Completed', 'Cancelled'].includes(status)) {
+    console.log('🔄 Update request status payload:', req.body);
+
+    const allowedStatuses = ['In Progress', 'Completed', 'Cancelled', 'Closed'];
+    const normalizedStatus = rawStatus
+      ? allowedStatuses.find(opt => opt.toLowerCase() === rawStatus.toLowerCase())
+      : null;
+
+    if (!normalizedStatus) {
       return res.status(400).json({
         error: 'Invalid status'
       });
@@ -250,7 +259,7 @@ exports.updateRequestStatus = async (req, res) => {
       });
     }
 
-    request.status = status;
+    request.status = normalizedStatus;
     await request.save();
 
     res.json({
@@ -280,26 +289,32 @@ exports.deleteRequest = async (req, res) => {
       });
     }
 
-    // Only client can cancel their own request
-    if (request.client.toString() !== userId) {
-      return res.status(403).json({
-        error: 'Only the client can cancel this request'
-      });
+    const isAdvisor = request.advisor?.toString() === userId;
+    const isClient = request.client.toString() === userId;
+
+    if (!isAdvisor && !isClient) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Can only cancel pending or accepted requests
-    if (['In Progress', 'Completed'].includes(request.status)) {
-      return res.status(400).json({
-        error: 'Cannot cancel requests that are in progress or completed'
-      });
+    // Client cancellation for non-final requests
+    if (isClient && ['Pending', 'Accepted', 'In Progress'].includes(request.status)) {
+      request.status = 'Cancelled';
     }
 
-    request.status = 'Cancelled';
+    // Soft-delete per role
+    if (isAdvisor) {
+      request.deletedByAdvisor = true;
+    }
+    if (isClient) {
+      request.deletedByClient = true;
+    }
+
     await request.save();
 
     res.json({
       success: true,
-      message: 'Request cancelled successfully'
+      message: 'Request archived for current user',
+      request
     });
   } catch (error) {
     console.error('Delete request error:', error);
@@ -331,6 +346,7 @@ exports.saveDraft = async (req, res) => {
     }
 
     request.draft = content;
+    request.advisorNotes = content;
     await request.save();
 
     res.json({

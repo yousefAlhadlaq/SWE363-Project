@@ -1,6 +1,10 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
+// Layouts
+import AuthLayout from '../components/Layouts/AuthLayout';
+import AppLayout from '../components/Layouts/AppLayout';
+
 // Auth Components (Yousef)
 import LoginPage from '../components/Auth/LoginPage';
 import SignUpPage from '../components/Auth/SignUpPage';
@@ -43,96 +47,141 @@ const clientAndAdvisorRoles = ['client', 'user', 'advisor'];
 const advisorRoles = ['advisor'];
 const adminRoles = ['admin'];
 
-const createProtectedElement = (Component, allowedRoles) => (
-  <ProtectedRoute {...(allowedRoles ? { allowedRoles } : {})}>
-    <Component />
-  </ProtectedRoute>
-);
-
-const defaultRoutes = [
-  {
-    path: '/',
-    element: <Navigate to="/login" replace />,
-  },
-];
-
-const authRoutes = [
-  { path: '/login', element: <LoginPage /> },
-  { path: '/signup', element: <SignUpPage /> },
-  { path: '/verify-email', element: <EmailVerification /> },
-  { path: '/forgot-password', element: <ForgotPasswordPage /> },
-  { path: '/reset-password', element: <ResetPasswordPage /> },
-];
-
-const settingsRoutes = [
-  { path: '/settings', element: createProtectedElement(ProfileSettings) },
-];
-
-const dashboardRoutes = [
-  { path: '/home', element: createProtectedElement(DashboardPage, clientRoles) },
-  { path: '/dashboard', element: createProtectedElement(DashboardPage, clientRoles) },
-  { path: '/investments', element: createProtectedElement(InvestmentsPage, clientRoles) },
-  { path: '/zakah-calculator', element: createProtectedElement(ZakahCalculator, clientRoles) },
-  { path: '/reports', element: createProtectedElement(ReportsExport, clientRoles) },
-];
-
-const expenseAndIncomeRoutes = [
-  { path: '/income', element: createProtectedElement(IncomeEntry, clientRoles) },
-  { path: '/expenses', element: createProtectedElement(ExpensesPage, clientRoles) },
-  { path: '/expenses/manual-entry', element: createProtectedElement(ExpenseEntry, clientRoles) },
-  { path: '/categories', element: createProtectedElement(CategoryManager, clientRoles) },
-  { path: '/budgets', element: createProtectedElement(BudgetsGoals, clientRoles) },
-];
-
-const financialAdviceRoutes = [
-  { path: '/financial-advice', element: createProtectedElement(FinancialAdvicePage, clientAndAdvisorRoles) },
-];
-
-const advisorRoutes = [
-  { path: '/financial-advisor', element: createProtectedElement(FinancialAdvisorPage, advisorRoles) },
-  { path: '/financial-settings', element: createProtectedElement(FinancialSettingsPage, advisorRoles) },
-  { path: '/advisor-availability', element: createProtectedElement(AdvisorAvailabilitySettings, advisorRoles) },
-];
-
-const adminRoutes = [
-  { path: '/admin', element: createProtectedElement(AdminDashboard, adminRoles) },
-  { path: '/admin/notifications', element: createProtectedElement(NotificationsPanel, adminRoles) },
-  { path: '/admin/advisors', element: createProtectedElement(AdvisorAvailability, adminRoles) },
-  { path: '/admin/users', element: createProtectedElement(UserManagement, adminRoles) },
-  { path: '/admin/settings', element: createProtectedElement(AdminSettings, adminRoles) },
-];
-
-const renderRoutes = (routes) =>
-  routes.map(({ path, element }) => <Route key={path} path={path} element={element} />);
-
 function AppRoutes() {
   return (
     <Routes>
-      {/* Default Route */}
-      {renderRoutes(defaultRoutes)}
+      {/* Default Redirect */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Auth Routes - Public */}
-      {renderRoutes(authRoutes)}
+      {/* Auth Routes (Public, No Navbar) */}
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+      </Route>
 
-      {/* Protected Settings Route - All authenticated users */}
-      {renderRoutes(settingsRoutes)}
+      {/* App Routes (Protected, With Navbar) */}
+      <Route element={<AppLayout />}>
+        
+        {/* Dashboard - Client Only */}
+        <Route path="/home" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <DashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <DashboardPage />
+          </ProtectedRoute>
+        } />
 
-        {/* Dashboard Routes - Client only (supports both 'user' and 'client' roles) */}
-        {renderRoutes(dashboardRoutes)}
-        {/* Expense & Income Routes - Client only (supports both 'user' and 'client' roles) */}
-      {renderRoutes(expenseAndIncomeRoutes)}
+        {/* Settings - All Authenticated */}
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <ProfileSettings />
+          </ProtectedRoute>
+        } />
 
-      {/* Financial Advice Routes - Both clients and advisors can access */}
-      {renderRoutes(financialAdviceRoutes)}
+        {/* Investments - Client Only */}
+        <Route path="/investments" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <InvestmentsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/zakah-calculator" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <ZakahCalculator />
+          </ProtectedRoute>
+        } />
+        <Route path="/reports" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <ReportsExport />
+          </ProtectedRoute>
+        } />
 
-      {/* Advisor-only Routes */}
-      {renderRoutes(advisorRoutes)}
+        {/* Expenses & Income - Client Only */}
+        <Route path="/income" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <IncomeEntry />
+          </ProtectedRoute>
+        } />
+        <Route path="/expenses" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <ExpensesPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/expenses/manual-entry" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <ExpenseEntry />
+          </ProtectedRoute>
+        } />
+        <Route path="/categories" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <CategoryManager />
+          </ProtectedRoute>
+        } />
+        <Route path="/budgets" element={
+          <ProtectedRoute allowedRoles={clientRoles}>
+            <BudgetsGoals />
+          </ProtectedRoute>
+        } />
 
-      {/* Admin Routes - Admin only */}
-      {renderRoutes(adminRoutes)}
+        {/* Financial Advice - Client & Advisor */}
+        <Route path="/financial-advice" element={
+          <ProtectedRoute allowedRoles={clientAndAdvisorRoles}>
+            <FinancialAdvicePage />
+          </ProtectedRoute>
+        } />
+
+        {/* Advisor Only Routes */}
+        <Route path="/financial-advisor" element={
+          <ProtectedRoute allowedRoles={advisorRoles}>
+            <FinancialAdvisorPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/financial-settings" element={
+          <ProtectedRoute allowedRoles={advisorRoles}>
+            <FinancialSettingsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/advisor-availability" element={
+          <ProtectedRoute allowedRoles={advisorRoles}>
+            <AdvisorAvailabilitySettings />
+          </ProtectedRoute>
+        } />
+
+        {/* Admin Only Routes */}
+        <Route path="/admin" element={
+          <ProtectedRoute allowedRoles={adminRoles}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/notifications" element={
+          <ProtectedRoute allowedRoles={adminRoles}>
+            <NotificationsPanel />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/advisors" element={
+          <ProtectedRoute allowedRoles={adminRoles}>
+            <AdvisorAvailability />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/users" element={
+          <ProtectedRoute allowedRoles={adminRoles}>
+            <UserManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/settings" element={
+          <ProtectedRoute allowedRoles={adminRoles}>
+            <AdminSettings />
+          </ProtectedRoute>
+        } />
+      </Route>
 
       {/* 404 Not Found */}
-      <Route path="*" element={<div className="p-6 text-center">404 - Page Not Found</div>} />
+      <Route path="*" element={<div className="p-6 text-center text-white">404 - Page Not Found</div>} />
     </Routes>
   );
 }

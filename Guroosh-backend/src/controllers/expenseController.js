@@ -3,6 +3,7 @@ const Expense = require('../models/expense');
 const Category = require('../models/category');
 const Account = require('../models/account');
 const Budget = require('../models/budget');
+const { createTransactionNotification } = require('../utils/notificationHelper');
 
 const PERIOD_IN_DAYS = {
   weekly: 7,
@@ -175,6 +176,29 @@ exports.createExpense = async (req, res) => {
 
     account.balance = Number(account.balance || 0) - Number(amount);
     await account.save();
+
+    // ✅ Create notification for expense
+    console.log('📤 [EXPENSE] Calling createTransactionNotification for expense:', {
+      userId: req.userId,
+      amount: Number(amount),
+      merchant: merchant || title,
+      accountName: account.name || account.bank || 'Unknown'
+    });
+
+    try {
+      await createTransactionNotification(req.userId, {
+        amount: Number(amount),
+        type: 'payment', // Expense is an outgoing payment
+        accountName: account.name || account.bank || 'Unknown',
+        transactionId: expense._id.toString(),
+        merchant: merchant || title,
+        method: 'Expense'
+      });
+      console.log('✅ [EXPENSE] Notification call completed for expense');
+    } catch (notifError) {
+      console.error('⚠️ [EXPENSE] Notification failed, but expense created successfully:', notifError.message);
+      // Don't throw - let expense creation succeed even if notification fails
+    }
 
     const budgetStatus = await collectBudgetStatuses(req.userId, categoryId);
 

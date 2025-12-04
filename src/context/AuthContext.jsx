@@ -14,20 +14,45 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Operation loading (login, signup, etc.)
+  const [authLoading, setAuthLoading] = useState(true); // Initial auth check loading
   const [error, setError] = useState(null);
 
-  // Check if user is already logged in (from localStorage)
+  // Restore session on app startup - runs ONCE
   useEffect(() => {
-    const storedUser = getUser();
-    if (storedUser) {
-      setUser(storedUser);
-      // Optionally fetch fresh user data from API
-      fetchCurrentUser();
-    } else {
-      setLoading(false);
-    }
+    restoreSession();
   }, []);
+
+  const restoreSession = async () => {
+    console.log('🔄 Restoring session...');
+    setAuthLoading(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const storedUser = getUser();
+
+      if (token && storedUser) {
+        console.log('✅ Session found, restoring user:', storedUser.email);
+        setUser(storedUser);
+
+        // Optionally validate token by fetching current user
+        try {
+          await fetchCurrentUser();
+        } catch (err) {
+          console.warn('⚠️ Token validation failed, using cached user');
+        }
+      } else {
+        console.log('❌ No session found');
+      }
+    } catch (err) {
+      console.error('❌ Session restoration failed:', err);
+      // Clear invalid session
+      logout();
+    } finally {
+      setAuthLoading(false);
+      console.log('✅ Auth initialization complete');
+    }
+  };
 
   const fetchCurrentUser = async () => {
     try {
@@ -38,9 +63,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error('Error fetching current user:', err);
       // Token might be expired, logout
-      logout();
-    } finally {
-      setLoading(false);
+      throw err;
     }
   };
 
@@ -55,6 +78,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.success && response.user) {
+        console.log('✅ Login successful:', response.user.email);
         setUser(response.user);
         return { success: true, user: response.user, role: response.user.role };
       } else {
@@ -202,9 +226,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('🚪 Logging out...');
     authService.logout();
     setUser(null);
     setError(null);
+    setAuthLoading(false); // Ensure authLoading is false after logout
   };
 
   const updateProfile = async (updates) => {
@@ -244,6 +270,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    authLoading, // ✅ NEW: Authentication initialization state
     error,
     login,
     signup,
@@ -257,6 +284,7 @@ export const AuthProvider = ({ children }) => {
     hasRole,
     isAdvisor,
     setError,
+    restoreSession, // ✅ NEW: Manual session restore (if needed)
   };
 
   return (

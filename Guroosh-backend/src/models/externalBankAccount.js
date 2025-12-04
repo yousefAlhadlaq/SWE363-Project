@@ -35,6 +35,10 @@ const externalBankAccountSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  accountName: {
+    type: String,
+    required: false  // Optional for backwards compatibility
+  },
   accountType: {
     type: String,
     enum: ['Checking', 'Savings', 'Investment', 'Business'],
@@ -48,6 +52,10 @@ const externalBankAccountSchema = new mongoose.Schema({
   currency: {
     type: String,
     default: 'SAR' // Saudi Riyal
+  },
+  bankLogo: {
+    type: String,
+    required: false
   },
   // Billing Information
   transactions: [transactionSchema],

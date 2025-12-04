@@ -13,7 +13,7 @@ const requestSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Accepted', 'In Progress', 'Completed', 'Cancelled'],
+    enum: ['Pending', 'Accepted', 'In Progress', 'Completed', 'Cancelled', 'Closed'],
     default: 'Pending'
   },
   title: {
@@ -56,6 +56,18 @@ const requestSchema = new mongoose.Schema({
   draft: {
     type: String,
     default: null
+  },
+  advisorNotes: {
+    type: String,
+    default: ''
+  },
+  deletedByClient: {
+    type: Boolean,
+    default: false
+  },
+  deletedByAdvisor: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

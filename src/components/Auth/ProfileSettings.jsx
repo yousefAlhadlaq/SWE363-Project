@@ -6,7 +6,8 @@ import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import ThemeToggleSegmented from '../Shared/ThemeToggleSegmented';
-import { PASSWORD_REQUIREMENTS, isPasswordStrong } from '../../utils/passwordRules';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const ProfileSettings = () => {
   const navigate = useNavigate();
@@ -23,6 +24,8 @@ const ProfileSettings = () => {
     language: 'English',
   });
 
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -32,12 +35,40 @@ const ProfileSettings = () => {
     fullName: '',
     email: '',
     phoneNumber: '',
-    password: '',
     address: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [editErrors, setEditErrors] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Fetch alert settings on mount
+  useEffect(() => {
+    fetchAlertSettings();
+  }, []);
+
+  // Fetch alert settings from backend
+  const fetchAlertSettings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${API_URL}/notifications/alert-settings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch alert settings');
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSettings(prev => ({
+          ...prev,
+          notifications: data.data.alertSettings
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching alert settings:', error);
+    }
+  };
 
   // Fix white bar
   useEffect(() => {
@@ -58,20 +89,58 @@ const ProfileSettings = () => {
         fullName: user.fullName || '',
         email: user.email || '',
         phoneNumber: user.phoneNumber || '',
-        password: '',
         address: user.address || '',
       });
     }
   }, [showEditModal, user]);
 
-  const handleNotificationToggle = (key) => {
+  const handleNotificationToggle = async (key) => {
+    const newValue = !settings.notifications[key];
+
+    // Optimistic update
     setSettings(prev => ({
       ...prev,
       notifications: {
         ...prev.notifications,
-        [key]: !prev.notifications[key],
+        [key]: newValue,
       },
     }));
+
+    // Save to backend
+    try {
+      setSettingsLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${API_URL}/notifications/alert-settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ [key]: newValue })
+      });
+
+      if (!response.ok) throw new Error('Failed to update alert setting');
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('Alert setting updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating alert setting:', error);
+      // Revert on error
+      setSettings(prev => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          [key]: !newValue,
+        },
+      }));
+    } finally {
+      setSettingsLoading(false);
+    }
   };
 
   const handleEditInputChange = (e) => {
@@ -85,31 +154,27 @@ const ProfileSettings = () => {
   // UPDATED validation to include fullName
   const validateEditForm = () => {
     const errors = {};
-    
+
     if (!editForm.fullName) {
       errors.fullName = 'Full name is required';
     } else if (editForm.fullName.length < 2) {
       errors.fullName = 'Name must be at least 2 characters';
     }
-    
+
     if (!editForm.email) {
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(editForm.email)) {
       errors.email = 'Please enter a valid email';
     }
-    
+
     if (!editForm.phoneNumber) {
       errors.phoneNumber = 'Phone number is required';
     }
-    
-    if (editForm.password && !isPasswordStrong(editForm.password)) {
-      errors.password = PASSWORD_REQUIREMENTS;
-    }
-    
+
     if (!editForm.address) {
       errors.address = 'Address is required';
     }
-    
+
     setEditErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -121,11 +186,11 @@ const ProfileSettings = () => {
     }
 
     setSaving(true);
-    
+
     try {
       // TODO: Replace with actual API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Update user profile in context - UPDATED to include fullName
       const updatedData = {
         fullName: editForm.fullName,
@@ -133,22 +198,23 @@ const ProfileSettings = () => {
         phoneNumber: editForm.phoneNumber,
         address: editForm.address,
       };
-      
-      // Only include password if it was changed
-      if (editForm.password) {
-        updatedData.password = editForm.password;
-      }
-      
+
       updateProfile(updatedData);
-      
+
       setShowEditModal(false);
       // Show success message (optional)
-      
+
     } catch (err) {
       setEditErrors({ general: 'Failed to save changes. Please try again.' });
     } finally {
       setSaving(false);
     }
+  };
+
+  // Navigate to Reset Password page
+  const handleChangePassword = () => {
+    setShowEditModal(false);
+    navigate('/reset-password', { state: { fromSettings: true, email: user?.email } });
   };
 
   const handleLogout = () => {
@@ -465,25 +531,26 @@ const ProfileSettings = () => {
             </div>
           </div>
 
-          {/* Password */}
+          {/* Password - Non-editable with Change Password button */}
           <div>
             <label className="block text-gray-300 text-sm font-medium mb-2">
-              Password <span className="text-gray-400 text-xs">(leave blank to keep current)</span>
+              Password
             </label>
-            <InputField
-              type={showPassword ? "text" : "password"}
-              name="password"
-              value={editForm.password}
-              onChange={handleEditInputChange}
-              placeholder="••••••••"
-              error={editErrors.password}
-              showPasswordToggle
-              showPassword={showPassword}
-              onTogglePassword={() => setShowPassword(!showPassword)}
-              disabled={saving}
-            />
+            <div className="flex gap-3 items-center">
+              <div className="flex-1 px-4 py-3 bg-slate-700/30 border border-slate-600 rounded-lg text-gray-400">
+                ••••••••
+              </div>
+              <button
+                type="button"
+                onClick={handleChangePassword}
+                disabled={saving}
+                className="px-4 py-3 bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/50 rounded-lg text-teal-400 hover:text-teal-300 transition-all font-medium whitespace-nowrap disabled:opacity-50"
+              >
+                Change password
+              </button>
+            </div>
             <p className="mt-1 text-xs text-gray-400">
-              {PASSWORD_REQUIREMENTS}
+              Use a secure password reset flow to change your password
             </p>
           </div>
 

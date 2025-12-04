@@ -1,15 +1,36 @@
 const express = require('express');
 const router = express.Router();
-const { auth } = require('../middleware/auth');
 const notificationController = require('../controllers/notificationController');
+const { auth } = require('../middleware/auth');
 
+// All routes require authentication
 router.use(auth);
 
-router.get('/', notificationController.getNotifications);
+// Get all notifications
+router.get('/', notificationController.getAllNotifications);
+
+// Get unread count
 router.get('/unread-count', notificationController.getUnreadCount);
-router.put('/mark-all-read', notificationController.markAllAsRead);
+
+// Get alert settings
+router.get('/alert-settings', notificationController.getAlertSettings);
+
+// Get latest updates feed (all notifications for activity feed)
+router.get('/latest-updates', notificationController.getLatestUpdates);
+
+// Mark single notification as read
 router.put('/:id/mark-read', notificationController.markAsRead);
+
+// Mark all notifications as read
+router.put('/mark-all-read', notificationController.markAllAsRead);
+
+// Update alert settings
+router.patch('/alert-settings', notificationController.updateAlertSettings);
+
+// Delete single notification
 router.delete('/:id', notificationController.deleteNotification);
-router.delete('/', notificationController.clearNotifications);
+
+// Clear all notifications
+router.delete('/', notificationController.clearAllNotifications);
 
 module.exports = router;

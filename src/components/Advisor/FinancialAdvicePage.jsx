@@ -5,19 +5,43 @@ import Sidebar from '../Shared/Sidebar';
 import requestService from '../../services/requestService';
 import advisorService from '../../services/advisorService';
 import { useAuth } from '../../context/AuthContext';
+import FloatingActionButton from '../Shared/FloatingActionButton';
+
+const avatarGradients = [
+  'from-teal-500 to-blue-600',
+  'from-purple-500 to-pink-600',
+  'from-amber-500 to-orange-500',
+  'from-emerald-500 to-teal-500',
+  'from-indigo-500 to-cyan-500',
+];
+
+const getAvatarProps = (person) => {
+  const name =
+    person?.fullName ||
+    person?.name ||
+    person?.email ||
+    person?.senderName ||
+    'Unknown';
+
+  const trimmed = (name || '').trim();
+  const initial = trimmed.charAt(0).toUpperCase() || 'A';
+  const hash = Array.from(trimmed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const gradient = avatarGradients[Math.abs(hash) % avatarGradients.length];
+
+  return { initial, gradient, name: trimmed || 'Unknown' };
+};
 
 function FinancialAdvicePage() {
-  const { isAdvisor } = useAuth();
-  const [activeTab, setActiveTab] = useState('sent');
+  const { isAdvisor, user } = useAuth();
+  const [activeTab, setActiveTab] = useState('active');
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedThread, setSelectedThread] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // State starts EMPTY - no mock data
-  const [sentRequests, setSentRequests] = useState([]);
-  const [receivedRequests, setReceivedRequests] = useState([]);
+  const [activeRequests, setActiveRequests] = useState([]);
+  const [pastRequests, setPastRequests] = useState([]);
   const [availableAdvisors, setAvailableAdvisors] = useState([]);
 
   const [request, setRequest] = useState({
@@ -44,21 +68,16 @@ function FinancialAdvicePage() {
       const response = await requestService.getAllRequests();
 
       if (response.success && response.requests) {
-        // Filter out cancelled requests - we only want active requests
-        const activeRequests = response.requests.filter(req => req.status !== 'Cancelled');
+        const requests = response.requests || [];
+        const visible = isAdvisor()
+          ? requests.filter(req => !req.deletedByAdvisor)
+          : requests.filter(req => !req.deletedByClient);
 
-        // Backend already filters requests based on user role:
-        // - For clients: returns requests where client = currentUser (all are "sent")
-        // - For advisors: returns requests where advisor = currentUser (all are "received")
-        if (isAdvisor()) {
-          // If user is advisor, all returned requests are received (assigned to them)
-          setSentRequests([]);
-          setReceivedRequests(activeRequests);
-        } else {
-          // If user is client, all returned requests are sent (created by them)
-          setSentRequests(activeRequests);
-          setReceivedRequests([]);
-        }
+        const activeStatuses = ['Pending', 'Accepted', 'In Progress'];
+        const pastStatuses = ['Closed', 'Completed', 'Cancelled'];
+
+        setActiveRequests(visible.filter(req => activeStatuses.includes(req.status)));
+        setPastRequests(visible.filter(req => pastStatuses.includes(req.status)));
       }
     } catch (err) {
       console.error('Error loading requests:', err);
@@ -213,7 +232,27 @@ function FinancialAdvicePage() {
     }
   };
 
+  const handleDeleteConversation = async (requestId) => {
+    const confirmed = window.confirm('Delete this conversation from your view? It will remain visible to the advisor.');
+    if (!confirmed) return;
+    try {
+      await requestService.cancelRequest(requestId);
+      await loadRequests();
+      if (selectedThread?._id === requestId) {
+        setSelectedThread(null);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to remove conversation');
+      alert(err.message || 'Failed to remove conversation');
+    }
+  };
+
   const handleSendReply = async () => {
+    if (selectedThread?.status && ['Closed', 'Completed'].includes(selectedThread.status)) {
+      alert('This conversation is closed. You cannot send new messages.');
+      return;
+    }
+
     if (!replyMessage.trim()) {
       alert('Please enter a message');
       return;
@@ -254,6 +293,21 @@ function FinancialAdvicePage() {
     }
   };
 
+  const handleEndConversation = async () => {
+    if (!selectedThread?._id) return;
+    const confirmed = window.confirm('Are you sure you want to end this conversation? You and the advisor will no longer be able to send new messages on this request.');
+    if (!confirmed) return;
+    try {
+      await requestService.updateRequestStatus(selectedThread._id, 'Closed');
+      await loadRequests();
+      await loadRequestDetails(selectedThread._id);
+      setActiveTab('past');
+    } catch (err) {
+      setError(err.message || 'Failed to end conversation.');
+      alert(err.message || 'Failed to end conversation.');
+    }
+  };
+
   const viewThread = async (requestItem) => {
     if (!requestItem || !requestItem._id) {
       console.error('Invalid request item:', requestItem);
@@ -276,6 +330,8 @@ function FinancialAdvicePage() {
         return 'bg-green-500/10 text-green-400 border border-green-500/30';
       case 'In Progress':
         return 'bg-blue-500/10 text-blue-400 border border-blue-500/30';
+      case 'Closed':
+        return 'bg-slate-700/30 text-slate-200 border border-slate-500/40';
       default:
         return 'bg-slate-700/30 text-slate-400 border border-slate-600/30';
     }
@@ -283,6 +339,8 @@ function FinancialAdvicePage() {
 
   // Thread View
   if (selectedThread) {
+    const conversationClosed = selectedThread.status === 'Closed' || selectedThread.status === 'Completed';
+
     return (
       <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100">
         {/* Decorative animated background elements */}
@@ -322,7 +380,12 @@ function FinancialAdvicePage() {
             <div className="relative bg-white/90 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 mb-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-300 shadow-sm dark:shadow-none">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{selectedThread.title}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{selectedThread.title}</h2>
+                  {selectedThread.description && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 max-w-3xl mb-2">
+                      {selectedThread.description}
+                    </p>
+                  )}
                   <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-slate-600 dark:text-gray-400">
                     <span className="text-slate-800 dark:text-gray-300">{selectedThread.topic}</span>
                     <span>•</span>
@@ -344,12 +407,14 @@ function FinancialAdvicePage() {
                 selectedThread.messages.map((message, index) => (
                   <div key={index} className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 shadow-sm dark:shadow-none">
                     <div className="flex items-start space-x-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                        {(() => {
-                          const senderName = message.sender?.fullName || message.sender?.email || message.senderName || 'Unknown';
-                          return senderName.charAt(0).toUpperCase();
-                        })()}
-                      </div>
+                      {(() => {
+                        const avatar = getAvatarProps(message.sender || { senderName: message.senderName });
+                        return (
+                          <div className={`w-10 h-10 bg-gradient-to-br ${avatar.gradient} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0`}>
+                            {avatar.initial}
+                          </div>
+                        );
+                      })()}
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-1">
                           <span className="font-semibold text-slate-900 dark:text-white">
@@ -384,6 +449,11 @@ function FinancialAdvicePage() {
 
               {/* Reply Box */}
               <div className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 shadow-sm dark:shadow-none">
+                {conversationClosed && (
+                  <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-100">
+                    This conversation is closed. You can no longer send new messages.
+                  </div>
+                )}
                 <label className="block text-sm font-medium text-slate-800 dark:text-slate-300 mb-3">
                   Add a reply
                 </label>
@@ -393,14 +463,21 @@ function FinancialAdvicePage() {
                   onChange={(e) => setReplyMessage(e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none mb-4 dark:bg-slate-900/50 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
                   placeholder="Type your message or follow-up question..."
-                  disabled={loading}
+                  disabled={loading || conversationClosed}
                 />
                 <button
                   onClick={handleSendReply}
-                  disabled={loading}
+                  disabled={loading || conversationClosed}
                   className="px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Sending...' : 'Send Reply'}
+                </button>
+                <button
+                  onClick={handleEndConversation}
+                  disabled={conversationClosed}
+                  className="px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-medium rounded-lg border border-red-500/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  End Conversation
                 </button>
               </div>
             </div>
@@ -411,27 +488,37 @@ function FinancialAdvicePage() {
               <div className="bg-white/90 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-6 shadow-sm dark:shadow-none">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Participants</h3>
                 <div className="space-y-3">
+                  {(() => {
+                    const youAvatar = getAvatarProps(user || { fullName: 'You' });
+                    return (
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                      Y
+                      <div className={`w-10 h-10 bg-gradient-to-br ${youAvatar.gradient} rounded-full flex items-center justify-center text-white font-bold`}>
+                        {youAvatar.initial}
                     </div>
                     <div>
-                      <p className="text-slate-900 dark:text-white font-medium">You</p>
+                      <p className="text-slate-900 dark:text-white font-medium">{youAvatar.name || 'You'}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-400">Requester</p>
                     </div>
                   </div>
+                    );
+                  })()}
                   {selectedThread.advisor && (
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {(selectedThread.advisor.fullName || selectedThread.advisor.email || 'A').charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-slate-900 dark:text-white font-medium">
-                          {selectedThread.advisor.fullName || selectedThread.advisor.email || 'Unknown Advisor'}
-                        </p>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Advisor</p>
-                      </div>
-                    </div>
+                    (() => {
+                      const advisorAvatar = getAvatarProps(selectedThread.advisor);
+                      return (
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-10 h-10 bg-gradient-to-br ${advisorAvatar.gradient} rounded-full flex items-center justify-center text-white font-bold`}>
+                            {advisorAvatar.initial}
+                          </div>
+                          <div>
+                            <p className="text-slate-900 dark:text-white font-medium">
+                              {selectedThread.advisor.fullName || selectedThread.advisor.email || 'Unknown Advisor'}
+                            </p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">Advisor</p>
+                          </div>
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               </div>
@@ -485,7 +572,7 @@ function FinancialAdvicePage() {
           <div className="flex items-center space-x-3">
             <h2 className="text-3xl font-bold bg-gradient-to-r from-teal-300 via-blue-300 to-purple-300 bg-clip-text text-transparent">Financial Advice</h2>
             <span className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-slate-900 text-sm font-bold px-4 py-1.5 rounded-full shadow-lg">
-              {sentRequests.length + receivedRequests.length}
+              {activeRequests.length}
             </span>
           </div>
         </div>
@@ -507,32 +594,32 @@ function FinancialAdvicePage() {
         {/* Toggle Tabs */}
         <div className="flex space-x-3 mb-6">
           <button
-            onClick={() => setActiveTab('sent')}
+            onClick={() => setActiveTab('active')}
             className={`flex-1 px-6 py-4 rounded-xl font-semibold text-lg transition-all ${
-              activeTab === 'sent'
+              activeTab === 'active'
                 ? 'bg-white shadow-sm text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
                 : 'bg-white/70 border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-teal-300 hover:bg-white dark:bg-slate-800/30 dark:border-slate-700/30 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/50 dark:hover:border-slate-600/50'
             }`}
           >
-            Sent
+            Active
           </button>
           <button
-            onClick={() => setActiveTab('received')}
+            onClick={() => setActiveTab('past')}
             className={`flex-1 px-6 py-4 rounded-xl font-semibold text-lg transition-all ${
-              activeTab === 'received'
+              activeTab === 'past'
                 ? 'bg-white shadow-sm text-slate-900 border border-slate-200 dark:bg-slate-800/70 dark:text-white dark:border-slate-700/50'
                 : 'bg-white/70 border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-teal-300 hover:bg-white dark:bg-slate-800/30 dark:border-slate-700/30 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/50 dark:hover:border-slate-600/50'
             }`}
           >
-            Received
+            Past
           </button>
         </div>
 
         {/* Request Cards */}
         <div className="space-y-4">
-          {activeTab === 'sent' ? (
-            sentRequests.length > 0 ? (
-              sentRequests.map((req) => (
+          {activeTab === 'active' ? (
+            activeRequests.length > 0 ? (
+              activeRequests.map((req) => (
                 <div key={req._id} className="relative group">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
                   <div className="relative bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-300 shadow-sm dark:shadow-none">
@@ -568,12 +655,12 @@ function FinancialAdvicePage() {
               ))
             ) : (
               <div className="bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-12 text-center">
-                <p className="text-slate-500 dark:text-slate-400">No sent requests yet. Click the + button to create a new request.</p>
+                <p className="text-slate-500 dark:text-slate-400">No active requests yet. Click the + button to create a new request.</p>
               </div>
             )
           ) : (
-            receivedRequests.length > 0 ? (
-              receivedRequests.map((req) => (
+            pastRequests.length > 0 ? (
+              pastRequests.map((req) => (
                 <div key={req._id} className="relative group">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-teal-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-10 blur transition duration-500"></div>
                   <div className="relative bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all duration-300 shadow-sm dark:shadow-none">
@@ -597,27 +684,25 @@ function FinancialAdvicePage() {
                     >
                       View
                     </button>
+                    <button
+                      onClick={() => handleDeleteConversation(req._id)}
+                      className="ml-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-medium rounded-lg border border-red-500/30 transition-all text-sm"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))
             ) : (
               <div className="bg-white/95 dark:bg-slate-800/70 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl p-12 text-center">
-                <p className="text-slate-500 dark:text-slate-400">No received requests yet.</p>
+                <p className="text-slate-500 dark:text-slate-400">No past requests yet.</p>
               </div>
             )
           )}
         </div>
 
         {/* Floating Action Button */}
-        <button
-          onClick={() => setShowRequestModal(true)}
-          disabled={loading}
-          className="fixed bottom-8 right-8 w-14 h-14 bg-yellow-500 hover:bg-yellow-400 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg className="w-7 h-7 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
+        <FloatingActionButton onClick={() => setShowRequestModal(true)} className={loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''} />
 
         {/* Request Modal */}
         {showRequestModal && (
