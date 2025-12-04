@@ -627,9 +627,8 @@ function DashboardPage() {
     .join(' ');
 
   const areaPath = chartPoints.length
-    ? `${linePath} L ${chartPoints[chartPoints.length - 1].x.toFixed(2)} ${
-        chartHeight - chartPaddingY
-      } L ${chartPoints[0].x.toFixed(2)} ${chartHeight - chartPaddingY} Z`
+    ? `${linePath} L ${chartPoints[chartPoints.length - 1].x.toFixed(2)} ${chartHeight - chartPaddingY
+    } L ${chartPoints[0].x.toFixed(2)} ${chartHeight - chartPaddingY} Z`
     : '';
 
   // Calculate Y-axis grid lines and labels
@@ -641,16 +640,20 @@ function DashboardPage() {
 
   const gridLines = yAxisTicks.slice(1, -1); // Skip top (1.0) and bottom (0) for grid lines
 
-  // ✅ Show loading state while auth initializes
-  if (authLoading) {
+  // ✅ Show loading state while auth initializes OR data is loading
+  if (authLoading || loading) {
     return (
       <div className="flex min-h-screen bg-page text-white pt-20">
         <Sidebar />
         <div className="flex-1 ml-64 px-6 py-8">
-          <div className="max-w-6xl space-y-6">
-            <div className="text-center py-20">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div>
-              <p className="mt-4 text-gray-400">Loading dashboard...</p>
+          <div className="max-w-6xl flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-teal-500/20 rounded-full"></div>
+                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-teal-500 rounded-full animate-spin"></div>
+                <div className="absolute inset-2 w-12 h-12 bg-teal-500/10 rounded-full animate-pulse"></div>
+              </div>
+              <p className="text-gray-400 text-sm animate-pulse">Loading dashboard...</p>
             </div>
           </div>
         </div>
@@ -1096,22 +1099,22 @@ function DashboardPage() {
       if (startDate) queryParams.append('startDate', startDate);
       if (endDate) queryParams.append('endDate', endDate);
       queryParams.append('format', format);
-      
+
       const endpoint = format === 'pdf' ? '/export/pdf' : '/export/csv';
       const downloadUrl = `${API_BASE_URL}${endpoint}?${queryParams.toString()}`;
-      
+
       try {
         const response = await fetch(downloadUrl, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`Export failed: ${errorText}`);
         }
-        
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1121,7 +1124,7 @@ function DashboardPage() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
         // toast.success is not defined, using alert for now
         alert('Report downloaded successfully');
         handleCancelAction('export');
@@ -1637,22 +1640,20 @@ function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => updateActionValue('export', 'format', 'csv')}
-                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${
-                    actionValues.export.format === 'csv'
+                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${actionValues.export.format === 'csv'
                       ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
                       : 'bg-slate-800/50 border-slate-700 text-gray-400 hover:border-slate-600'
-                  }`}
+                    }`}
                 >
                   CSV (Excel)
                 </button>
                 <button
                   type="button"
                   onClick={() => updateActionValue('export', 'format', 'pdf')}
-                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${
-                    actionValues.export.format === 'pdf'
+                  className={`p-3 rounded-xl border text-sm font-medium transition-all ${actionValues.export.format === 'pdf'
                       ? 'bg-teal-500/20 border-teal-500/50 text-teal-300'
                       : 'bg-slate-800/50 border-slate-700 text-gray-400 hover:border-slate-600'
-                  }`}
+                    }`}
                 >
                   PDF Document
                 </button>
@@ -1853,11 +1854,10 @@ function DashboardPage() {
                       <button
                         key={option.key}
                         type="button"
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
-                          statusRange === option.key
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${statusRange === option.key
                             ? 'bg-teal-500/20 text-teal-200 border-teal-400/60 shadow-[0_0_25px_rgba(94,234,212,0.3)]'
                             : 'text-gray-400 border-slate-700/70 hover:text-white hover:border-teal-400/40'
-                        }`}
+                          }`}
                         onClick={() => setStatusRange(option.key)}
                       >
                         {option.label}

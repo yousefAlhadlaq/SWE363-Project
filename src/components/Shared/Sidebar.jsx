@@ -38,10 +38,9 @@ function Sidebar() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? "bg-white shadow-md border border-slate-300 text-slate-900 dark:bg-slate-800/70 dark:border-slate-700/50 dark:text-white"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent hover:border-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30"
+                `group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
+                  ? "bg-white shadow-md border border-slate-300 text-slate-900 dark:bg-slate-800/70 dark:border-slate-700/50 dark:text-white"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent hover:border-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-slate-800/40 dark:hover:border-slate-700/30"
                 }`
               }
             >
@@ -63,10 +62,10 @@ function Sidebar() {
       <div className="relative z-10 px-6 py-6 border-t border-slate-200 dark:border-slate-700/50">
         <div className="flex items-center gap-3 mb-3 px-3 py-2 bg-white/90 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700/30 shadow-sm">
           <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-teal-200/50 dark:ring-white/10">
-            {getInitials(user?.name)}
+            {getInitials(user?.fullName || user?.name)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{user?.name || 'User'}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{user?.fullName || user?.name || 'User'}</p>
             <p className="text-xs text-slate-500 dark:text-gray-400 capitalize">{user?.role || 'Member'}</p>
           </div>
         </div>
