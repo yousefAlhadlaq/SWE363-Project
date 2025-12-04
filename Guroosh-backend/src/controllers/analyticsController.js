@@ -18,12 +18,13 @@ const fetchFromCentralBank = async (endpoint, userId) => {
 };
 
 /**
- * GET /api/analytics/spending?range=weekly|monthly|yearly
+ * GET /api/analytics/spending?range=weekly|monthly|yearly|all
  *
  * Returns spending data aggregated by time period:
  * - weekly: Last 7 days (Sun-Sat)
  * - monthly: Last 30 days (grouped by date)
  * - yearly: Last 12 months (Jan-Dec)
+ * - all: Aggregated by year (all available data)
  *
  * ONLY counts outgoing transactions (payments, withdrawals, expenses)
  * IGNORES deposits, transfers between accounts, and investments
@@ -46,10 +47,10 @@ exports.getSpendingAnalytics = async (req, res) => {
     console.log(`📊 Analytics request: userId=${userId}, range=${range}`);
 
     // Validate range parameter
-    if (!['weekly', 'monthly', 'yearly'].includes(range)) {
+    if (!['weekly', 'monthly', 'yearly', 'all'].includes(range)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid range. Must be weekly, monthly, or yearly'
+        message: 'Invalid range. Must be weekly, monthly, yearly, or all'
       });
     }
 
@@ -154,8 +155,10 @@ exports.getSpendingAnalytics = async (req, res) => {
       const currentDay = now.getDate();
       data = [];
       for (let i = 1; i <= currentDay; i++) {
+        const dateObj = new Date(now.getFullYear(), now.getMonth(), i);
         data.push({
           label: i.toString(),
+          date: dateObj.toISOString(),
           value: Math.round((monthlyData[i] || 0) * 100) / 100
         });
       }
@@ -199,6 +202,66 @@ exports.getSpendingAnalytics = async (req, res) => {
         label: monthLabels[index],
         value: Math.round(value * 100) / 100
       }));
+
+    } else if (range === 'all') {
+      // Aggregate by year (all data) with continuous year range
+      const yearlyTotals = {};
+      let minYear = null;
+      let maxYear = null;
+
+      const processTx = (tx) => {
+        const txDate = new Date(tx.date);
+        if (tx.type === 'payment' || tx.type === 'withdrawal') {
+          const year = txDate.getFullYear();
+
+          // Track min/max years
+          if (minYear === null || year < minYear) minYear = year;
+          if (maxYear === null || year > maxYear) maxYear = year;
+
+          yearlyTotals[year] = (yearlyTotals[year] || 0) + (tx.amount || 0);
+        }
+      };
+
+      // Bank transactions
+      accounts.forEach(account => {
+        const transactions = account.billing?.transactions || account.transactions || [];
+        transactions.forEach(processTx);
+      });
+
+      // Local expenses
+      expensesFromDB.forEach(expense => {
+        const expenseDate = new Date(expense.date);
+        const year = expenseDate.getFullYear();
+
+        // Track min/max years
+        if (minYear === null || year < minYear) minYear = year;
+        if (maxYear === null || year > maxYear) maxYear = year;
+
+        yearlyTotals[year] = (yearlyTotals[year] || 0) + (expense.amount || 0);
+      });
+
+      // If no transactions exist, use current year as both min and max
+      const currentYear = now.getFullYear();
+      if (minYear === null) minYear = currentYear;
+      if (maxYear === null) maxYear = currentYear;
+
+      // Ensure at least the last 3 years are represented, even if zero
+      const paddedMinYear = Math.min(minYear, currentYear - 2);
+      const paddedMaxYear = Math.max(maxYear, currentYear);
+
+      // Fill in all years from minYear to maxYear (including zero-spend years)
+      data = [];
+      for (let year = paddedMinYear; year <= paddedMaxYear; year++) {
+        if (yearlyTotals[year] === undefined) {
+          yearlyTotals[year] = 0;
+        }
+        data.push({
+          label: String(year),
+          year: year,
+          date: new Date(year, 0, 1).toISOString(),
+          value: Math.round((yearlyTotals[year] || 0) * 100) / 100,
+        });
+      }
     }
 
     // ✅ Check if user has any spending data

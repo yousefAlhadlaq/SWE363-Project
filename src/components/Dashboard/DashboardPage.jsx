@@ -35,31 +35,8 @@ const financialStatusOptions = [
   { key: 'weekly', label: 'Weekly' },
   { key: 'monthly', label: 'Monthly' },
   { key: 'yearly', label: 'Yearly' },
+  { key: 'all', label: 'All years' },
 ];
-
-const financialStatusData = {
-  weekly: [
-    { label: 'Sun', value: 2 },
-    { label: 'Mon', value: 7 },
-    { label: 'Tue', value: 12 },
-    { label: 'Wed', value: 18 },
-    { label: 'Thu', value: 22 },
-    { label: 'Fri', value: 27 },
-    { label: 'Sat', value: 10 },
-  ],
-  monthly: [
-    { label: 'Week 1', value: 12 },
-    { label: 'Week 2', value: 19 },
-    { label: 'Week 3', value: 27 },
-    { label: 'Week 4', value: 32 },
-  ],
-  yearly: [
-    { label: 'Q1', value: 52 },
-    { label: 'Q2', value: 61 },
-    { label: 'Q3', value: 78 },
-    { label: 'Q4', value: 88 },
-  ],
-};
 
 const initialLatestUpdates = [
   {
@@ -308,7 +285,7 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [linkedAccounts, setLinkedAccounts] = useState([]);
-  const [chartData, setChartData] = useState(financialStatusData.weekly);
+  const [chartData, setChartData] = useState([]);
   const [formErrors, setFormErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState(null);
 
@@ -544,6 +521,61 @@ function DashboardPage() {
     []
   );
 
+  const normalizeChartData = useMemo(() => {
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    const deriveLabel = (entry, index, parsedDate) => {
+      if (entry?.label) return entry.label;
+      if (statusRange === 'weekly') {
+        return daysOfWeek[index % 7];
+      }
+      if (statusRange === 'monthly') {
+        if (parsedDate) return parsedDate.getDate().toString();
+        if (entry?.day) return String(entry.day);
+        return String(index + 1);
+      }
+      if (statusRange === 'yearly') {
+        if (parsedDate) return months[parsedDate.getMonth()];
+        if (entry?.monthIndex !== undefined) return months[entry.monthIndex % 12];
+        if (entry?.month) return entry.month;
+        return months[index % 12];
+      }
+      // all years
+      if (parsedDate) return parsedDate.getFullYear().toString();
+      if (entry?.year !== undefined) return String(entry.year);
+      return `Year ${index + 1}`;
+    };
+
+    const deriveTooltip = (parsedDate, label, amount) => {
+      if (parsedDate) {
+        const day = parsedDate.getDate();
+        const month = months[parsedDate.getMonth()];
+        const year = parsedDate.getFullYear();
+
+        if (statusRange === 'all') {
+          // All years: "2024 – SR 1,000.00"
+          return `${year} – ${formatSR(amount)}`;
+        }
+        // Other ranges: "5 Jan 2025"
+        return `${day} ${month} ${year}`;
+      }
+      return label;
+    };
+
+    return (chartData || []).map((entry, index) => {
+      const parsedDate = entry?.date ? new Date(entry.date) : null;
+      const amount = Number(entry.amount ?? entry.value ?? entry.total ?? 0);
+      const label = deriveLabel(entry, index, parsedDate);
+      const tooltip = deriveTooltip(parsedDate, label, amount);
+      return {
+        value: amount,
+        label,
+        tooltip,
+      };
+    });
+  }, [chartData, statusRange]);
+
   const addLatestUpdate = (update) => {
     setLatestUpdates((prev) =>
       [{ id: Date.now(), ...update }, ...prev].slice(0, latestUpdatesLimit)
@@ -565,29 +597,31 @@ function DashboardPage() {
   }, [displayName]);
 
   // Use real data from backend instead of hardcoded financialStatusData
-  const activeFinancialData = chartData;
+  const normalizedChart = normalizeChartData;
+  const activeFinancialData = normalizedChart;
   const maxFinancialValue = Math.max(
-    ...activeFinancialData.map((item) => item.value),
+    ...normalizedChart.map((item) => item.value),
     1
   );
 
   const chartWidth = 720;
   const chartHeight = 240;
-  const chartPaddingX = 40;
+  const chartPaddingLeft = 70; // Extra space for Y-axis labels
+  const chartPaddingRight = 40;
   const chartPaddingY = 26;
-  const usableWidth = chartWidth - chartPaddingX * 2;
+  const usableWidth = chartWidth - chartPaddingLeft - chartPaddingRight;
   const usableHeight = chartHeight - chartPaddingY * 2;
 
-  const chartPoints = activeFinancialData.map((entry, index) => {
+  const chartPoints = normalizedChart.map((entry, index) => {
     const x =
-      activeFinancialData.length === 1
-        ? chartPaddingX + usableWidth / 2
-        : chartPaddingX + (index / (activeFinancialData.length - 1)) * usableWidth;
+      normalizedChart.length === 1
+        ? chartPaddingLeft + usableWidth / 2
+        : chartPaddingLeft + (index / (normalizedChart.length - 1)) * usableWidth;
     const normalizedValue = entry.value / maxFinancialValue;
-      const y =
-        chartHeight - chartPaddingY - normalizedValue * usableHeight;
-      return { ...entry, x, y };
-    });
+    const y =
+      chartHeight - chartPaddingY - normalizedValue * usableHeight;
+    return { ...entry, x, y };
+  });
 
   const linePath = chartPoints
     .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
@@ -599,9 +633,14 @@ function DashboardPage() {
       } L ${chartPoints[0].x.toFixed(2)} ${chartHeight - chartPaddingY} Z`
     : '';
 
-  const gridLines = [0.25, 0.5, 0.75].map((ratio) => ({
-    y: chartPaddingY + ratio * usableHeight,
-  }));
+  // Calculate Y-axis grid lines and labels
+  const yAxisTicks = [0, 0.25, 0.5, 0.75, 1.0].map((ratio) => {
+    const value = maxFinancialValue * (1 - ratio); // Inverted because Y increases downward in SVG
+    const y = chartPaddingY + ratio * usableHeight;
+    return { y, value };
+  });
+
+  const gridLines = yAxisTicks.slice(1, -1); // Skip top (1.0) and bottom (0) for grid lines
 
   // ✅ Show loading state while auth initializes
   if (authLoading) {
@@ -1811,7 +1850,7 @@ function DashboardPage() {
               <Card title="Your financial status">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-gray-400">
-                    Track weekly, monthly, or yearly spending performance.
+                    Track weekly, monthly, yearly, or multi-year spending performance.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {financialStatusOptions.map((option) => (
@@ -1863,8 +1902,8 @@ function DashboardPage() {
                           <line
                             // eslint-disable-next-line react/no-array-index-key
                             key={`grid-${index}`}
-                            x1={chartPaddingX}
-                            x2={chartWidth - chartPaddingX}
+                            x1={chartPaddingLeft}
+                            x2={chartWidth - chartPaddingRight}
                             y1={line.y}
                             y2={line.y}
                             stroke="rgba(148,163,184,0.15)"
@@ -1894,8 +1933,45 @@ function DashboardPage() {
                               stroke="#0f172a"
                               strokeWidth={2}
                             />
+                            {point.tooltip && (
+                              <title>{point.tooltip}</title>
+                            )}
                           </g>
                         ))}
+
+                        {chartPoints.map((point, idx) => (
+                          <text
+                            key={`xlabel-${idx}`}
+                            x={point.x}
+                            y={chartHeight - chartPaddingY + 16}
+                            textAnchor="middle"
+                            className="text-[10px] fill-gray-400"
+                          >
+                            {point.label}
+                          </text>
+                        ))}
+
+                        {/* Y-axis tick labels */}
+                        {yAxisTicks.map((tick, idx) => (
+                          <text
+                            key={`ylabel-${idx}`}
+                            x={chartPaddingLeft - 8}
+                            y={tick.y + 3}
+                            textAnchor="end"
+                            className="text-[10px] fill-gray-400"
+                          >
+                            {formatSR(tick.value, 0)}
+                          </text>
+                        ))}
+
+                        <text
+                          x={chartPaddingLeft - 8}
+                          y={chartPaddingY - 10}
+                          textAnchor="end"
+                          className="text-[10px] fill-gray-400 font-medium"
+                        >
+                          Amount (SR)
+                        </text>
                       </svg>
                     ) : (
                       <div className="h-48 flex items-center justify-center rounded-xl border border-dashed border-slate-700/50 text-gray-500 text-sm">
@@ -1904,16 +1980,6 @@ function DashboardPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {activeFinancialData.map((entry) => (
-                      <div key={entry.label} className="text-center">
-                        <p className="text-lg font-semibold text-white">{entry.value}</p>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">
-                          {entry.label}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
