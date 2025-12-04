@@ -1,16 +1,18 @@
 /**
  * Gold Price Service
  * Fetches current price from GoldAPI (or env override) and estimates historical price.
+ * Returns all prices in SAR (Saudi Riyal)
  */
 
 const axios = require('axios');
 
 /**
- * Gold price calculations expressed per gram (USD)
- * Uses realistic current market price
+ * Gold price calculations expressed per gram (converted to SAR)
+ * Uses realistic current market price with USD to SAR conversion
  */
 
 const GRAMS_PER_TROY_OUNCE = 31.1034768;
+const USD_TO_SAR = 3.75; // Fixed conversion rate: 1 USD = 3.75 SAR
 const GOLD_API_BASE_URL = process.env.GOLD_API_BASE_URL || 'https://www.goldapi.io/api';
 const GOLD_API_KEY = process.env.GOLD_API_KEY;
 const roundToTwo = (value) => Math.round(value * 100) / 100;
@@ -23,12 +25,12 @@ const parsePricePerGramFromGoldApi = (data) => {
 };
 
 /**
- * Fetch current gold price per gram in USD
- * Uses realistic current market price
- * @returns {Promise<number>} Current price per gram
+ * Fetch current gold price per gram in SAR
+ * Uses realistic current market price converted from USD
+ * @returns {Promise<number>} Current price per gram in SAR
  */
 async function getCurrentGoldPrice() {
-  // Allow manual override for exact pricing (e.g., live feed piped in)
+  // Allow manual override for exact pricing (assumes SAR input)
   const envPrice = Number(process.env.GOLD_PRICE_PER_GRAM);
   if (!Number.isNaN(envPrice) && envPrice > 0) {
     return roundToTwo(envPrice);
@@ -36,9 +38,8 @@ async function getCurrentGoldPrice() {
 
   try {
     if (!GOLD_API_KEY) {
-      throw new Error(
-        'No gold price provider configured. Set GOLD_API_KEY or provide GOLD_PRICE_PER_GRAM for a manual override.'
-      );
+      console.warn('No GOLD_API_KEY configured, will use fallback price');
+      return null;
     }
 
     const response = await axios.get(`${GOLD_API_BASE_URL}/XAU/USD`, {
@@ -47,16 +48,20 @@ async function getCurrentGoldPrice() {
     });
 
     const data = response.data || {};
-    const pricePerGram = parsePricePerGramFromGoldApi(data);
+    const pricePerGramUSD = parsePricePerGramFromGoldApi(data);
 
-    if (pricePerGram && pricePerGram > 0) {
-      return roundToTwo(pricePerGram);
+    if (pricePerGramUSD && pricePerGramUSD > 0) {
+      // Convert USD to SAR
+      return roundToTwo(pricePerGramUSD * USD_TO_SAR);
     }
 
-    throw new Error('GoldAPI returned unexpected payload');
+    console.warn('GoldAPI returned unexpected payload, will use fallback price');
+    return null;
   } catch (error) {
-    console.error('Error fetching current gold price:', error.message);
-    throw error;
+    // This is expected when API key is missing or rate-limited - fallback silently
+    console.log('ℹ️  Gold price API unavailable, using fallback');
+    // Return null to allow fallback instead of throwing
+    return null;
   }
 }
 

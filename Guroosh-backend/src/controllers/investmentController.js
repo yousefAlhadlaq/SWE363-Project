@@ -1,4 +1,4 @@
-const Investment = require('../models/Investment');
+const Investment = require('../models/investment');
 const externalDataService = require('../services/externalDataService');
 const { createInvestmentNotification } = require('../utils/notificationHelper');
 
@@ -199,8 +199,8 @@ exports.createInvestment = async (req, res) => {
     }
 
     if ((amountOwned !== undefined && amountOwned < 0) ||
-        (buyPrice !== undefined && buyPrice < 0) ||
-        (currentPrice !== undefined && currentPrice < 0)) {
+      (buyPrice !== undefined && buyPrice < 0) ||
+      (currentPrice !== undefined && currentPrice < 0)) {
       return res.status(400).json({
         success: false,
         error: 'Amount and prices must be positive numbers'
