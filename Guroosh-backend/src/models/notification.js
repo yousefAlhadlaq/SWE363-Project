@@ -14,7 +14,7 @@ const notificationSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['transactionAlerts', 'budgetReminders', 'investmentUpdates', 'marketingEmails'],
+    enum: ['transactionAlerts', 'budgetReminders', 'investmentUpdates', 'marketingEmails', 'advisor'],
     required: true
   },
   title: {
@@ -42,7 +42,8 @@ const notificationSchema = new mongoose.Schema({
     merchant: String, // Merchant or recipient name
     direction: String, // 'in' or 'out' for money flow
     quantity: Number, // For investments (shares, ounces, etc.)
-    symbol: String // For stocks/crypto
+    symbol: String, // For stocks/crypto
+    adviceId: mongoose.Schema.Types.ObjectId // For advisor notifications
   }
 }, {
   timestamps: true

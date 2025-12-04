@@ -13,7 +13,7 @@ const requestSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Accepted', 'In Progress', 'Completed', 'Cancelled', 'Closed'],
+    enum: ['Pending', 'Accepted', 'In Progress', 'Completed', 'Cancelled', 'Closed', 'Declined'],
     default: 'Pending'
   },
   title: {

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import Button from '../Shared/Button';
 import InputField from '../Shared/InputField';
 import Sidebar from '../Shared/Sidebar';
@@ -58,6 +59,29 @@ function FinancialAdvicePage() {
   useEffect(() => {
     loadRequests();
     loadAdvisors();
+
+    // Auto-refresh every 15 seconds to catch status updates
+    const pollInterval = setInterval(() => {
+      loadRequests();
+    }, 15000);
+
+    return () => clearInterval(pollInterval);
+  }, []);
+
+  // Re-fetch when tab changes
+  useEffect(() => {
+    loadRequests();
+  }, [activeTab]);
+
+  // Re-fetch when page becomes visible (user returns to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadRequests();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   // Function to load all requests from backend
@@ -74,7 +98,7 @@ function FinancialAdvicePage() {
           : requests.filter(req => !req.deletedByClient);
 
         const activeStatuses = ['Pending', 'Accepted', 'In Progress'];
-        const pastStatuses = ['Closed', 'Completed', 'Cancelled'];
+        const pastStatuses = ['Closed', 'Completed', 'Cancelled', 'Declined'];
 
         setActiveRequests(visible.filter(req => activeStatuses.includes(req.status)));
         setPastRequests(visible.filter(req => pastStatuses.includes(req.status)));
@@ -332,6 +356,8 @@ function FinancialAdvicePage() {
         return 'bg-blue-500/10 text-blue-400 border border-blue-500/30';
       case 'Closed':
         return 'bg-slate-700/30 text-slate-200 border border-slate-500/40';
+      case 'Declined':
+        return 'bg-red-500/10 text-red-400 border border-red-500/30';
       default:
         return 'bg-slate-700/30 text-slate-400 border border-slate-600/30';
     }

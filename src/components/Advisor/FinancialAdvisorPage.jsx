@@ -68,6 +68,8 @@ function FinancialAdvisorPage() {
         return 'bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-purple-500/10 dark:border-purple-500/30 dark:text-purple-200';
       case 'Completed':
         return 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-200';
+      case 'Declined':
+        return 'bg-rose-50 text-rose-700 border border-rose-100 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-200';
       default:
         return 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-700/30 dark:text-slate-300 dark:border-slate-600/30';
     }
@@ -115,7 +117,7 @@ const normalizeRequest = (request) => ({
         ['Accepted', 'In Progress'].includes(req.status)
       );
       const completed = visible.filter((req) =>
-        ['Completed', 'Closed'].includes(req.status)
+        ['Completed', 'Closed', 'Declined'].includes(req.status)
       );
 
       setPendingRequests(pending);

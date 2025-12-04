@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -82,7 +83,7 @@ function getRandomPastDate(yearsBack = 5) {
 // Notify main backend about operations
 async function notifyMainBackend(data) {
   try {
-    const MAIN_BACKEND_URL = process.env.MAIN_BACKEND_URL || 'http://localhost:5000';
+    const MAIN_BACKEND_URL = process.env.MAIN_BACKEND_URL || 'http://localhost:5001';
     await axios.post(`${MAIN_BACKEND_URL}/api/external/notify`, data);
     console.log(`✅ Notified main backend: ${data.operation_type}`);
   } catch (error) {

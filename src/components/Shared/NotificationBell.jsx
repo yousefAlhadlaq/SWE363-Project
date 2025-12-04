@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, X, Check, AlertCircle, Info } from 'lucide-react';
 import notificationService from '../../services/notificationService';
 
 function NotificationBell() {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -20,10 +22,12 @@ function NotificationBell() {
         const fetchedNotifications = response.data.notifications.map(notif => ({
           id: notif._id,
           type: notif.type,
+          category: notif.category,
           title: notif.title,
           message: notif.message,
           timestamp: formatTimestamp(notif.createdAt),
-          read: notif.read
+          read: notif.read,
+          metadata: notif.metadata || {}
         }));
 
         setNotifications(fetchedNotifications);
@@ -256,9 +260,15 @@ function NotificationBell() {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
+                    onClick={() => {
+                      if (notification.category === 'advisor') {
+                        setIsOpen(false);
+                        navigate('/financial-advice');
+                      }
+                    }}
                     className={`p-3 rounded-xl border transition-all hover:bg-white/5 ${
-                      notification.read ? 'opacity-60' : ''
-                    } ${getBgColor(notification.type)}`}
+                      notification.category === 'advisor' ? 'cursor-pointer' : ''
+                    } ${notification.read ? 'opacity-60' : ''} ${getBgColor(notification.type)}`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 mt-0.5">

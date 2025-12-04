@@ -24,7 +24,7 @@ import InputField from '../Shared/InputField';
 import SelectMenu from '../Shared/SelectMenu';
 import EmptyState from '../Shared/EmptyState';
 import { useAuth } from '../../context/AuthContext';
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const formatSR = (value = 0, digits = 2) =>
   `SR ${Number(value).toLocaleString('en-US', {

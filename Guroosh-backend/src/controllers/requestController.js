@@ -3,6 +3,7 @@ const Message = require('../models/message');
 const Note = require('../models/note');
 const Meeting = require('../models/meeting');
 const User = require('../models/user');
+const { createNotification } = require('../utils/notificationHelper');
 
 // Create new advice request
 exports.createRequest = async (req, res) => {
@@ -169,6 +170,23 @@ exports.acceptRequest = async (req, res) => {
     await request.populate('client', 'fullName email');
     await request.populate('advisor', 'fullName email');
 
+    // Notify the client that their request was accepted
+    try {
+      await createNotification({
+        userId: request.client._id.toString(),
+        type: 'success',
+        category: 'advisor',
+        title: 'Your advice request was accepted',
+        message: `Your request "${request.title}" was accepted by your advisor.`,
+        metadata: {
+          adviceId: request._id
+        }
+      });
+      console.log('✅ Notification sent for accepted request:', request._id);
+    } catch (notifError) {
+      console.error('⚠️ Failed to send notification:', notifError);
+    }
+
     res.json({
       success: true,
       message: 'Request accepted successfully',
@@ -208,12 +226,30 @@ exports.declineRequest = async (req, res) => {
       request.advisor = null;
     }
 
-    request.status = 'Pending'; // Return to pending pool
+    request.status = 'Declined';
     await request.save();
+
+    // Notify the client that their request was declined
+    try {
+      await createNotification({
+        userId: request.client.toString(),
+        type: 'warning',
+        category: 'advisor',
+        title: 'Your advice request was declined',
+        message: `Your request "${request.title}" has been declined by the advisor.`,
+        metadata: {
+          adviceId: request._id
+        }
+      });
+      console.log('✅ Notification sent for declined request:', request._id);
+    } catch (notifError) {
+      console.error('⚠️ Failed to send notification:', notifError);
+    }
 
     res.json({
       success: true,
-      message: 'Request declined'
+      message: 'Request declined',
+      request
     });
   } catch (error) {
     console.error('Decline request error:', error);
@@ -310,6 +346,25 @@ exports.deleteRequest = async (req, res) => {
     }
 
     await request.save();
+
+    // Notify the client if request was cancelled
+    if (request.status === 'Cancelled') {
+      try {
+        await createNotification({
+          userId: request.client.toString(),
+          type: 'warning',
+          category: 'advisor',
+          title: 'Your advice request was canceled',
+          message: `Your request "${request.title}" has been canceled.`,
+          metadata: {
+            adviceId: request._id
+          }
+        });
+        console.log('✅ Notification sent for cancelled request:', request._id);
+      } catch (notifError) {
+        console.error('⚠️ Failed to send notification:', notifError);
+      }
+    }
 
     res.json({
       success: true,
