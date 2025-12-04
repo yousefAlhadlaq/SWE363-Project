@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Get auth token
 const getToken = () => localStorage.getItem('token');
@@ -105,6 +105,17 @@ const notificationService = {
       return response.data;
     } catch (error) {
       console.error('Error updating alert settings:', error);
+      throw error;
+    }
+  },
+
+  // Admin: send broadcast notification
+  sendAdminNotification: async (payload) => {
+    try {
+      const response = await api.post('/admin/notifications', payload);
+      return response.data;
+    } catch (error) {
+      console.error('Error sending admin notification:', error);
       throw error;
     }
   }

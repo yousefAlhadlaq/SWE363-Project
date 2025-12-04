@@ -1,5 +1,7 @@
 const Notification = require('../models/notification');
 const Settings = require('../models/settings');
+const User = require('../models/user');
+const { createBulkNotifications } = require('../utils/notificationHelper');
 
 // GET /api/notifications - Get all notifications for the logged-in user
 exports.getAllNotifications = async (req, res) => {
@@ -307,6 +309,62 @@ exports.getLatestUpdates = async (req, res) => {
       success: false,
       message: 'Failed to fetch latest updates',
       error: error.message
+    });
+  }
+};
+
+exports.createAdminNotification = async (req, res) => {
+  try {
+    const { title, message, type = 'info', targetAudience = 'all' } = req.body;
+
+    if (!title?.trim() || !message?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title and message are required.'
+      });
+    }
+
+    const allowedTypes = new Set(['info', 'warning', 'success', 'error']);
+    const normalizedType = allowedTypes.has(type) ? type : 'info';
+
+    const audienceFilters = {
+      all: {},
+      advisors: { $or: [{ role: 'advisor' }, { isAdvisor: true }] },
+      clients: { role: { $in: ['user', 'client'] } }
+    };
+
+    const audienceKey = audienceFilters[targetAudience] ? targetAudience : 'all';
+    const recipients = await User.find(audienceFilters[audienceKey]).select('_id');
+
+    if (!recipients.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'No recipients found for the selected audience.'
+      });
+    }
+
+    const { successful, failed } = await createBulkNotifications(
+      recipients.map((user) => user._id),
+      {
+        type: normalizedType,
+        category: 'marketingEmails',
+        title: title.trim(),
+        message: message.trim(),
+        metadata: { audience: audienceKey }
+      }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: `Notification sent to ${successful} recipient${successful === 1 ? '' : 's'}.`,
+      data: { successful, failed }
+    });
+  } catch (error) {
+    console.error('Error sending admin notification:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send notification.',
+      details: error.message
     });
   }
 };

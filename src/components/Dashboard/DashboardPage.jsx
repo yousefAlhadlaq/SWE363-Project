@@ -1,4 +1,4 @@
- import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   ArrowUpCircle,
   Banknote,
@@ -24,6 +24,7 @@ import InputField from '../Shared/InputField';
 import SelectMenu from '../Shared/SelectMenu';
 import EmptyState from '../Shared/EmptyState';
 import { useAuth } from '../../context/AuthContext';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const formatSR = (value = 0, digits = 2) =>
   `SR ${Number(value).toLocaleString('en-US', {
@@ -342,7 +343,6 @@ function DashboardPage() {
 
   // Fetch analytics chart data
   const fetchChartData = useCallback(async (range) => {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
     const token = localStorage.getItem('token');
 
     // ✅ Validate token exists before making request
@@ -393,7 +393,6 @@ function DashboardPage() {
 
   // Fetch dashboard data from backend
   const fetchDashboardData = useCallback(async () => {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
     const token = localStorage.getItem('token');
 
     // ✅ Validate token exists before making request
@@ -774,7 +773,6 @@ function DashboardPage() {
 
       try {
         // Call backend API to create account
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
         const token = localStorage.getItem('token');
 
         console.log('Creating account with data:', {
@@ -970,7 +968,6 @@ function DashboardPage() {
       }
 
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
         const token = localStorage.getItem('token');
 
         // Handle EXPENSE and INCOME
@@ -1039,7 +1036,6 @@ function DashboardPage() {
 
       const selectedOption = linkedAccountOptions.find(opt => opt.value === accountId);
       const confirmationLabel = selectedOption?.label || 'this account';
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
       const token = localStorage.getItem('token');
 
       const confirmed = window.confirm(`Are you sure you want to remove ${confirmationLabel}?`);
@@ -1102,7 +1098,7 @@ function DashboardPage() {
       queryParams.append('format', format);
       
       const endpoint = format === 'pdf' ? '/export/pdf' : '/export/csv';
-      const downloadUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}${endpoint}?${queryParams.toString()}`;
+      const downloadUrl = `${API_BASE_URL}${endpoint}?${queryParams.toString()}`;
       
       try {
         const response = await fetch(downloadUrl, {
