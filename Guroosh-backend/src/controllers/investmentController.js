@@ -1,4 +1,4 @@
-const Investment = require('../models/investment');
+const Investment = require('../models/Investment');
 const externalDataService = require('../services/externalDataService');
 const { createInvestmentNotification } = require('../utils/notificationHelper');
 
