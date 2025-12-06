@@ -28,8 +28,8 @@ const EmptyState = ({
     // Minimal inline empty state (for smaller sections)
     return (
       <div className={`text-center py-6 ${className}`}>
-        <p className="text-sm text-gray-400">{title}</p>
-        {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+      <p className="text-sm text-slate-500 dark:text-gray-400">{title}</p>
+        {subtitle && <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">{subtitle}</p>}
         {actionLabel && onAction && (
           <button
             onClick={onAction}
@@ -47,12 +47,12 @@ const EmptyState = ({
     return (
       <div className={`text-center py-8 px-4 ${className}`}>
         {Icon && (
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-800/50 flex items-center justify-center mb-3">
-            <Icon className="w-6 h-6 text-gray-500" />
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center mb-3">
+            <Icon className="w-6 h-6 text-slate-400 dark:text-gray-500" />
           </div>
         )}
-        <p className="text-sm font-medium text-gray-300">{title}</p>
-        {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+        <p className="text-sm font-medium text-slate-700 dark:text-gray-300">{title}</p>
+        {subtitle && <p className="text-xs text-slate-500 dark:text-gray-500 mt-1">{subtitle}</p>}
         {actionLabel && onAction && (
           <Button
             onClick={onAction}
@@ -71,13 +71,13 @@ const EmptyState = ({
   return (
     <div className={`text-center py-12 px-6 ${className}`}>
       {Icon && (
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-800/50 flex items-center justify-center mb-4">
-          <Icon className="w-8 h-8 text-gray-500" />
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center mb-4">
+          <Icon className="w-8 h-8 text-slate-400 dark:text-gray-500" />
         </div>
       )}
-      <h3 className="text-lg font-semibold text-white">{title}</h3>
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
       {subtitle && (
-        <p className="text-sm text-gray-400 mt-2 max-w-md mx-auto">
+        <p className="text-sm text-slate-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
           {subtitle}
         </p>
       )}

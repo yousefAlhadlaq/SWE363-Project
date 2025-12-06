@@ -304,10 +304,10 @@ const InvestmentChart = ({
   onFilterCategory,
   filteredCategory
 }) => (
-  <div className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-3 border border-slate-700/50 h-full shadow-xl">
+  <div className="bg-white dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-3 border border-slate-200 dark:border-slate-700/50 h-full shadow-lg dark:shadow-xl transition-colors">
     <div className="flex items-start justify-between gap-3 mb-3">
-      <p className="text-xs text-gray-400 text-right">
-        Total · <span className="text-teal-300 font-semibold">{formatCurrency(total)}</span>
+      <p className="text-xs text-slate-500 dark:text-gray-400 text-right">
+        Total · <span className="text-teal-600 dark:text-teal-300 font-semibold">{formatCurrency(total)}</span>
       </p>
     </div>
 
@@ -320,7 +320,7 @@ const InvestmentChart = ({
         return (
           <div
             key={value}
-            className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2.5"
+            className="rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/40 px-3 py-2.5 transition-colors"
           >
             <div className="flex items-center justify-between gap-3">
               <button
@@ -329,10 +329,10 @@ const InvestmentChart = ({
                 className="text-left flex-1"
               >
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-200">{label}</span>
-                  <span className="text-white font-semibold">
+                  <span className="text-slate-700 dark:text-gray-200">{label}</span>
+                  <span className="text-slate-900 dark:text-white font-semibold">
                     {formatCurrency(amount)}{' '}
-                    <span className="text-gray-400 font-normal text-xs">({percentage}%)</span>
+                    <span className="text-slate-500 dark:text-gray-400 font-normal text-xs">({percentage}%)</span>
                   </span>
                 </div>
               </button>
@@ -347,7 +347,7 @@ const InvestmentChart = ({
                 {isFocused ? 'Focused' : 'Focus'}
               </button>
             </div>
-            <div className="h-2.5 bg-slate-800/80 rounded-full overflow-hidden mt-2">
+            <div className="h-2.5 bg-slate-200 dark:bg-slate-800/80 rounded-full overflow-hidden mt-2">
               <div
                 className={`h-full rounded-full bg-gradient-to-r ${categoryColors[value] || 'from-teal-500 to-blue-500'}`}
                 style={{ width: `${percentage || (total ? 2 : 0)}%` }}
@@ -369,7 +369,7 @@ const InvestmentTrendChart = ({
 }) => {
   if (!totalSeries.length) {
     return (
-      <div className="h-60 bg-slate-900/40 rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-gray-500">
+      <div className="h-60 bg-slate-100 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-gray-500">
         No performance data available.
       </div>
     );
@@ -1377,14 +1377,14 @@ function InvestmentsPage() {
             </header>
 
 
-            <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
+            <section className="bg-white dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl transition-colors">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm uppercase tracking-widest text-gray-400">
+                  <p className="text-sm uppercase tracking-widest text-slate-500 dark:text-gray-400">
                     Performance
                   </p>
-                  <h2 className="text-xl font-semibold text-white">Portfolio over time</h2>
-                  <p className="text-sm text-gray-400">
+                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Portfolio over time</h2>
+                  <p className="text-sm text-slate-500 dark:text-gray-400">
                     Visualize your investment growth across any period.
                   </p>
                 </div>
@@ -1397,8 +1397,8 @@ function InvestmentsPage() {
                         type="button"
                         onClick={() => setSelectedRange(option.key)}
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${isActive
-                          ? 'bg-teal-500/20 text-teal-300 border-teal-400/40 shadow-[0_0_25px_rgba(94,234,212,0.3)]'
-                          : 'text-gray-400 border-slate-700/70 hover:text-white hover:border-teal-500/40'
+                          ? 'bg-teal-500/20 text-teal-700 dark:text-teal-300 border-teal-400/40 shadow-[0_0_25px_rgba(94,234,212,0.3)]'
+                          : 'text-slate-500 dark:text-gray-400 border-slate-300 dark:border-slate-700/70 hover:text-slate-900 dark:hover:text-white hover:border-teal-500/40'
                           }`}
                       >
                         {option.label}
@@ -1417,13 +1417,13 @@ function InvestmentsPage() {
                 />
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   <div>
-                    <p className="text-xs uppercase tracking-widest text-gray-400">Latest value</p>
-                    <p className="text-2xl font-semibold text-white mt-1">
+                    <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-gray-400">Latest value</p>
+                    <p className="text-2xl font-semibold text-slate-900 dark:text-white mt-1">
                       {formatCurrency(trendStats.latest)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-widest text-gray-400">Change</p>
+                    <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-gray-400">Change</p>
                     <p
                       className={`text-lg font-semibold ${trendStats.changeAbs >= 0 ? 'text-teal-300' : 'text-rose-400'
                         }`}
@@ -1442,10 +1442,10 @@ function InvestmentsPage() {
               </div>
             </section>
 
-            <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
+            <section className="bg-white dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl transition-colors">
               <div className="flex items-center justify-between mb-2.5">
                 <div>
-                  <p className="text-sm uppercase tracking-widest text-gray-400">Investment Allocation</p>
+                  <p className="text-sm uppercase tracking-widest text-slate-500 dark:text-gray-400">Investment Allocation</p>
                 </div>
               </div>
               <InvestmentChart
@@ -1457,11 +1457,11 @@ function InvestmentsPage() {
               />
             </section>
 
-            <section className="bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 shadow-xl">
+            <section className="bg-white dark:bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-200 dark:border-slate-700/50 shadow-lg dark:shadow-xl transition-colors">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm uppercase tracking-widest text-gray-400">Zakah Calculator</p>
-                  <p className="text-xs text-gray-400">Calculate Zakat based on Saudi Arabian regulations (2.5% rate, Nisab threshold)</p>
+                  <p className="text-sm uppercase tracking-widest text-slate-500 dark:text-gray-400">Zakah Calculator</p>
+                  <p className="text-xs text-slate-500 dark:text-gray-400">Calculate Zakat based on Saudi Arabian regulations (2.5% rate, Nisab threshold)</p>
                 </div>
                 <Button
                   type="button"
