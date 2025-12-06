@@ -1,4 +1,15 @@
-const nodemailer = require('nodemailer');
+const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
+
+// Initialize MailerSend with API key
+const mailerSend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY,
+});
+
+// Default sender
+const getSender = () => new Sender(
+  process.env.EMAIL_FROM || 'MS_xusxdf@test-nrw7gymepqjg2k8e.mlsender.net',
+  'Quroosh Financial Platform'
+);
 
 /**
  * Send email verification code
@@ -7,144 +18,112 @@ const nodemailer = require('nodemailer');
  * @param {string} verificationCode - 6-digit code
  */
 exports.sendVerificationEmail = async (email, fullName, verificationCode) => {
-  // Create transporter for each request (works better on serverless)
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    }
-  });
+  try {
+    const recipients = [new Recipient(email, fullName)];
 
-  // Verify connection
-  await new Promise((resolve, reject) => {
-    transporter.verify((error, success) => {
-      if (error) {
-        console.error('❌ Email transporter verification failed:', error);
-        reject(error);
-      } else {
-        console.log('✅ Email server is ready');
-        resolve(success);
-      }
-    });
-  });
-
-  const mailOptions = {
-    from: {
-      name: 'Quroosh Financial Platform',
-      address: process.env.EMAIL_FROM
-    },
-    to: email,
-    subject: 'Verify Your Email - Quroosh',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            border-radius: 10px 10px 0 0;
-          }
-          .content {
-            background: #f9f9f9;
-            padding: 30px;
-            border-radius: 0 0 10px 10px;
-          }
-          .code-box {
-            background: white;
-            border: 2px dashed #667eea;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-          }
-          .code {
-            font-size: 32px;
-            font-weight: bold;
-            color: #667eea;
-            letter-spacing: 8px;
-          }
-          .footer {
-            text-align: center;
-            margin-top: 20px;
-            color: #666;
-            font-size: 12px;
-          }
-          .warning {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>🏦 Quroosh</h1>
-          <p>Financial Management Platform</p>
-        </div>
-        <div class="content">
-          <h2>Hello ${fullName}!</h2>
-          <p>Thank you for registering with Quroosh. To complete your registration, please verify your email address using the code below:</p>
-
-          <div class="code-box">
-            <p style="margin: 0; color: #666; font-size: 14px;">Your Verification Code</p>
-            <div class="code">${verificationCode}</div>
-            <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">Valid for 15 minutes</p>
+    const emailParams = new EmailParams()
+      .setFrom(getSender())
+      .setTo(recipients)
+      .setSubject('Verify Your Email - Quroosh')
+      .setHtml(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #f9f9f9;
+              padding: 30px;
+              border-radius: 0 0 10px 10px;
+            }
+            .code-box {
+              background: white;
+              border: 2px dashed #667eea;
+              border-radius: 10px;
+              padding: 20px;
+              text-align: center;
+              margin: 20px 0;
+            }
+            .code {
+              font-size: 32px;
+              font-weight: bold;
+              color: #667eea;
+              letter-spacing: 8px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              color: #666;
+              font-size: 12px;
+            }
+            .warning {
+              background: #fff3cd;
+              border-left: 4px solid #ffc107;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 5px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🏦 Quroosh</h1>
+            <p>Financial Management Platform</p>
           </div>
+          <div class="content">
+            <h2>Hello ${fullName}!</h2>
+            <p>Thank you for registering with Quroosh. To complete your registration, please verify your email address using the code below:</p>
 
-          <p>Enter this code in the verification page to activate your account and start managing your finances with Quroosh.</p>
+            <div class="code-box">
+              <p style="margin: 0; color: #666; font-size: 14px;">Your Verification Code</p>
+              <div class="code">${verificationCode}</div>
+              <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">Valid for 15 minutes</p>
+            </div>
 
-          <div class="warning">
-            <strong>⚠️ Security Notice:</strong>
-            <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-              <li>Never share this code with anyone</li>
-              <li>Quroosh staff will never ask for your verification code</li>
-              <li>This code expires in 15 minutes</li>
-            </ul>
+            <p>Enter this code in the verification page to activate your account and start managing your finances with Quroosh.</p>
+
+            <div class="warning">
+              <strong>⚠️ Security Notice:</strong>
+              <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                <li>Never share this code with anyone</li>
+                <li>Quroosh staff will never ask for your verification code</li>
+                <li>This code expires in 15 minutes</li>
+              </ul>
+            </div>
+
+            <p>If you didn't create an account with Quroosh, please ignore this email.</p>
+
+            <p>Best regards,<br>The Quroosh Team</p>
           </div>
+          <div class="footer">
+            <p>&copy; 2025 Quroosh Financial Platform. All rights reserved.</p>
+            <p>This is an automated message, please do not reply to this email.</p>
+          </div>
+        </body>
+        </html>
+      `);
 
-          <p>If you didn't create an account with Quroosh, please ignore this email.</p>
-
-          <p>Best regards,<br>The Quroosh Team</p>
-        </div>
-        <div class="footer">
-          <p>&copy; 2025 Quroosh Financial Platform. All rights reserved.</p>
-          <p>This is an automated message, please do not reply to this email.</p>
-        </div>
-      </body>
-      </html>
-    `
-  };
-
-  // Send email with promise wrapper
-  const info = await new Promise((resolve, reject) => {
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) {
-        console.error(`❌ Failed to send verification email to ${email}:`, err);
-        reject(err);
-      } else {
-        console.log(`✅ Verification email sent to ${email}: ${info.messageId}`);
-        resolve(info);
-      }
-    });
-  });
-
-  return { success: true, messageId: info.messageId };
+    const response = await mailerSend.email.send(emailParams);
+    console.log(`✅ Verification email sent to ${email}`);
+    return { success: true, messageId: response.headers?.['x-message-id'] || 'sent' };
+  } catch (error) {
+    console.error(`❌ Failed to send verification email to ${email}:`, error.message);
+    throw error;
+  }
 };
 
 /**
@@ -154,145 +133,113 @@ exports.sendVerificationEmail = async (email, fullName, verificationCode) => {
  * @param {string} resetCode - 6-digit code
  */
 exports.sendPasswordResetEmail = async (email, fullName, resetCode) => {
-  // Create transporter for each request (works better on serverless)
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    }
-  });
+  try {
+    const recipients = [new Recipient(email, fullName)];
 
-  // Verify connection
-  await new Promise((resolve, reject) => {
-    transporter.verify((error, success) => {
-      if (error) {
-        console.error('❌ Email transporter verification failed:', error);
-        reject(error);
-      } else {
-        console.log('✅ Email server is ready');
-        resolve(success);
-      }
-    });
-  });
-
-  const mailOptions = {
-    from: {
-      name: 'Quroosh Financial Platform',
-      address: process.env.EMAIL_FROM
-    },
-    to: email,
-    subject: 'Reset Your Password - Quroosh',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            border-radius: 10px 10px 0 0;
-          }
-          .content {
-            background: #f9f9f9;
-            padding: 30px;
-            border-radius: 0 0 10px 10px;
-          }
-          .code-box {
-            background: white;
-            border: 2px dashed #dc3545;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
-          }
-          .code {
-            font-size: 32px;
-            font-weight: bold;
-            color: #dc3545;
-            letter-spacing: 8px;
-          }
-          .footer {
-            text-align: center;
-            margin-top: 20px;
-            color: #666;
-            font-size: 12px;
-          }
-          .warning {
-            background: #f8d7da;
-            border-left: 4px solid #dc3545;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>🏦 Quroosh</h1>
-          <p>Financial Management Platform</p>
-        </div>
-        <div class="content">
-          <h2>Hello ${fullName}!</h2>
-          <p>We received a request to reset your password. Use the code below to reset your password:</p>
-
-          <div class="code-box">
-            <p style="margin: 0; color: #666; font-size: 14px;">Password Reset Code</p>
-            <div class="code">${resetCode}</div>
-            <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">Valid for 15 minutes</p>
+    const emailParams = new EmailParams()
+      .setFrom(getSender())
+      .setTo(recipients)
+      .setSubject('Reset Your Password - Quroosh')
+      .setHtml(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #f9f9f9;
+              padding: 30px;
+              border-radius: 0 0 10px 10px;
+            }
+            .code-box {
+              background: white;
+              border: 2px dashed #dc3545;
+              border-radius: 10px;
+              padding: 20px;
+              text-align: center;
+              margin: 20px 0;
+            }
+            .code {
+              font-size: 32px;
+              font-weight: bold;
+              color: #dc3545;
+              letter-spacing: 8px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              color: #666;
+              font-size: 12px;
+            }
+            .warning {
+              background: #f8d7da;
+              border-left: 4px solid #dc3545;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 5px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🏦 Quroosh</h1>
+            <p>Financial Management Platform</p>
           </div>
+          <div class="content">
+            <h2>Hello ${fullName}!</h2>
+            <p>We received a request to reset your password. Use the code below to reset your password:</p>
 
-          <p>Enter this code on the password reset page to create a new password.</p>
+            <div class="code-box">
+              <p style="margin: 0; color: #666; font-size: 14px;">Password Reset Code</p>
+              <div class="code">${resetCode}</div>
+              <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">Valid for 15 minutes</p>
+            </div>
 
-          <div class="warning">
-            <strong>⚠️ Security Alert:</strong>
-            <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-              <li>Never share this code with anyone</li>
-              <li>Quroosh staff will never ask for your reset code</li>
-              <li>This code expires in 15 minutes</li>
-              <li>If you didn't request this, please ignore this email</li>
-            </ul>
+            <p>Enter this code on the password reset page to create a new password.</p>
+
+            <div class="warning">
+              <strong>⚠️ Security Alert:</strong>
+              <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                <li>Never share this code with anyone</li>
+                <li>Quroosh staff will never ask for your reset code</li>
+                <li>This code expires in 15 minutes</li>
+                <li>If you didn't request this, please ignore this email</li>
+              </ul>
+            </div>
+
+            <p>If you didn't request a password reset, your account is still secure and you can safely ignore this email.</p>
+
+            <p>Best regards,<br>The Quroosh Team</p>
           </div>
+          <div class="footer">
+            <p>&copy; 2025 Quroosh Financial Platform. All rights reserved.</p>
+            <p>This is an automated message, please do not reply to this email.</p>
+          </div>
+        </body>
+        </html>
+      `);
 
-          <p>If you didn't request a password reset, your account is still secure and you can safely ignore this email.</p>
-
-          <p>Best regards,<br>The Quroosh Team</p>
-        </div>
-        <div class="footer">
-          <p>&copy; 2025 Quroosh Financial Platform. All rights reserved.</p>
-          <p>This is an automated message, please do not reply to this email.</p>
-        </div>
-      </body>
-      </html>
-    `
-  };
-
-  // Send email with promise wrapper
-  const info = await new Promise((resolve, reject) => {
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) {
-        console.error(`❌ Failed to send password reset email to ${email}:`, err);
-        reject(err);
-      } else {
-        console.log(`✅ Password reset email sent to ${email}: ${info.messageId}`);
-        resolve(info);
-      }
-    });
-  });
-
-  return { success: true, messageId: info.messageId };
+    const response = await mailerSend.email.send(emailParams);
+    console.log(`✅ Password reset email sent to ${email}`);
+    return { success: true, messageId: response.headers?.['x-message-id'] || 'sent' };
+  } catch (error) {
+    console.error(`❌ Failed to send password reset email to ${email}:`, error.message);
+    throw error;
+  }
 };
 
 /**
@@ -300,27 +247,10 @@ exports.sendPasswordResetEmail = async (email, fullName, resetCode) => {
  */
 exports.testEmailConfiguration = async () => {
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
-
-    await new Promise((resolve, reject) => {
-      transporter.verify((error, success) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(success);
-        }
-      });
-    });
-
-    console.log('✅ Email server is ready to send messages');
+    if (!process.env.MAILERSEND_API_KEY) {
+      throw new Error('MAILERSEND_API_KEY is not configured');
+    }
+    console.log('✅ MailerSend email service is configured');
     return true;
   } catch (error) {
     console.error('❌ Email server configuration error:', error.message);
