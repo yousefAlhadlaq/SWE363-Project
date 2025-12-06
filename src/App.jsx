@@ -8,7 +8,7 @@ import { useAuth } from './context/AuthContext';
 import './styles/globals.css';
 
 function AppContent() {
-  const { loading: authLoading } = useAuth();
+  const { authLoading } = useAuth();
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   useEffect(() => {
