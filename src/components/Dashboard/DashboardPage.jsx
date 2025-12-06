@@ -1746,10 +1746,10 @@ function DashboardPage() {
         <div className="max-w-6xl space-y-6">
           <header className="space-y-4">
             <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">
+              <p className="text-sm uppercase tracking-[0.35em] text-teal-600 dark:text-teal-200/80">
                 Home
               </p>
-              <h1 className="text-3xl md:text-4xl font-bold text-white">
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
                 Welcome back, {displayName.split(' ')[0] || 'there'} 👋
               </h1>
             </div>
@@ -1757,8 +1757,8 @@ function DashboardPage() {
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <div className="space-y-6">
-              <Card className="!bg-gradient-to-br from-slate-900/90 via-slate-900/70 to-slate-900/50 overflow-hidden relative">
-                <div className="absolute inset-y-0 right-0 w-1/2 pointer-events-none opacity-40" aria-hidden="true">
+              <Card className="bg-white dark:bg-gradient-to-br dark:from-slate-900/90 dark:via-slate-900/70 dark:to-slate-900/50 overflow-hidden relative border-slate-200 dark:border-slate-700/50 transition-colors duration-300">
+                <div className="absolute inset-y-0 right-0 w-1/2 pointer-events-none opacity-20 dark:opacity-40" aria-hidden="true">
                   <svg viewBox="0 0 400 400" className="w-full h-full text-slate-800">
                     <defs>
                       <linearGradient id="heroGradient" x1="0" x2="1" y1="0" y2="1">
@@ -1772,22 +1772,22 @@ function DashboardPage() {
                 <div className="relative space-y-6">
                   <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                      <p className="text-sm text-gray-400">Welcome back 👋</p>
+                      <p className="text-sm text-slate-500 dark:text-gray-400">Welcome back 👋</p>
                       <div className="flex flex-wrap items-baseline gap-3 mt-1">
-                        <p className="text-4xl font-bold">
+                        <p className="text-4xl font-bold text-slate-900 dark:text-white">
                           {formatSR(dashboardData?.totalBalance || 0)}
                         </p>
-                        <span className="px-3 py-1 rounded-full text-sm font-medium bg-teal-500/10 text-teal-300 border border-teal-500/40">
+                        <span className="px-3 py-1 rounded-full text-sm font-medium bg-teal-500/10 text-teal-600 dark:text-teal-300 border border-teal-500/40">
                           {linkedAccounts.length} accounts
                         </span>
                       </div>
-                      <p className="text-sm text-gray-400 mt-1">Total Balance</p>
+                      <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">Total Balance</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs uppercase tracking-widest text-gray-400">
+                      <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-gray-400">
                         Weekly Spend
                       </p>
-                      <p className="text-2xl font-semibold text-teal-300">
+                      <p className="text-2xl font-semibold text-teal-600 dark:text-teal-300">
                         {formatSR(dashboardData?.weeklySpend || 0)}
                       </p>
                     </div>
@@ -1821,21 +1821,21 @@ function DashboardPage() {
                       return (
                         <div
                           key={stat.key}
-                          className="rounded-2xl border border-slate-700/60 bg-slate-900/40 p-4 flex flex-col gap-3"
+                          className="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900/40 p-4 flex flex-col gap-3 transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-slate-800/70 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/70 flex items-center justify-center">
                               <Icon className="w-5 h-5 text-teal-300" />
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-widest text-gray-400">
+                              <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-gray-400">
                                 {stat.label}
                               </p>
                             </div>
                           </div>
                           <div>
-                            <p className="text-xl font-semibold">{formatSR(stat.amount)}</p>
-                            <p className="text-xs text-gray-500">{stat.hint}</p>
+                            <p className="text-xl font-semibold text-slate-900 dark:text-white">{formatSR(stat.amount)}</p>
+                            <p className="text-xs text-slate-500 dark:text-gray-500">{stat.hint}</p>
                           </div>
                         </div>
                       );
@@ -1846,7 +1846,7 @@ function DashboardPage() {
 
               <Card title="Your financial status">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-slate-600 dark:text-gray-400">
                     Track weekly, monthly, yearly, or multi-year spending performance.
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1855,8 +1855,8 @@ function DashboardPage() {
                         key={option.key}
                         type="button"
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${statusRange === option.key
-                            ? 'bg-teal-500/20 text-teal-200 border-teal-400/60 shadow-[0_0_25px_rgba(94,234,212,0.3)]'
-                            : 'text-gray-400 border-slate-700/70 hover:text-white hover:border-teal-400/40'
+                            ? 'bg-teal-500/20 text-teal-700 dark:text-teal-200 border-teal-400/60 shadow-[0_0_25px_rgba(94,234,212,0.3)]'
+                            : 'text-slate-500 dark:text-gray-400 border-slate-300 dark:border-slate-700/70 hover:text-slate-900 dark:hover:text-white hover:border-teal-400/40'
                           }`}
                         onClick={() => setStatusRange(option.key)}
                       >
@@ -1979,19 +1979,19 @@ function DashboardPage() {
                 </div>
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4">
-                    <p className="text-xs uppercase tracking-widest text-gray-400">
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900/40 p-4 transition-colors">
+                    <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-gray-400">
                       Daily spend limit
                     </p>
-                    <p className="text-2xl font-semibold text-white mt-1">{formatSR(dashboardData?.dailySpendLimit || 0)}</p>
-                    <p className="text-sm text-gray-400 mt-2">Transfers between my accounts</p>
+                    <p className="text-2xl font-semibold text-slate-900 dark:text-white mt-1">{formatSR(dashboardData?.dailySpendLimit || 0)}</p>
+                    <p className="text-sm text-slate-500 dark:text-gray-400 mt-2">Transfers between my accounts</p>
                   </div>
-                  <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 p-4">
-                    <p className="text-xs uppercase tracking-widest text-gray-400">
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900/40 p-4 transition-colors">
+                    <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-gray-400">
                       Remaining limit
                     </p>
-                    <p className="text-2xl font-semibold text-white mt-1">{formatSR(dashboardData?.remainingLimit || 0)}</p>
-                    <p className="text-sm text-gray-400 mt-2">Safe spending buffer for today</p>
+                    <p className="text-2xl font-semibold text-slate-900 dark:text-white mt-1">{formatSR(dashboardData?.remainingLimit || 0)}</p>
+                    <p className="text-sm text-slate-500 dark:text-gray-400 mt-2">Safe spending buffer for today</p>
                   </div>
                 </div>
               </Card>
@@ -2016,20 +2016,20 @@ function DashboardPage() {
                       return (
                         <div
                           key={transaction.id}
-                          className="flex items-center gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/40 px-4 py-3"
+                          className="flex items-center gap-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900/40 px-4 py-3 transition-colors"
                         >
-                          <div className="w-12 h-12 rounded-2xl bg-slate-800/70 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/70 flex items-center justify-center">
                             <Icon className={`w-5 h-5 ${isInvestment ? 'text-yellow-400' : 'text-teal-300'}`} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-white truncate">{transaction.merchant}</p>
-                            <p className="text-xs text-gray-400">{transaction.timestamp} • {transaction.method}</p>
+                            <p className="font-semibold text-slate-900 dark:text-white truncate">{transaction.merchant}</p>
+                            <p className="text-xs text-slate-500 dark:text-gray-400">{transaction.timestamp} • {transaction.method}</p>
                           </div>
                           <div className="text-right">
                             <p className={`text-base font-semibold ${isInvestment ? 'text-yellow-400' : (isCredit ? 'text-teal-300' : 'text-rose-300')}`}>
                               {isInvestment ? '' : (isCredit ? '+' : '-')}{formatSR(transaction.amount)}
                             </p>
-                            <p className="text-xs text-gray-500">{isInvestment ? 'Investment' : (isCredit ? 'Incoming' : 'Outgoing')}</p>
+                            <p className="text-xs text-slate-500 dark:text-gray-500">{isInvestment ? 'Investment' : (isCredit ? 'Incoming' : 'Outgoing')}</p>
                           </div>
                         </div>
                       );
@@ -2049,7 +2049,7 @@ function DashboardPage() {
                         type="button"
                         key={action.id}
                         onClick={() => setActiveAction(action.id)}
-                        className="w-full flex items-center justify-between gap-3 rounded-2xl border border-slate-700/60 bg-slate-900/30 px-4 py-3 text-left transition hover:border-teal-500/50 hover:bg-slate-900/60"
+                        className="w-full flex items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/30 px-4 py-3 text-left transition hover:border-teal-500/50 hover:bg-slate-100 dark:hover:bg-slate-900/60"
                       >
                         <div className="flex items-center gap-3">
                           <span
@@ -2058,8 +2058,8 @@ function DashboardPage() {
                             <Icon className="w-5 h-5" />
                           </span>
                           <div>
-                            <p className="font-semibold text-white text-sm">{action.title}</p>
-                            <p className="text-xs text-gray-400">{action.description}</p>
+                            <p className="font-semibold text-slate-900 dark:text-white text-sm">{action.title}</p>
+                            <p className="text-xs text-slate-500 dark:text-gray-400">{action.description}</p>
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-gray-500" />
@@ -2085,10 +2085,10 @@ function DashboardPage() {
                     {linkedAccountOptions.map((account) => (
                       <div
                         key={account.value}
-                        className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-slate-900/30 border border-slate-700/40 hover:border-teal-500/30 transition"
+                        className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700/40 hover:border-teal-500/30 transition"
                       >
-                        <span className="text-sm text-gray-300">{account.name}</span>
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-sm text-slate-700 dark:text-gray-300">{account.name}</span>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">
                           {formatSR(account.balance)}
                         </span>
                       </div>
@@ -2098,12 +2098,12 @@ function DashboardPage() {
               </Card>
 
               <Card title="Where did your money go?">
-                <div className="rounded-2xl border border-slate-700/60 bg-slate-900/30 p-4">
-                  <p className="text-xs uppercase tracking-widest text-gray-400">Top merchant</p>
-                  <p className="text-2xl font-semibold text-white mt-1">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900/30 p-4 transition-colors">
+                  <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-gray-400">Top merchant</p>
+                  <p className="text-2xl font-semibold text-slate-900 dark:text-white mt-1">
                     {dashboardData?.topMerchant?.name || spendingBreakdown.topMerchant}
                   </p>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-slate-500 dark:text-gray-400">
                     {formatSR(dashboardData?.topMerchant?.amount || spendingBreakdown.amount)}
                   </p>
                 </div>
@@ -2111,11 +2111,11 @@ function DashboardPage() {
                   {(dashboardData?.categoryBreakdown || []).length > 0 ? (
                     (dashboardData?.categoryBreakdown || spendingBreakdown.allocation).map((allocation) => (
                       <div key={allocation.label}>
-                        <div className="flex items-center justify-between text-sm text-gray-300 mb-1">
+                        <div className="flex items-center justify-between text-sm text-slate-600 dark:text-gray-300 mb-1">
                           <span>{allocation.label}</span>
                           <span>{allocation.value}%</span>
                         </div>
-                        <div className="h-2 rounded-full bg-slate-800/70">
+                        <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800/70">
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-teal-400 to-blue-500"
                             style={{ width: `${allocation.value}%` }}
@@ -2124,17 +2124,17 @@ function DashboardPage() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-4 text-gray-500 text-sm">
+                    <div className="text-center py-4 text-slate-500 dark:text-gray-500 text-sm">
                       No spending recorded yet.
                     </div>
                   )}
                 </div>
-                <div className="mt-6 rounded-2xl border border-slate-700/60 bg-slate-900/30 p-4">
-                  <p className="text-xs uppercase tracking-widest text-gray-400">Daily spend limit</p>
-                  <p className="text-lg font-semibold text-white mt-1">
+                <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-900/30 p-4 transition-colors">
+                  <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-gray-400">Daily spend limit</p>
+                  <p className="text-lg font-semibold text-slate-900 dark:text-white mt-1">
                     {formatSR(dashboardData?.dailySpendLimit || 1000)}
                   </p>
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-slate-500 dark:text-gray-500 mt-2">
                     Remaining: {formatSR(dashboardData?.remainingLimit || 1000)}
                   </p>
                 </div>

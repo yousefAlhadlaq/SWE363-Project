@@ -203,12 +203,12 @@ function NotificationBell() {
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl hover:bg-white/10 transition-all duration-200 group"
+        className="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-all duration-200 group"
         aria-label="Notifications"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <Bell className="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" />
+        <Bell className="w-6 h-6 text-slate-600 dark:text-gray-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-red-500 to-pink-600 rounded-full flex items-center justify-center text-xs font-bold text-white animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -218,28 +218,28 @@ function NotificationBell() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 max-h-[600px] bg-slate-800/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden z-50 animate-fade-in">
+        <div className="absolute right-0 mt-2 w-96 max-h-[600px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden z-50 animate-fade-in">
           {/* Header */}
-          <div className="p-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700/50 bg-gradient-to-r from-slate-50 dark:from-slate-800/50 to-slate-100 dark:to-slate-900/50">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-semibold text-white">Notifications</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Notifications</h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-1 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg transition-colors"
                 aria-label="Close notifications"
               >
-                <X className="w-5 h-5 text-gray-400 hover:text-white" />
+                <X className="w-5 h-5 text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white" />
               </button>
             </div>
             {unreadCount > 0 && (
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-slate-500 dark:text-gray-400">
                   {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
                 </p>
                 <button
                   onClick={markAllAsRead}
                   disabled={loading}
-                  className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors disabled:opacity-50"
+                  className="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium transition-colors disabled:opacity-50"
                 >
                   Mark all as read
                 </button>
@@ -251,9 +251,9 @@ function NotificationBell() {
           <div className="max-h-[450px] overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-8 text-center">
-                <Bell className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-400 font-medium">No notifications</p>
-                <p className="text-sm text-gray-500 mt-1">You're all caught up!</p>
+                <Bell className="w-12 h-12 text-slate-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-slate-600 dark:text-gray-400 font-medium">No notifications</p>
+                <p className="text-sm text-slate-400 dark:text-gray-500 mt-1">You're all caught up!</p>
               </div>
             ) : (
               <div className="p-2 space-y-2">
@@ -274,20 +274,20 @@ function NotificationBell() {
                       <div className="flex-shrink-0 mt-0.5">
                         {getIcon(notification.type)}
                       </div>
-                      <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <h4 className="text-sm font-semibold text-white">
+                          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
                             {notification.title}
                           </h4>
                           {!notification.read && (
                             <span className="w-2 h-2 bg-teal-400 rounded-full flex-shrink-0 mt-1.5"></span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-300 mb-2">
+                        <p className="text-xs text-slate-600 dark:text-gray-300 mb-2">
                           {notification.message}
                         </p>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-slate-400 dark:text-gray-500">
                             {notification.timestamp}
                           </span>
                           <div className="flex items-center gap-2">
@@ -295,7 +295,7 @@ function NotificationBell() {
                               <button
                                 onClick={() => markAsRead(notification.id)}
                                 disabled={loading}
-                                className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors disabled:opacity-50"
+                                className="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium transition-colors disabled:opacity-50"
                               >
                                 Mark read
                               </button>
@@ -303,7 +303,7 @@ function NotificationBell() {
                             <button
                               onClick={() => deleteNotification(notification.id)}
                               disabled={loading}
-                              className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors disabled:opacity-50"
+                              className="text-xs text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 font-medium transition-colors disabled:opacity-50"
                             >
                               Delete
                             </button>
@@ -319,11 +319,11 @@ function NotificationBell() {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="p-3 border-t border-slate-700/50 bg-gradient-to-r from-slate-900/50 to-slate-800/50">
+            <div className="p-3 border-t border-slate-200 dark:border-slate-700/50 bg-gradient-to-r from-slate-50 dark:from-slate-900/50 to-slate-100 dark:to-slate-800/50">
               <button
                 onClick={clearAll}
                 disabled={loading}
-                className="w-full px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 hover:text-red-200 text-sm font-medium transition-all disabled:opacity-50"
+                className="w-full px-4 py-2 rounded-xl bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-300 hover:text-red-700 dark:hover:text-red-200 text-sm font-medium transition-all disabled:opacity-50"
               >
                 Clear All Notifications
               </button>

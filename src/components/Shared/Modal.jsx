@@ -46,14 +46,14 @@ const Modal = ({
         aria-modal="true"
       >
         <div
-          className={`relative w-full ${maxWidth} bg-slate-800/95 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl animate-scaleIn`}
+          className={`relative w-full ${maxWidth} bg-white dark:bg-slate-800/95 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-2xl animate-scaleIn transition-colors`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-slate-700/50 hover:bg-slate-700 text-gray-400 hover:text-white transition-all z-10"
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-all z-10"
               aria-label="Close modal"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,10 +66,10 @@ const Modal = ({
           {(title || subtitle) && (
             <div className="px-8 pt-8 pb-6">
               {title && (
-                <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{title}</h2>
               )}
               {subtitle && (
-                <p className="text-gray-300 text-sm">{subtitle}</p>
+                <p className="text-slate-600 dark:text-gray-300 text-sm">{subtitle}</p>
               )}
             </div>
           )}
