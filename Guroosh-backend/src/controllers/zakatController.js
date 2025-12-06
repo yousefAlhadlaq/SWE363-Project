@@ -1,5 +1,5 @@
 const zakatService = require('../services/zakatService');
-const Investment = require('../models/investment');
+const Investment = require('../models/Investment');
 const externalDataService = require('../services/externalDataService');
 
 /**

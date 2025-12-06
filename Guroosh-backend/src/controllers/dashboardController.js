@@ -3,7 +3,7 @@ const ExternalBankAccount = require('../models/externalBankAccount');
 const ExternalStock = require('../models/externalStock');
 const ExternalGold = require('../models/externalGold');
 const Expense = require('../models/expense');
-const Investment = require('../models/investment');
+const Investment = require('../models/Investment');
 const axios = require('axios');
 
 const CENTRAL_BANK_API = process.env.CENTRAL_BANK_API || 'http://localhost:5002/api';
