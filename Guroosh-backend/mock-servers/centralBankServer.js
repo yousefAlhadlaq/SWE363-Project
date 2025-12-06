@@ -872,8 +872,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-const PORT = process.env.CENTRAL_BANK_PORT || 5002;
-
+const PORT = process.env.PORT || process.env.CENTRAL_BANK_PORT || 5002;
 app.listen(PORT, () => {
   console.log(`🏦 Central Bank API running on port ${PORT}`);
   console.log(`📊 Serving bank accounts and stock portfolios from MongoDB`);
