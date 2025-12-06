@@ -118,11 +118,12 @@ exports.sendVerificationEmail = async (email, fullName, verificationCode) => {
       `);
 
     const response = await mailerSend.email.send(emailParams);
-    console.log(`✅ Verification email sent to ${email}`);
+    console.log(`✅ Verification email sent to ${email}`, response);
     return { success: true, messageId: response.headers?.['x-message-id'] || 'sent' };
   } catch (error) {
-    console.error(`❌ Failed to send verification email to ${email}:`, error.message);
-    throw error;
+    console.error(`❌ Failed to send verification email to ${email}:`, JSON.stringify(error, null, 2));
+    console.error('Full error object:', error);
+    throw new Error(error.message || error.body?.message || 'Failed to send email');
   }
 };
 
@@ -234,11 +235,12 @@ exports.sendPasswordResetEmail = async (email, fullName, resetCode) => {
       `);
 
     const response = await mailerSend.email.send(emailParams);
-    console.log(`✅ Password reset email sent to ${email}`);
+    console.log(`✅ Password reset email sent to ${email}`, response);
     return { success: true, messageId: response.headers?.['x-message-id'] || 'sent' };
   } catch (error) {
-    console.error(`❌ Failed to send password reset email to ${email}:`, error.message);
-    throw error;
+    console.error(`❌ Failed to send password reset email to ${email}:`, JSON.stringify(error, null, 2));
+    console.error('Full error object:', error);
+    throw new Error(error.message || error.body?.message || 'Failed to send email');
   }
 };
 
