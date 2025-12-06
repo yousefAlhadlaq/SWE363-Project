@@ -713,27 +713,28 @@ function DashboardPage() {
   };
 
   const validateManualEntry = (data) => {
+    const errors = {};
     const amount = parseFloat(data.amount);
 
     if (!data.transactionType) {
-      return 'Please select a transaction type';
+      errors.transactionType = 'Please select a transaction type';
     }
 
     if (data.transactionType === 'expense') {
-      if (!data.account) return 'Expense account is required';
-      if (!data.amount || Number.isNaN(amount) || amount <= 0) return 'Expense amount must be greater than 0';
-      if (!data.category) return 'Expense category is required';
-      if (!data.merchant) return 'Merchant or description is required for expenses';
-      if (!data.date) return 'Expense date is required';
+      if (!data.account) errors.account = 'Expense account is required';
+      if (!data.amount || Number.isNaN(amount) || amount <= 0) errors.amount = 'Expense amount must be greater than 0';
+      if (!data.category) errors.category = 'Expense category is required';
+      if (!data.merchant) errors.merchant = 'Merchant or description is required';
+      if (!data.date) errors.date = 'Expense date is required';
     } else if (data.transactionType === 'income') {
-      if (!data.account) return 'Income receiving account is required';
-      if (!data.amount || Number.isNaN(amount) || amount <= 0) return 'Income amount must be greater than 0';
-      if (!data.category) return 'Income category is required';
-      if (!data.merchant) return 'Income source or description is required';
-      if (!data.date) return 'Income date is required';
+      if (!data.account) errors.account = 'Income receiving account is required';
+      if (!data.amount || Number.isNaN(amount) || amount <= 0) errors.amount = 'Income amount must be greater than 0';
+      if (!data.category) errors.category = 'Income category is required';
+      if (!data.merchant) errors.merchant = 'Income source or description is required';
+      if (!data.date) errors.date = 'Income date is required';
     }
 
-    return null;
+    return errors;
   };
 
   const handleSubmitAction = async (actionId, event) => {
@@ -962,11 +963,15 @@ function DashboardPage() {
 
     if (actionId === 'manual-entry') {
       const data = actionValues['manual-entry'];
-      const validationError = validateManualEntry(data);
+      
+      // Clear previous errors
+      setFormErrors({});
+      
+      const validationErrors = validateManualEntry(data);
 
       // Type-specific validation
-      if (validationError) {
-        alert(validationError);
+      if (Object.keys(validationErrors).length > 0) {
+        setFormErrors(validationErrors);
         return;
       }
 
@@ -1441,10 +1446,12 @@ function DashboardPage() {
                   label="Account"
                   name="account"
                   value={actionValues['manual-entry'].account}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'account', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'account', event.target.value);
+                    if (formErrors.account) setFormErrors({ ...formErrors, account: null });
+                  }}
                   options={realAccountOptions}
+                  error={formErrors.account}
                   required
                 />
                 <InputField
@@ -1454,30 +1461,36 @@ function DashboardPage() {
                   min="0.01"
                   step="0.01"
                   value={actionValues['manual-entry'].amount}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'amount', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'amount', event.target.value);
+                    if (formErrors.amount) setFormErrors({ ...formErrors, amount: null });
+                  }}
                   placeholder="0.00"
+                  error={formErrors.amount}
                   required
                 />
                 <SelectMenu
                   label="Category"
                   name="category"
                   value={actionValues['manual-entry'].category}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'category', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'category', event.target.value);
+                    if (formErrors.category) setFormErrors({ ...formErrors, category: null });
+                  }}
                   options={expenseCategoryOptions}
+                  error={formErrors.category}
                   required
                 />
                 <InputField
                   label="Merchant / Description"
                   name="merchant"
                   value={actionValues['manual-entry'].merchant}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'merchant', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'merchant', event.target.value);
+                    if (formErrors.merchant) setFormErrors({ ...formErrors, merchant: null });
+                  }}
                   placeholder="e.g., Apple Store"
+                  error={formErrors.merchant}
                   required
                 />
                 <InputField
@@ -1485,9 +1498,11 @@ function DashboardPage() {
                   name="date"
                   type="date"
                   value={actionValues['manual-entry'].date}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'date', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'date', event.target.value);
+                    if (formErrors.date) setFormErrors({ ...formErrors, date: null });
+                  }}
+                  error={formErrors.date}
                   required
                 />
                 <div>
@@ -1515,10 +1530,12 @@ function DashboardPage() {
                   label="Account"
                   name="account"
                   value={actionValues['manual-entry'].account}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'account', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'account', event.target.value);
+                    if (formErrors.account) setFormErrors({ ...formErrors, account: null });
+                  }}
                   options={realAccountOptions}
+                  error={formErrors.account}
                   required
                 />
                 <InputField
@@ -1528,30 +1545,36 @@ function DashboardPage() {
                   min="0.01"
                   step="0.01"
                   value={actionValues['manual-entry'].amount}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'amount', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'amount', event.target.value);
+                    if (formErrors.amount) setFormErrors({ ...formErrors, amount: null });
+                  }}
                   placeholder="0.00"
+                  error={formErrors.amount}
                   required
                 />
                 <SelectMenu
                   label="Income Category"
                   name="category"
                   value={actionValues['manual-entry'].category}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'category', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'category', event.target.value);
+                    if (formErrors.category) setFormErrors({ ...formErrors, category: null });
+                  }}
                   options={incomeCategoryOptions}
+                  error={formErrors.category}
                   required
                 />
                 <InputField
                   label="Source / Description"
                   name="merchant"
                   value={actionValues['manual-entry'].merchant}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'merchant', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'merchant', event.target.value);
+                    if (formErrors.merchant) setFormErrors({ ...formErrors, merchant: null });
+                  }}
                   placeholder="e.g., Monthly Salary, Bonus"
+                  error={formErrors.merchant}
                   required
                 />
                 <InputField
@@ -1559,9 +1582,11 @@ function DashboardPage() {
                   name="date"
                   type="date"
                   value={actionValues['manual-entry'].date}
-                  onChange={(event) =>
-                    updateActionValue('manual-entry', 'date', event.target.value)
-                  }
+                  onChange={(event) => {
+                    updateActionValue('manual-entry', 'date', event.target.value);
+                    if (formErrors.date) setFormErrors({ ...formErrors, date: null });
+                  }}
+                  error={formErrors.date}
                   required
                 />
                 <div>
