@@ -102,6 +102,103 @@ router.get('/quote/:symbol', async (req, res) => {
   }
 });
 
+// Get historical stock price range for charting
+router.get('/chart/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { range = '1mo' } = req.query; // 1d, 5d, 1mo, 3mo, 6mo, 1y, 5y, max
+
+    // Map range to Yahoo Finance period and interval
+    let period1, period2, interval;
+    const now = new Date();
+
+    switch (range) {
+      case '1d':
+        period1 = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        interval = '5m'; // 5-minute intervals for 1 day
+        break;
+      case '5d':
+        period1 = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+        interval = '15m'; // 15-minute intervals for 5 days
+        break;
+      case '1mo':
+        period1 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        interval = '1d'; // Daily for 1 month
+        break;
+      case '3mo':
+        period1 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        interval = '1d'; // Daily for 3 months
+        break;
+      case '6mo':
+        period1 = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        interval = '1d'; // Daily for 6 months
+        break;
+      case '1y':
+        period1 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        interval = '1d'; // Daily for 1 year
+        break;
+      case '5y':
+        period1 = new Date(now.getTime() - 5 * 365 * 24 * 60 * 60 * 1000);
+        interval = '1wk'; // Weekly for 5 years
+        break;
+      case 'max':
+        period1 = new Date(now.getTime() - 20 * 365 * 24 * 60 * 60 * 1000);
+        interval = '1mo'; // Monthly for max
+        break;
+      default:
+        period1 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        interval = '1d';
+    }
+
+    period2 = now;
+
+    // Fetch historical data from Yahoo Finance
+    const historicalData = await yahooFinance.historical(symbol, {
+      period1,
+      period2,
+      interval
+    });
+
+    if (!historicalData || historicalData.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Historical data not available for this symbol'
+      });
+    }
+
+    // Check if it's a Saudi stock (already in SAR)
+    const isInSAR = isSaudiStock(symbol, '');
+    const conversionRate = isInSAR ? 1 : USD_TO_SAR;
+
+    // Format data for charting
+    const chartData = historicalData.map(point => ({
+      timestamp: new Date(point.date).getTime(),
+      date: new Date(point.date).toISOString(),
+      open: point.open * conversionRate,
+      high: point.high * conversionRate,
+      low: point.low * conversionRate,
+      close: point.close * conversionRate,
+      volume: point.volume
+    }));
+
+    res.json({
+      success: true,
+      symbol,
+      range,
+      interval,
+      currency: 'SAR',
+      data: chartData
+    });
+
+  } catch (error) {
+    console.error('Error fetching chart data:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch chart data'
+    });
+  }
+});
+
 // Get historical stock price for a specific date
 router.get('/historical/:symbol/:date', async (req, res) => {
   const { symbol, date } = req.params;

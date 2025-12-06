@@ -651,7 +651,7 @@ function InvestmentsPage() {
 
         if (response.success && response.investments) {
           // Transform backend data to frontend format
-          const transformedInvestments = response.investments.map((inv) => ({
+          let transformedInvestments = response.investments.map((inv) => ({
             id: inv._id,
             name: inv.name,
             category: inv.category,
@@ -663,7 +663,38 @@ function InvestmentsPage() {
             amount: inv.currentPrice * (inv.amountOwned || 1),
             notes: inv.notes,
             areaSqm: inv.areaSqm,
+            symbol: inv.symbol, // For stocks/crypto
           }));
+
+          // Fetch live gold price and update gold investments
+          const goldInvestments = transformedInvestments.filter(inv => inv.category === 'Gold');
+          if (goldInvestments.length > 0) {
+            try {
+              const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+              const goldPriceResponse = await fetch(`${API_BASE_URL}/external/gold/price`);
+              const goldPriceData = await goldPriceResponse.json();
+
+              if (goldPriceData.success && goldPriceData.price) {
+                // Gold price is per gram in SAR
+                const liveGoldPrice = goldPriceData.price;
+                console.log(`🥇 Live gold price: ${liveGoldPrice} SAR/gram`);
+
+                // Update gold investments with live price
+                transformedInvestments = transformedInvestments.map(inv => {
+                  if (inv.category === 'Gold') {
+                    return {
+                      ...inv,
+                      currentPrice: liveGoldPrice,
+                      amount: liveGoldPrice * (inv.amountOwned || 1),
+                    };
+                  }
+                  return inv;
+                });
+              }
+            } catch (goldError) {
+              console.warn('Could not fetch live gold price, using stored values:', goldError);
+            }
+          }
 
           setInvestments(transformedInvestments);
         }
@@ -1158,7 +1189,10 @@ function InvestmentsPage() {
       if (!form.propertyType) {
         validationErrors.propertyType = 'Property type is required';
       }
-      // Purchase price is optional for Real Estate
+      // Purchase price is mandatory for Real Estate
+      if (!buyPriceValue || buyPriceValue <= 0) {
+        validationErrors.buyPrice = 'Purchase price is required';
+      }
     } else {
       if (!amountOwnedValue || amountOwnedValue <= 0) {
         validationErrors.amountOwned = 'Enter the amount owned';
@@ -1248,6 +1282,11 @@ function InvestmentsPage() {
       investmentData.amountOwned = amountOwnedValue;
       investmentData.buyPrice = buyPriceValue;
       investmentData.currentPrice = currentPriceValue;
+
+      // Store symbol for stocks/crypto to enable historical data fetching
+      if ((form.category === 'Stock' || form.category === 'Crypto') && selectedStock) {
+        investmentData.symbol = selectedStock.symbol;
+      }
     }
 
     try {
@@ -1269,6 +1308,7 @@ function InvestmentsPage() {
           amount: inv.currentPrice * (inv.amountOwned || 1),
           notes: inv.notes,
           areaSqm: inv.areaSqm,
+          symbol: inv.symbol, // For stocks/crypto
         };
 
         setInvestments((prev) => [...prev, transformedInvestment]);
@@ -1448,6 +1488,25 @@ function InvestmentsPage() {
         maxWidth="max-w-3xl"
       >
         <form className="space-y-4" onSubmit={handleAddInvestment}>
+          {/* Type selector - FIRST FIELD */}
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">
+              Type
+            </label>
+            <select
+              value={form.category}
+              onChange={handleCategoryChange}
+              className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+            >
+              {categoryOptions.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Category-specific name/search fields */}
           {form.category === 'Stock' ? (
             <div className="space-y-4">
               <StockSearchInput
@@ -1498,23 +1557,6 @@ function InvestmentsPage() {
               error={errors.name}
             />
           )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              Type
-            </label>
-            <select
-              value={form.category}
-              onChange={handleCategoryChange}
-              className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-            >
-              {categoryOptions.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
 
           <InputField
             label="Purchase date"

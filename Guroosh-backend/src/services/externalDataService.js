@@ -147,45 +147,38 @@ exports.estimatePropertyValue = async (propertyData) => {
 
 // ===== GOLD PRICE SERVICES =====
 
-// Fetch current gold price (using goldapi.io - free tier available)
+// Fetch current gold price using goldPriceService (Yahoo Finance - FREE)
 exports.fetchGoldPrice = async () => {
   try {
-    // Using metals-api.com as alternative (also has free tier)
-    // Or use goldapi.io, metals-dev-api.com, etc.
+    const goldPriceService = require('./goldPriceService');
+    const pricePerGramSAR = await goldPriceService.getCurrentGoldPrice();
 
-    // For demo purposes, using a simplified free API
-    // In production, get API key from: https://www.goldapi.io/
-
-    const response = await axios.get('https://api.metals.dev/v1/latest', {
-      params: {
-        api_key: 'demo', // Replace with real API key in production
-        currency: 'USD',
-        unit: 'toz' // troy ounce
-      }
-    });
-
-    if (response.data && response.data.metals) {
+    if (pricePerGramSAR && pricePerGramSAR > 0) {
       return {
         success: true,
+        price: pricePerGramSAR, // Price per gram in SAR
         gold: {
-          price: response.data.metals.gold || 2050, // Fallback price
-          unit: 'troy ounce',
-          currency: 'USD',
-          timestamp: response.data.timestamp || new Date().toISOString()
+          price: pricePerGramSAR,
+          unit: 'gram',
+          currency: 'SAR',
+          timestamp: new Date().toISOString()
         }
       };
     }
   } catch (error) {
-    console.log('Using fallback gold price (API unavailable)');
+    console.log('Error fetching gold price from goldPriceService:', error.message);
   }
 
-  // Fallback to mock price if API fails
+  // Fallback to estimated price if API fails
+  // Current gold price is approximately 500 SAR per gram
+  const fallbackPrice = 500;
   return {
     success: true,
+    price: fallbackPrice,
     gold: {
-      price: 2050, // Current approximate gold price per troy ounce
-      unit: 'troy ounce',
-      currency: 'USD',
+      price: fallbackPrice,
+      unit: 'gram',
+      currency: 'SAR',
       timestamp: new Date().toISOString(),
       note: 'Using fallback price - API unavailable'
     }
@@ -257,8 +250,8 @@ exports.fetchAllExternalData = async (userId) => {
         totalStocks: stockData.summary?.totalValue || 0,
         totalCrypto: cryptoData.summary?.totalValue || 0,
         grandTotal: (bankData.totalBalance || 0) +
-                   (stockData.summary?.totalValue || 0) +
-                   (cryptoData.summary?.totalValue || 0)
+          (stockData.summary?.totalValue || 0) +
+          (cryptoData.summary?.totalValue || 0)
       }
     };
   } catch (error) {

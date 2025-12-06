@@ -36,6 +36,11 @@ const investmentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  // Stock/Crypto specific fields
+  symbol: {
+    type: String,  // Ticker symbol for stocks/crypto (e.g., "AAPL", "BTC-USD")
+    trim: true
+  },
   // Real Estate specific fields
   location: {
     type: String,  // City name for Real Estate (deprecated, use lat/lng)
