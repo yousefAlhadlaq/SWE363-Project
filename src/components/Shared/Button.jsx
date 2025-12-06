@@ -1,6 +1,14 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 
-function Button({
+// Memoized variant classes - defined outside component to prevent recreation
+const variantClasses = {
+  primary: 'bg-teal-600 text-white hover:bg-teal-500 focus:ring-teal-500 active:bg-teal-700',
+  secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 active:bg-gray-800',
+  danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 active:bg-red-800',
+  outline: 'bg-transparent border-2 border-teal-500 text-teal-400 hover:bg-teal-500/10 focus:ring-teal-500',
+};
+
+const Button = memo(function Button({
   children,
   onClick,
   variant = 'primary',
@@ -12,16 +20,19 @@ function Button({
   ariaLabel,
   ...rest
 }) {
-  const baseClasses = `px-4 py-2 rounded-md font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 ${className}`;
-
-  const variantClasses = {
-    primary: 'bg-teal-600 text-white hover:bg-teal-500 focus:ring-teal-500 active:bg-teal-700',
-    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 active:bg-gray-800',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 active:bg-red-800',
-    outline: 'bg-transparent border-2 border-teal-500 text-teal-400 hover:bg-teal-500/10 focus:ring-teal-500',
-  };
-
   const isDisabled = disabled || loading;
+
+  // Memoize className computation to avoid recalculating on every render
+  const computedClassName = useMemo(() => {
+    const base = `px-4 py-2 rounded-md font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 ${className}`;
+    const variantClass = variantClasses[variant] || variantClasses.primary;
+    const widthClass = fullWidth ? 'w-full' : '';
+    const disabledClass = isDisabled 
+      ? 'opacity-50 cursor-not-allowed' 
+      : 'hover:scale-[1.02] active:scale-[0.98]';
+    
+    return `${base} ${variantClass} ${widthClass} ${disabledClass}`.trim();
+  }, [className, variant, fullWidth, isDisabled]);
 
   return (
     <button
@@ -31,11 +42,7 @@ function Button({
       aria-label={ariaLabel}
       aria-busy={loading}
       aria-disabled={isDisabled}
-      className={`${baseClasses} ${variantClasses[variant]} ${
-        fullWidth ? 'w-full' : ''
-      } ${
-        isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'
-      }`}
+      className={computedClassName}
       {...rest}
     >
       {loading ? (
@@ -67,6 +74,9 @@ function Button({
       )}
     </button>
   );
-}
+});
+
+Button.displayName = 'Button';
 
 export default Button;
+

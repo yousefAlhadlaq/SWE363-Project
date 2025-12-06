@@ -388,7 +388,7 @@ const normalizeRequest = (request) => ({
         <FinancialSidebar />
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto p-6 relative ml-64 pt-24">
+        <div className="flex-1 overflow-auto p-4 sm:p-6 relative lg:ml-64 pt-24">
         <div className="max-w-7xl mx-auto">
           {/* Back Button */}
           <button
@@ -706,7 +706,7 @@ const normalizeRequest = (request) => ({
       <FinancialSidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-6 relative ml-64 pt-24">
+      <div className="flex-1 overflow-auto p-4 sm:p-6 relative lg:ml-64 pt-24">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between mb-10">

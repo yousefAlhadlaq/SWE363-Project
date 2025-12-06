@@ -216,7 +216,7 @@ function FinancialSettingsPage() {
       <FinancialSidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto relative ml-64 pt-24">
+      <div className="flex-1 overflow-auto relative lg:ml-64 pt-24">
         <div className="max-w-7xl mx-auto p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">

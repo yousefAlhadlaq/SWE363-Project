@@ -97,7 +97,7 @@ exports.register = async (req, res) => {
         isAdvisor: user.isAdvisor,
         createdAt: user.createdAt
       },
-      verificationCode: verificationCode // Remove this in production!
+
     });
   } catch (error) {
     console.error('Register error:', error);
@@ -229,7 +229,7 @@ exports.resendVerificationCode = async (req, res) => {
     res.json({
       success: true,
       message: 'Verification code sent successfully',
-      verificationCode: verificationCode // Remove this in production!
+
     });
   } catch (error) {
     console.error('Resend code error:', error);
@@ -434,7 +434,7 @@ exports.forgotPassword = async (req, res) => {
     res.json({
       success: true,
       message: 'If an account exists with this email, you will receive a password reset code shortly.',
-      resetCode: resetCode // Remove this in production!
+
     });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -554,7 +554,7 @@ exports.resendResetCode = async (req, res) => {
     res.json({
       success: true,
       message: 'If an account exists with this email, a new code has been sent.',
-      resetCode: resetCode // Remove this in production!
+
     });
   } catch (error) {
     console.error('Resend reset code error:', error);

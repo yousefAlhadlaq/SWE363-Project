@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 
-const Card = ({ children, title, className = '' }) => {
+const Card = memo(function Card({ children, title, className = '' }) {
   const baseClasses = 'rounded-2xl p-6 border shadow-lg backdrop-blur-sm transition-colors bg-white/95 text-slate-900 border-slate-200/70 dark:bg-slate-800/95 dark:text-white dark:border-slate-700/50';
 
   return (
@@ -13,6 +13,9 @@ const Card = ({ children, title, className = '' }) => {
       {children}
     </div>
   );
-};
+});
+
+Card.displayName = 'Card';
 
 export default Card;
+

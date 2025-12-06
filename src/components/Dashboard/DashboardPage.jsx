@@ -643,9 +643,9 @@ function DashboardPage() {
   // ✅ Show loading state while auth initializes OR data is loading
   if (authLoading || loading) {
     return (
-      <div className="flex min-h-screen bg-page text-white pt-20">
+      <div className="flex min-h-screen bg-page text-white pt-16 lg:pt-20">
         <Sidebar />
-        <div className="flex-1 ml-64 px-6 py-8">
+        <div className="flex-1 lg:ml-64 px-4 sm:px-6 py-8">
           <div className="max-w-6xl flex items-center justify-center min-h-[60vh]">
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
@@ -1700,7 +1700,7 @@ function DashboardPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-page text-white pt-20">
+    <div className="flex min-h-screen bg-page text-white pt-16 lg:pt-20">
       <Sidebar />
 
       {/* Success Toast Notification */}
@@ -1742,7 +1742,7 @@ function DashboardPage() {
         </div>
       )}
 
-      <div className="flex-1 ml-64 px-6 py-8">
+      <div className="flex-1 lg:ml-64 px-4 sm:px-6 py-8">
         <div className="max-w-6xl space-y-6">
           <header className="space-y-4">
             <div>

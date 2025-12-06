@@ -243,7 +243,7 @@ const ProfileSettings = () => {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="ml-64 pt-20 px-4 md:px-6 pb-6 overflow-x-hidden min-h-screen">
+      <div className="lg:ml-64 pt-16 lg:pt-20 px-4 md:px-6 pb-6 overflow-x-hidden min-h-screen">
         <div className="max-w-5xl">
           {/* Header */}
           <div className="mb-4">

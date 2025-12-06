@@ -1330,9 +1330,9 @@ function InvestmentsPage() {
   // Show full-page spinner while initial data is loading
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-20">
+      <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-16 lg:pt-20">
         <Sidebar />
-        <div className="flex-1 ml-64 px-5 py-6">
+        <div className="flex-1 lg:ml-64 px-4 sm:px-5 py-6">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
@@ -1350,10 +1350,10 @@ function InvestmentsPage() {
 
   return (
     <>
-      <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-20">
+      <div className="flex min-h-screen bg-page text-slate-900 dark:text-slate-100 pt-16 lg:pt-20">
         <Sidebar />
 
-        <div className="flex-1 ml-64 px-5 py-6">
+        <div className="flex-1 lg:ml-64 px-4 sm:px-5 py-6">
           <div className="w-full max-w-5xl space-y-5">
             <header>
               <p className="text-sm uppercase tracking-[0.35em] text-teal-200/80">

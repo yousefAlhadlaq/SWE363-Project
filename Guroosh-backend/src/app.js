@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
+const { apiLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
@@ -48,7 +49,8 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Routes
+// Routes - Apply general rate limiter to all API routes
+app.use('/api', apiLimiter);
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/advisors', require('./routes/advisorRoutes'));
@@ -73,7 +75,6 @@ app.use('/api/real-estate', require('./routes/realEstateRoutes'));
 app.use('/api/gold', require('./routes/goldRoutes'));
 app.use('/api/transactions', require('./routes/transactionRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
-app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/zakat', require('./routes/zakatRoutes'));
 

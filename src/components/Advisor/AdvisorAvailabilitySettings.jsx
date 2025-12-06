@@ -132,7 +132,7 @@ function AdvisorAvailabilitySettings() {
         <FinancialSidebar />
       </div>
 
-      <div className="relative flex-1 p-8 ml-64 pt-24 z-10">
+      <div className="relative flex-1 p-4 sm:p-8 lg:ml-64 pt-24 z-10">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
