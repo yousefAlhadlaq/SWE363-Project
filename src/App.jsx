@@ -18,9 +18,12 @@ function AppContent() {
 
   const shouldShowLoader = authLoading || isPageLoading;
 
+  if (shouldShowLoader) {
+    return <LoadingScreen />;
+  }
+
   return (
     <div className="min-h-screen bg-page">
-      {shouldShowLoader && <LoadingScreen />}
       <AppRoutes />
     </div>
   );
