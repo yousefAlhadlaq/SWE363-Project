@@ -4,6 +4,7 @@ const ExternalStock = require('../models/externalStock');
 const ExternalGold = require('../models/externalGold');
 const Expense = require('../models/expense');
 const Investment = require('../models/Investment');
+const Account = require('../models/account');
 const axios = require('axios');
 
 const CENTRAL_BANK_API = process.env.CENTRAL_BANK_API || 'http://localhost:5002/api';
@@ -88,14 +89,16 @@ exports.getDashboardData = async (req, res) => {
       centralBankAccounts,
       centralBankStocks,
       centralBankGold,
-      localAccounts
+      localAccounts,
+      managedAccounts
     ] = await Promise.all([
-      Expense.find({ userId }).sort({ date: -1 }).limit(50),
+      Expense.find({ userId }).populate('categoryId', 'name color type').sort({ date: -1 }).limit(50),
       Investment.find({ userId }),
       fetchFromCentralBank('accounts', userId),
       fetchFromCentralBank('stocks', userId),
       fetchFromCentralBank('gold_value', userId),
-      ExternalBankAccount.find({ userId })
+      ExternalBankAccount.find({ userId }),
+      Account.find({ userId })
     ]);
 
     const accounts = centralBankAccounts?.accounts || [];
@@ -109,6 +112,7 @@ exports.getDashboardData = async (req, res) => {
     let totalBalance = 0;
     let weeklySpend = 0;
     let monthlySpend = 0;
+    let dailySpend = 0;
     let creditCardDue = 0;
     const allTransactions = [];
     const merchantSpending = {};
@@ -117,16 +121,16 @@ exports.getDashboardData = async (req, res) => {
 
     const startOfWeek = getStartOfWeek();
     const startOfMonth = getStartOfMonth();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     oneWeekAgo.setHours(0, 0, 0, 0);
 
     const processedAccounts = [];
 
+    // Only process Central Bank accounts that have been explicitly named/linked by user
     if (Array.isArray(accounts)) {
       accounts.forEach(account => {
-        const balance = account.balance || 0;
-        totalBalance += balance;
-
         const localMatch =
           localAccountByNumber.get(account.accountNumber) ||
           localAccountByNumber.get(account.id) ||
@@ -136,6 +140,14 @@ exports.getDashboardData = async (req, res) => {
           account.accountName ||
           localMatch?.accountName ||
           '';
+
+        // Skip accounts that haven't been named/linked by user (auto-generated unnamed accounts)
+        if (!accountName || accountName.trim() === '' || accountName === 'Unnamed') {
+          return; // Skip this account
+        }
+
+        const balance = account.balance || 0;
+        totalBalance += balance;
 
         processedAccounts.push({
           id: account.id || account._id,
@@ -169,6 +181,10 @@ exports.getDashboardData = async (req, res) => {
 
             if (txDate >= oneWeekAgo) {
               weeklySpend += tx.amount;
+            }
+
+            if (txDate >= startOfToday) {
+              dailySpend += tx.amount;
             }
 
             if (txDate >= startOfWeek) {
@@ -214,6 +230,30 @@ exports.getDashboardData = async (req, res) => {
       });
     }
 
+    // Include managed accounts (like Cash Wallet) from Account model
+    if (Array.isArray(managedAccounts)) {
+      managedAccounts.forEach(managedAcc => {
+        const balance = managedAcc.balance || 0;
+        totalBalance += balance;
+
+        processedAccounts.push({
+          id: managedAcc._id,
+          _id: managedAcc._id,
+          bank: managedAcc.institution || 'Bank',
+          bankLogo: null,
+          accountNumber: managedAcc.lastFour || '',
+          accountName: managedAcc.name,
+          name: managedAcc.name,
+          accountType: managedAcc.type,
+          balance,
+          currency: managedAcc.currency || 'SAR',
+          createdAt: managedAcc.createdAt,
+          isPrimary: managedAcc.isPrimary,
+          isManaged: true
+        });
+      });
+    }
+
     expensesFromDB.forEach(expense => {
       const txDate = new Date(expense.date);
 
@@ -221,13 +261,18 @@ exports.getDashboardData = async (req, res) => {
         _id: expense._id,
         type: 'payment',
         amount: expense.amount,
-        description: expense.description || expense.category,
+        description: expense.title || expense.merchant || expense.description || 'Expense',
         date: expense.date,
         source: 'expense',
+        merchant: expense.merchant,
       });
 
       if (txDate >= oneWeekAgo) {
         weeklySpend += expense.amount;
+      }
+
+      if (txDate >= startOfToday) {
+        dailySpend += expense.amount;
       }
 
       if (txDate >= startOfWeek) {
@@ -238,7 +283,7 @@ exports.getDashboardData = async (req, res) => {
         monthlySpend += expense.amount;
       }
 
-      const category = expense.category || categorizeTransaction(expense.description);
+      const category = expense.categoryId?.name || categorizeTransaction(expense.title || expense.description);
       categorySpending[category] = (categorySpending[category] || 0) + expense.amount;
 
       if (expense.merchant) {
@@ -373,7 +418,9 @@ exports.getDashboardData = async (req, res) => {
         categoryBreakdown: sortedCategories,
         weeklyChart,
         dailySpendLimit: 1000,
-        remainingLimit: Math.max(0, 1000 - (weeklySpend / 7)),
+        dailySpend,
+        // Show remaining limit relative to today's spend
+        remainingLimit: Math.max(0, 1000 - dailySpend),
         isNewUser, // ✅ NEW: Flag for empty states
         hasNoAccounts, // ✅ NEW: For conditional rendering
         hasNoTransactions, // ✅ NEW: For conditional rendering

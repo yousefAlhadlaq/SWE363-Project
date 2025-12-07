@@ -1,8 +1,21 @@
 const brevo = require('@getbrevo/brevo');
 
-// Initialize Brevo API
-const apiInstance = new brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+// Initialize Brevo API - defer initialization to ensure env vars are loaded
+let apiInstance = null;
+
+const getApiInstance = () => {
+  if (!apiInstance) {
+    apiInstance = new brevo.TransactionalEmailsApi();
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+      console.error('❌ BREVO_API_KEY is not set in environment variables');
+    } else {
+      console.log('✅ Brevo API key found, length:', apiKey.length);
+    }
+    apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, apiKey);
+  }
+  return apiInstance;
+};
 
 /**
  * Send email verification code
@@ -12,6 +25,7 @@ apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BR
  */
 exports.sendVerificationEmail = async (email, fullName, verificationCode) => {
   try {
+    const api = getApiInstance();
     const sendSmtpEmail = new brevo.SendSmtpEmail();
 
     sendSmtpEmail.subject = 'Verify Your Email - Quroosh';
@@ -112,7 +126,7 @@ exports.sendVerificationEmail = async (email, fullName, verificationCode) => {
       </html>
     `;
 
-    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    const response = await getApiInstance().sendTransacEmail(sendSmtpEmail);
     console.log(`✅ Verification email sent to ${email}:`, response);
     return { success: true, messageId: response.messageId || 'sent' };
   } catch (error) {
@@ -231,7 +245,7 @@ exports.sendPasswordResetEmail = async (email, fullName, resetCode) => {
       </html>
     `;
 
-    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    const response = await getApiInstance().sendTransacEmail(sendSmtpEmail);
     console.log(`✅ Password reset email sent to ${email}:`, response);
     return { success: true, messageId: response.messageId || 'sent' };
   } catch (error) {

@@ -161,6 +161,16 @@ exports.createExpense = async (req, res) => {
       return res.status(404).json({ error: 'Account not found or inactive' });
     }
 
+    // Check if account has sufficient balance
+    const currentBalance = Number(account.balance || 0);
+    const expenseAmount = Number(amount);
+    if (currentBalance < expenseAmount) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance',
+        message: `Account "${account.name}" has SAR ${currentBalance.toLocaleString()} but expense requires SAR ${expenseAmount.toLocaleString()}`
+      });
+    }
+
     const expense = await Expense.create({
       userId: req.userId,
       categoryId,
@@ -174,7 +184,8 @@ exports.createExpense = async (req, res) => {
 
     await expense.populate('categoryId', 'name color type');
 
-    account.balance = Number(account.balance || 0) - Number(amount);
+    // Deduct expense amount from account balance
+    account.balance = currentBalance - expenseAmount;
     await account.save();
 
     // ✅ Create notification for expense
@@ -258,13 +269,16 @@ exports.updateExpense = async (req, res) => {
 
     await expense.save();
 
+    // Adjust account balances based on changes
     const newAccountId = expense.accountId.toString();
     const newAmount = expense.amount;
 
     if (previousAccountId !== newAccountId) {
+      // Refund previous account, deduct from new account
       await Account.findOneAndUpdate({ _id: previousAccountId, userId: req.userId }, { $inc: { balance: previousAmount } });
       await Account.findOneAndUpdate({ _id: newAccountId, userId: req.userId }, { $inc: { balance: -newAmount } });
     } else if (previousAmount !== newAmount) {
+      // Same account, just adjust the difference
       const diff = newAmount - previousAmount;
       await Account.findOneAndUpdate({ _id: newAccountId, userId: req.userId }, { $inc: { balance: -diff } });
     }
@@ -297,6 +311,7 @@ exports.deleteExpense = async (req, res) => {
       return res.status(404).json({ error: 'Expense not found' });
     }
 
+    // Refund the expense amount back to the account
     await Account.findOneAndUpdate(
       { _id: expense.accountId, userId: req.userId },
       { $inc: { balance: expense.amount } }

@@ -1,4 +1,7 @@
 const ExternalBankAccount = require('../models/externalBankAccount');
+const Account = require('../models/account');
+const Expense = require('../models/expense');
+const Category = require('../models/category');
 const axios = require('axios');
 const { createTransactionNotification } = require('../utils/notificationHelper');
 
@@ -399,7 +402,104 @@ exports.manualEntry = async (req, res) => {
       });
     }
 
-    // Call Central Bank API to perform operation for real accounts
+    // First, check if this is a local/managed account (like Cash Wallet)
+    const localAccount = await Account.findOne({ _id: accountId, userId });
+    
+    if (localAccount) {
+      // Handle local/managed account directly
+      if (direction === 'outgoing' && localAccount.balance < txAmount) {
+        return res.status(400).json({
+          success: false,
+          error: 'Insufficient funds'
+        });
+      }
+
+      // Update balance
+      if (direction === 'incoming') {
+        localAccount.balance += txAmount;
+      } else {
+        localAccount.balance -= txAmount;
+      }
+
+      await localAccount.save();
+
+      // Create expense record for outgoing transactions
+      if (direction === 'outgoing') {
+        try {
+          // Find the category - try by name first, then by ID
+          let categoryDoc = null;
+          if (category) {
+            categoryDoc = await Category.findOne({ 
+              userId, 
+              $or: [{ name: category }, { _id: category }] 
+            });
+          }
+          
+          // If no category found, try to find or create a default "Other" category
+          if (!categoryDoc) {
+            categoryDoc = await Category.findOne({ userId, name: 'Other' });
+            if (!categoryDoc) {
+              categoryDoc = await Category.create({
+                userId,
+                name: 'Other',
+                type: 'expense',
+                color: '#808080'
+              });
+            }
+          }
+
+          await Expense.create({
+            userId,
+            amount: txAmount,
+            title: description,
+            description: description,
+            merchant: description,
+            categoryId: categoryDoc._id,
+            accountId: accountId,
+            date: date ? new Date(date) : new Date()
+          });
+          console.log('✅ Expense record created for manual transaction');
+        } catch (expenseError) {
+          console.error('⚠️ Failed to create expense record:', expenseError.message);
+          // Don't fail the transaction if expense creation fails
+        }
+      }
+
+      // Create notification for local account transaction
+      try {
+        await createTransactionNotification(userId, {
+          amount: txAmount,
+          type: operationType,
+          accountName: localAccount.name || 'Local Account',
+          transactionId: accountId,
+          merchant: description,
+          method: 'Manual Entry'
+        });
+      } catch (notifError) {
+        console.error('⚠️ [TRANSACTION] Notification failed:', notifError.message);
+      }
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          transaction: {
+            type: operationType,
+            amount: txAmount,
+            description,
+            date: date ? new Date(date) : new Date(),
+            direction,
+            category: category || 'Other',
+          },
+          account: {
+            id: accountId,
+            name: localAccount.name,
+            balance: localAccount.balance,
+          }
+        }
+      });
+    }
+
+    // If not a local account, call Central Bank API for external bank accounts
     try {
       const response = await axios.post(`${CENTRAL_BANK_API}/perform_operation`, {
         userId,
@@ -438,6 +538,45 @@ exports.manualEntry = async (req, res) => {
       } catch (notifError) {
         console.error('⚠️ [TRANSACTION] Notification failed, but transaction succeeded:', notifError.message);
         // Don't throw - let transaction succeed even if notification fails
+      }
+
+      // Create expense record for outgoing transactions (Central Bank path)
+      if (direction === 'outgoing') {
+        try {
+          let categoryDoc = null;
+          if (category) {
+            categoryDoc = await Category.findOne({ 
+              userId, 
+              $or: [{ name: category }, { _id: category }] 
+            });
+          }
+          
+          if (!categoryDoc) {
+            categoryDoc = await Category.findOne({ userId, name: 'Other' });
+            if (!categoryDoc) {
+              categoryDoc = await Category.create({
+                userId,
+                name: 'Other',
+                type: 'expense',
+                color: '#808080'
+              });
+            }
+          }
+
+          await Expense.create({
+            userId,
+            amount: txAmount,
+            title: description,
+            description: description,
+            merchant: description,
+            categoryId: categoryDoc._id,
+            accountId: accountId,
+            date: date ? new Date(date) : new Date()
+          });
+          console.log('✅ Expense record created for Central Bank transaction');
+        } catch (expenseError) {
+          console.error('⚠️ Failed to create expense record:', expenseError.message);
+        }
       }
 
       res.status(201).json({
@@ -519,6 +658,45 @@ exports.manualEntry = async (req, res) => {
       } catch (notifError) {
         console.error('⚠️ [TRANSACTION] Notification failed (fallback), but transaction succeeded:', notifError.message);
         // Don't throw - let transaction succeed even if notification fails
+      }
+
+      // Create expense record for outgoing transactions (fallback path)
+      if (direction === 'outgoing') {
+        try {
+          let categoryDoc = null;
+          if (category) {
+            categoryDoc = await Category.findOne({ 
+              userId, 
+              $or: [{ name: category }, { _id: category }] 
+            });
+          }
+          
+          if (!categoryDoc) {
+            categoryDoc = await Category.findOne({ userId, name: 'Other' });
+            if (!categoryDoc) {
+              categoryDoc = await Category.create({
+                userId,
+                name: 'Other',
+                type: 'expense',
+                color: '#808080'
+              });
+            }
+          }
+
+          await Expense.create({
+            userId,
+            amount: txAmount,
+            title: description,
+            description: description,
+            merchant: description,
+            categoryId: categoryDoc._id,
+            accountId: account._id,
+            date: date ? new Date(date) : new Date()
+          });
+          console.log('✅ Expense record created (fallback path)');
+        } catch (expenseError) {
+          console.error('⚠️ Failed to create expense record (fallback):', expenseError.message);
+        }
       }
 
       res.status(201).json({

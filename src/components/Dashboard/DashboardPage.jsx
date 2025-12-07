@@ -28,6 +28,7 @@ import EmptyState from '../Shared/EmptyState';
 import { useAuth } from '../../context/AuthContext';
 import { formatCurrencySAR } from '../../utils/formatCurrencySAR';
 import { usePortfolioSummary } from '../../hooks/usePortfolioSummary';
+import { accountService, categoryService } from '../../services';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
@@ -200,7 +201,7 @@ const transactionTypeOptions = [
   { value: 'income', label: 'Income' },
 ];
 
-const expenseCategoryOptions = [
+const defaultExpenseCategoryOptions = [
   { value: 'telecom', label: 'Telecom' },
   { value: 'groceries', label: 'Groceries' },
   { value: 'travel', label: 'Travel' },
@@ -290,29 +291,15 @@ function DashboardPage() {
   const [chartData, setChartData] = useState([]);
   const [formErrors, setFormErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState(null);
+  const [expenseCategoryOptions, setExpenseCategoryOptions] = useState(defaultExpenseCategoryOptions);
 
   // Generate account options dynamically from linked accounts
   // Always include a default "Main Account" option for users without linked accounts
   // Use useMemo to ensure UI refreshes when balances change
   const linkedAccountOptions = useMemo(() => {
-    const mainBalance = dashboardData?.totalBalance || 0;
-    const mainBankLabel = 'Main Account';
-    const mainAccountName = 'Main Account (Default)';
-
-    const mainAccountOption = {
-      value: 'main',
-      label: `${mainBankLabel} — ${mainAccountName} — ${formatSR(mainBalance)}`,
-      name: mainAccountName,
-      accountName: mainAccountName,
-      bank: mainBankLabel,
-      balance: mainBalance,
-      isAccountOption: true,
-      logo: null,
-    };
-
-    return [
-      mainAccountOption,
-      ...linkedAccounts.map(account => {
+    return linkedAccounts
+      .filter((account) => account && (account._id || account.id))
+      .map((account) => {
         const bankLabel = account.bank || account.bankName || 'Bank';
         const accountNameRaw =
           account.accountName ||
@@ -324,7 +311,7 @@ function DashboardPage() {
         const balanceValue = account.balance || 0;
 
         return {
-          value: account.id || account._id,  // Use the actual account ID from backend
+          value: account._id || account.id,
           bank: bankLabel,
           accountName: accountNickname,
           balance: balanceValue,
@@ -333,13 +320,12 @@ function DashboardPage() {
           logo: account.bankLogo || account.logo || account.bank_logo,
           isAccountOption: true,
         };
-      })
-    ];
-  }, [dashboardData?.totalBalance, linkedAccounts]);
+      });
+  }, [linkedAccounts]);
 
   // Filter out Main Account for transfer/deposit/manual actions
   const realAccountOptions = useMemo(() => {
-    return linkedAccountOptions.filter(account => account.value !== 'main');
+    return linkedAccountOptions;
   }, [linkedAccountOptions]);
 
   // Fetch analytics chart data
@@ -430,7 +416,9 @@ function DashboardPage() {
       if (result.success) {
         console.log('✅ Dashboard data loaded');
         setDashboardData(result.data);
-        setLinkedAccounts(result.data.accounts || []);
+        if (Array.isArray(result.data.accounts) && result.data.accounts.length) {
+          setLinkedAccounts(result.data.accounts);
+        }
 
         // Update latest updates from backend
         if (result.data.latestUpdates && result.data.latestUpdates.length > 0) {
@@ -452,6 +440,52 @@ function DashboardPage() {
       setLoading(false);
     }
   }, []); // ✅ No dependencies - function doesn't change
+
+  // Load real accounts (includes Cash Wallet) for manual entry when dashboard response lacks them
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        let response = await accountService.getAccounts();
+        let accounts = response?.data || response?.accounts || [];
+
+        if (!accounts.length) {
+          // Ensure a default cash wallet exists
+          try {
+            await accountService.createAccount({ name: 'Cash Wallet', type: 'cash', balance: 0 });
+            response = await accountService.getAccounts();
+            accounts = response?.data || response?.accounts || [];
+          } catch (createErr) {
+            console.warn('⚠️ Failed to auto-create Cash Wallet:', createErr?.message || createErr);
+          }
+        }
+
+        if (accounts.length) {
+          setLinkedAccounts(accounts);
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to load accounts for manual entry:', error?.message || error);
+      }
+    })();
+  }, [user]);
+
+  // Load expense categories so manual entry matches Expenses page
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const response = await categoryService.getCategories();
+        const categories = (response?.data || response?.categories || []).filter((cat) => cat.type !== 'income');
+        if (categories.length) {
+          setExpenseCategoryOptions(
+            categories.map((cat) => ({ value: cat._id || cat.id, label: cat.name || 'Category' }))
+          );
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to load categories for manual entry:', error?.message || error);
+      }
+    })();
+  }, [user]);
 
   // ✅ CRITICAL FIX: Wait for auth to complete, then fetch data
   useEffect(() => {
@@ -2100,8 +2134,8 @@ function DashboardPage() {
               </Card>
 
               <Card title="Your Accounts">
-                {/* ✅ Show empty state if no accounts (only Main Account exists) */}
-                {dashboardData?.hasNoAccounts || linkedAccountOptions.length === 1 ? (
+                {/* ✅ Show empty state if no accounts */}
+                {dashboardData?.hasNoAccounts || linkedAccountOptions.length === 0 ? (
                   <EmptyState
                     icon={Wallet}
                     title="No accounts yet"

@@ -164,6 +164,19 @@ const broadcastUpdate = (eventName, detail) => {
   window.dispatchEvent(new CustomEvent(eventName, { detail }));
 };
 
+// Helper to swallow duplicate/exists errors coming back from API
+const isDuplicateError = (error) => {
+  const message = error?.message?.toLowerCase?.() || '';
+  const responseMessage = error?.response?.data?.error?.toLowerCase?.() || '';
+  return (
+    error?.code === 11000 ||
+    message.includes('duplicate') ||
+    responseMessage.includes('duplicate') ||
+    responseMessage.includes('already exists') ||
+    message.includes('already exists')
+  );
+};
+
 function ExpensesPage() {
   const { user } = useAuth();
 
@@ -186,6 +199,7 @@ function ExpensesPage() {
   const [spendSaving, setSpendSaving] = useState(false);
   const [spendError, setSpendError] = useState('');
   const seedStateRef = useRef({ storageKey: buildSeedStorageKey(user?._id), categories: false, goals: false });
+  const syncInProgressRef = useRef(false);
 
   const loadSeedFlags = useCallback(() => {
     const storageKey = buildSeedStorageKey(user?._id);
@@ -250,6 +264,7 @@ function ExpensesPage() {
   const [modalSaving, setModalSaving] = useState(false);
 
   const seedDefaultCategories = useCallback(async () => {
+    if (seedStateRef.current.categories) return;
     for (let index = 0; index < defaultCategoriesSeed.length; index += 1) {
       const template = defaultCategoriesSeed[index];
       try {
@@ -260,8 +275,7 @@ function ExpensesPage() {
           icon: template.icon || defaultIconChoices[index % defaultIconChoices.length]
         });
       } catch (error) {
-        const message = error?.message?.toLowerCase?.() || '';
-        if (!message.includes('exists')) {
+        if (!isDuplicateError(error)) {
           throw error;
         }
       }
@@ -270,6 +284,7 @@ function ExpensesPage() {
   }, [markSeeded]);
 
   const seedDefaultGoals = useCallback(async () => {
+    if (seedStateRef.current.goals) return;
     for (const template of defaultGoalsSeed) {
       try {
         await goalService.createGoal({
@@ -278,8 +293,7 @@ function ExpensesPage() {
           savedAmount: template.savedAmount || 0
         });
       } catch (error) {
-        const message = error?.message?.toLowerCase?.() || '';
-        if (!message.includes('duplicate')) {
+        if (!isDuplicateError(error)) {
           throw error;
         }
       }
@@ -311,6 +325,8 @@ function ExpensesPage() {
   }, [user]);
 
   const syncFromServer = useCallback(async () => {
+    if (syncInProgressRef.current) return;
+    syncInProgressRef.current = true;
     if (!user) {
       setStoredCategories(defaultCategoriesSeed);
       setStoredBudgets(defaultBudgetsSeed);
@@ -318,6 +334,7 @@ function ExpensesPage() {
       setStoredGoals(defaultGoalsSeed);
       setAccounts([]);
       setSyncInfo({ status: 'guest', lastSuccess: null, error: null });
+      syncInProgressRef.current = false;
       return;
     }
 
@@ -335,6 +352,9 @@ function ExpensesPage() {
       let categoryPayload = (categoriesResponse?.data || categoriesResponse?.categories || []).filter(
         (category) => category.type !== 'income'
       );
+      if (categoryPayload.length) {
+        markSeeded('categories');
+      }
       if (!categoryPayload.length && shouldSeedDefaults('categories')) {
         await seedDefaultCategories();
         const seededCategoriesResponse = await categoryService.getCategories();
@@ -344,6 +364,9 @@ function ExpensesPage() {
       }
 
       let goalPayload = goalsResponse?.goals || goalsResponse?.data || [];
+      if (goalPayload.length) {
+        markSeeded('goals');
+      }
       if (!goalPayload.length && shouldSeedDefaults('goals')) {
         await seedDefaultGoals();
         const seededGoalsResponse = await goalService.getGoals();
@@ -374,6 +397,7 @@ function ExpensesPage() {
         error: err.response?.data?.error || err.message || 'Failed to sync expenses'
       }));
     }
+    syncInProgressRef.current = false;
   }, [seedDefaultCategories, seedDefaultGoals, user]);
 
   useEffect(() => {
@@ -869,11 +893,21 @@ function ExpensesPage() {
       setStoredGoals((prev) => prev.filter((goal) => goal.id !== goalId));
       return;
     }
+
+    let previousGoals = null;
+    setStoredGoals((prev) => {
+      previousGoals = prev;
+      return prev.filter((goal) => goal.id !== goalId);
+    });
+
     try {
       await goalService.deleteGoal(goalId);
       await syncFromServer();
     } catch (error) {
       console.error('Delete goal error:', error);
+      if (previousGoals) {
+        setStoredGoals(previousGoals);
+      }
       setSyncInfo((prev) => ({
         ...prev,
         status: 'error',

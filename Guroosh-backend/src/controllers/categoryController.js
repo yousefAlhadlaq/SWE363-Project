@@ -2,10 +2,41 @@ const Category = require('../models/category');
 const Expense = require('../models/expense');
 const Budget = require('../models/budget');
 
+// Map old icon names to emojis
+const ICON_NAME_TO_EMOJI = {
+  'home': '🏠',
+  'utensils': '🍽️',
+  'car': '🚗',
+  'film': '🎬',
+  'shopping-bag': '🛍️',
+  'heart': '🩺',
+  'book': '📚',
+  'bolt': '⚡',
+  'ellipsis-h': '📦',
+  'briefcase': '💼',
+  'chart-line': '📈',
+  'gift': '🎁',
+};
+
+// Convert icon name to emoji if needed
+const normalizeIcon = (icon) => {
+  if (!icon) return '💳'; // default icon
+  // Check if it's in our mapping first
+  if (ICON_NAME_TO_EMOJI[icon]) {
+    return ICON_NAME_TO_EMOJI[icon];
+  }
+  // If it contains emoji characters, return as-is
+  if (/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(icon)) {
+    return icon;
+  }
+  // Unknown icon name, return default
+  return '💳';
+};
+
 const withEnabledFlag = (doc) => {
   if (!doc) return doc;
   const json = doc.toObject ? doc.toObject() : doc;
-  return { ...json, enabled: json.isActive };
+  return { ...json, enabled: json.isActive, icon: normalizeIcon(json.icon) };
 };
 
 // Get all categories for the authenticated user
@@ -16,7 +47,11 @@ exports.getAllCategories = async (req, res) => {
       .lean();
     res.json({
       success: true,
-      data: categories.map((category) => ({ ...category, enabled: category.isActive }))
+      data: categories.map((category) => ({ 
+        ...category, 
+        enabled: category.isActive,
+        icon: normalizeIcon(category.icon)
+      }))
     });
   } catch (error) {
     console.error('Get categories error:', error);

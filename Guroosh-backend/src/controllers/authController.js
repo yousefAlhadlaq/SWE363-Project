@@ -1,7 +1,70 @@
 const User = require('../models/user');
+const Category = require('../models/category');
+const Account = require('../models/account');
 const jwt = require('jsonwebtoken');
 const centralBankService = require('../services/centralBankService');
 const emailService = require('../utils/emailService');
+
+// Default expense categories for new users (using emojis for frontend compatibility)
+const DEFAULT_CATEGORIES = [
+  { name: 'Housing', type: 'expense', color: '#FF6B6B', icon: '🏠' },
+  { name: 'Food & Dining', type: 'expense', color: '#4ECDC4', icon: '🍽️' },
+  { name: 'Transport', type: 'expense', color: '#45B7D1', icon: '🚗' },
+  { name: 'Entertainment', type: 'expense', color: '#96CEB4', icon: '🎬' },
+  { name: 'Shopping', type: 'expense', color: '#FFEAA7', icon: '🛍️' },
+  { name: 'Healthcare', type: 'expense', color: '#DDA0DD', icon: '🩺' },
+  { name: 'Education', type: 'expense', color: '#98D8C8', icon: '📚' },
+  { name: 'Utilities', type: 'expense', color: '#F7DC6F', icon: '⚡' },
+  { name: 'Other', type: 'expense', color: '#808080', icon: '📦' },
+  { name: 'Salary', type: 'income', color: '#27AE60', icon: '💼' },
+  { name: 'Investment', type: 'income', color: '#3498DB', icon: '📈' },
+  { name: 'Gift', type: 'income', color: '#E74C3C', icon: '🎁' },
+];
+
+// Create default categories for new user
+const createDefaultCategories = async (userId) => {
+  try {
+    const existingCategories = await Category.countDocuments({ userId });
+    if (existingCategories > 0) {
+      console.log(`User ${userId} already has categories, skipping defaults`);
+      return;
+    }
+
+    const categories = DEFAULT_CATEGORIES.map(cat => ({
+      ...cat,
+      userId,
+      isActive: true
+    }));
+
+    await Category.insertMany(categories);
+    console.log(`✅ Created ${categories.length} default categories for user ${userId}`);
+  } catch (error) {
+    console.error(`⚠️ Failed to create default categories for user ${userId}:`, error.message);
+  }
+};
+
+// Create default Cash Wallet account for new user
+const createDefaultAccount = async (userId) => {
+  try {
+    const existingAccount = await Account.findOne({ userId });
+    if (existingAccount) {
+      console.log(`User ${userId} already has an account, skipping default`);
+      return;
+    }
+
+    await Account.create({
+      userId,
+      name: 'Cash Wallet',
+      type: 'cash',
+      balance: 0,
+      currency: 'SAR',
+      isPrimary: true
+    });
+    console.log(`✅ Created default Cash Wallet for user ${userId}`);
+  } catch (error) {
+    console.error(`⚠️ Failed to create default account for user ${userId}:`, error.message);
+  }
+};
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -157,19 +220,15 @@ exports.verifyEmail = async (req, res) => {
     user.emailVerificationExpires = null;
     await user.save();
 
-    // Now create Central Bank accounts after successful email verification
-    centralBankService.createUser(user._id.toString())
-      .then(result => {
-        console.log(`✅ Central Bank accounts created for verified user ${user._id}:`, {
-          accounts: result.data?.accounts?.length || 0,
-          stocks: result.data?.stocks?.length || 0
-        });
-      })
-      .catch(error => {
-        console.error(`⚠️ Failed to create Central Bank accounts for user ${user._id}:`, error.message);
-        // Don't fail verification if Central Bank is unavailable
-        // User can still use the app, Central Bank features will be limited
-      });
+    // Create default categories and account for new user
+    await Promise.all([
+      createDefaultCategories(user._id.toString()),
+      createDefaultAccount(user._id.toString())
+    ]);
+
+    // NOTE: Central Bank accounts are NO LONGER created automatically
+    // Users should link their bank accounts manually through the "Link Account" feature
+    // This prevents confusion with "unnamed" accounts and gives users control
 
     res.json({
       success: true,

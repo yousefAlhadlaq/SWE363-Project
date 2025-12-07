@@ -1,9 +1,19 @@
 const Groq = require('groq-sdk');
 
-// Initialize Groq client
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-});
+const groqApiKey = process.env.GROQ_API_KEY;
+// Lazily guard Groq client creation so the server can boot without a key.
+const groq = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null;
+
+if (!groqApiKey) {
+  console.warn('⚠️ GROQ_API_KEY not set; AI valuation features will be unavailable.');
+}
+
+const ensureGroqClient = () => {
+  if (!groq) {
+    throw new Error('GROQ_API_KEY is missing. Set it in Guroosh-backend/.env to enable AI features.');
+  }
+  return groq;
+};
 
 /**
  * Evaluate real estate property value using Groq AI
@@ -39,7 +49,7 @@ Respond ONLY with a valid JSON object in this exact format (no additional text):
   "reasoning": "<brief explanation>"
 }`;
 
-    const chatCompletion = await groq.chat.completions.create({
+    const chatCompletion = await ensureGroqClient().chat.completions.create({
       messages: [
         {
           role: 'user',
@@ -121,7 +131,7 @@ Respond ONLY with valid JSON in this format:
   "areaType": "<residential|commercial|mixed|industrial>"
 }`;
 
-    const chatCompletion = await groq.chat.completions.create({
+    const chatCompletion = await ensureGroqClient().chat.completions.create({
       messages: [
         {
           role: 'system',
