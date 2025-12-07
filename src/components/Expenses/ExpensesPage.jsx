@@ -1001,6 +1001,7 @@ function ExpensesPage() {
   const CategoryForm = (
     <form onSubmit={handleSubmitCategory} className="space-y-4">
       <InputField
+        key="category-name-input"
         label="Category name"
         name="category-name"
         value={categoryForm.name}
@@ -1012,6 +1013,7 @@ function ExpensesPage() {
         <div>
           <label className="text-sm text-slate-400 mb-1 block">Color</label>
           <input
+            key="category-color-input"
             type="color"
             value={categoryForm.color}
             onChange={(event) => setCategoryForm((current) => ({ ...current, color: event.target.value }))}
@@ -1021,6 +1023,7 @@ function ExpensesPage() {
         <div>
           <label className="text-sm text-slate-400 mb-1 block">Icon</label>
           <select
+            key="category-icon-select"
             value={categoryForm.icon}
             onChange={(event) => setCategoryForm((current) => ({ ...current, icon: event.target.value }))}
             className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-white/5 dark:text-white"
@@ -1035,6 +1038,7 @@ function ExpensesPage() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <InputField
+          key="category-budget-input"
           label="Budget (SAR)"
           type="number"
           min="0"
@@ -1046,6 +1050,7 @@ function ExpensesPage() {
         <div>
           <label className="text-sm text-slate-400 mb-1 block">Period</label>
           <select
+            key="category-period-select"
             value={categoryForm.period}
             onChange={(event) => setCategoryForm((current) => ({ ...current, period: event.target.value }))}
             className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-white/5 dark:text-white"
@@ -1072,6 +1077,7 @@ function ExpensesPage() {
   const GoalForm = (
     <form onSubmit={handleSubmitGoal} className="space-y-4">
       <InputField
+        key="goal-name-input"
         label="Goal name"
         name="goal-name"
         value={goalForm.name}
@@ -1080,6 +1086,7 @@ function ExpensesPage() {
         required
       />
       <InputField
+        key="goal-target-input"
         label="Target (SAR)"
         type="number"
         min="1"
@@ -1090,6 +1097,7 @@ function ExpensesPage() {
         required
       />
       <InputField
+        key="goal-deadline-input"
         label="Target date"
         type="date"
         name="goal-deadline"
@@ -1097,6 +1105,7 @@ function ExpensesPage() {
         onChange={(event) => setGoalForm((current) => ({ ...current, deadline: event.target.value }))}
       />
       <InputField
+        key="goal-saved-input"
         label="Saved so far (SAR)"
         type="number"
         min="0"
@@ -1468,6 +1477,7 @@ function ExpensesPage() {
       >
         <form className="space-y-4" onSubmit={handleSpendSubmit}>
           <InputField
+            key="spend-title-input"
             label="Title"
             name="spend-title"
             value={spendForm.title}
@@ -1476,6 +1486,7 @@ function ExpensesPage() {
             required
           />
           <InputField
+            key="spend-amount-input"
             label="Amount (SAR)"
             type="number"
             min="0"
@@ -1486,6 +1497,7 @@ function ExpensesPage() {
             required
           />
           <InputField
+            key="spend-date-input"
             label="Date"
             type="date"
             name="spend-date"
@@ -1498,6 +1510,7 @@ function ExpensesPage() {
               <label className="text-sm text-slate-400 mb-1 block">Account</label>
               {accounts.length ? (
                 <select
+                  key="spend-account-select"
                   value={spendForm.accountId}
                   onChange={(event) => setSpendForm((prev) => ({ ...prev, accountId: event.target.value }))}
                   className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 dark:bg-slate-900 dark:border-white/5 dark:text-white"
@@ -1517,6 +1530,7 @@ function ExpensesPage() {
             </div>
           )}
           <InputField
+            key="spend-notes-input"
             label="Notes"
             name="spend-notes"
             value={spendForm.notes}

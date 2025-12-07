@@ -1443,6 +1443,7 @@ function DashboardPage() {
             {transactionType === 'expense' && (
               <>
                 <SelectMenu
+                  key="expense-account"
                   label="Account"
                   name="account"
                   value={actionValues['manual-entry'].account}
@@ -1455,6 +1456,7 @@ function DashboardPage() {
                   required
                 />
                 <InputField
+                  key="expense-amount"
                   label="Amount"
                   name="amount"
                   type="number"
@@ -1470,6 +1472,7 @@ function DashboardPage() {
                   required
                 />
                 <SelectMenu
+                  key="expense-category"
                   label="Category"
                   name="category"
                   value={actionValues['manual-entry'].category}
@@ -1482,6 +1485,7 @@ function DashboardPage() {
                   required
                 />
                 <InputField
+                  key="expense-merchant"
                   label="Merchant / Description"
                   name="merchant"
                   value={actionValues['manual-entry'].merchant}
@@ -1494,6 +1498,7 @@ function DashboardPage() {
                   required
                 />
                 <InputField
+                  key="expense-date"
                   label="Date"
                   name="date"
                   type="date"
@@ -1505,7 +1510,7 @@ function DashboardPage() {
                   error={formErrors.date}
                   required
                 />
-                <div>
+                <div key="expense-notes">
                   <label className="block text-sm font-medium text-gray-400 mb-1">
                     Notes (Optional)
                   </label>
@@ -1527,6 +1532,7 @@ function DashboardPage() {
             {transactionType === 'income' && (
               <>
                 <SelectMenu
+                  key="income-account"
                   label="Account"
                   name="account"
                   value={actionValues['manual-entry'].account}
@@ -1539,6 +1545,7 @@ function DashboardPage() {
                   required
                 />
                 <InputField
+                  key="income-amount"
                   label="Amount"
                   name="amount"
                   type="number"
@@ -1554,6 +1561,7 @@ function DashboardPage() {
                   required
                 />
                 <SelectMenu
+                  key="income-category"
                   label="Income Category"
                   name="category"
                   value={actionValues['manual-entry'].category}
@@ -1566,6 +1574,7 @@ function DashboardPage() {
                   required
                 />
                 <InputField
+                  key="income-merchant"
                   label="Source / Description"
                   name="merchant"
                   value={actionValues['manual-entry'].merchant}
@@ -1578,6 +1587,7 @@ function DashboardPage() {
                   required
                 />
                 <InputField
+                  key="income-date"
                   label="Date"
                   name="date"
                   type="date"
@@ -1589,7 +1599,7 @@ function DashboardPage() {
                   error={formErrors.date}
                   required
                 />
-                <div>
+                <div key="income-notes">
                   <label className="block text-sm font-medium text-gray-400 mb-1">
                     Notes (Optional)
                   </label>

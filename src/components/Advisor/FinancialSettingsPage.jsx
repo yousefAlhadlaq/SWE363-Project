@@ -422,6 +422,7 @@ function FinancialSettingsPage() {
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">Full Name</label>
               <InputField
+                key="profile-fullname-input"
                 type="text"
                 name="fullName"
                 value={editForm.fullName}
@@ -436,6 +437,7 @@ function FinancialSettingsPage() {
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">Email</label>
                 <InputField
+                  key="profile-email-input"
                   type="email"
                   name="email"
                   value={editForm.email}
@@ -448,6 +450,7 @@ function FinancialSettingsPage() {
               <div>
                 <label className="block text-sm font-medium text-white/80 mb-2">Phone number</label>
                 <InputField
+                  key="profile-phone-input"
                   type="tel"
                   name="phoneNumber"
                   value={editForm.phoneNumber}
@@ -464,6 +467,7 @@ function FinancialSettingsPage() {
                 Password <span className="text-xs text-white/50">(leave blank to keep current)</span>
               </label>
               <InputField
+                key="profile-password-input"
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 value={editForm.password}

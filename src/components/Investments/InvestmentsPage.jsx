@@ -1494,6 +1494,7 @@ function InvestmentsPage() {
               Type
             </label>
             <select
+              key="investment-type-select"
               value={form.category}
               onChange={handleCategoryChange}
               className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
@@ -1510,11 +1511,13 @@ function InvestmentsPage() {
           {form.category === 'Stock' ? (
             <div className="space-y-4">
               <StockSearchInput
+                key="stock-search-input"
                 onStockSelected={handleStockSelected}
                 initialValue={selectedStock ? selectedStock.symbol : ''}
               />
               {selectedStock && (
                 <InputField
+                  key="stock-name-input"
                   label="Investment name"
                   name="name"
                   value={form.name}
@@ -1530,11 +1533,13 @@ function InvestmentsPage() {
           ) : form.category === 'Crypto' ? (
             <div className="space-y-4">
               <CryptoSearchInput
+                key="crypto-search-input"
                 onCryptoSelected={handleCryptoSelected}
                 initialValue={selectedStock ? selectedStock.symbol : ''}
               />
               {selectedStock && (
                 <InputField
+                  key="crypto-name-input"
                   label="Investment name"
                   name="name"
                   value={form.name}
@@ -1549,6 +1554,7 @@ function InvestmentsPage() {
             </div>
           ) : (
             <InputField
+              key="generic-name-input"
               label="Investment name"
               name="name"
               value={form.name}
@@ -1559,6 +1565,7 @@ function InvestmentsPage() {
           )}
 
           <InputField
+            key="purchase-date-input"
             label="Purchase date"
             type="date"
             name="purchaseDate"
@@ -1624,6 +1631,7 @@ function InvestmentsPage() {
                   Property Type
                 </label>
                 <select
+                  key="property-type-select"
                   value={form.propertyType}
                   onChange={handleFormChange('propertyType')}
                   className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
@@ -1635,6 +1643,7 @@ function InvestmentsPage() {
               </div>
 
               <InputField
+                key="area-sqm-input"
                 label="Area (m²)"
                 type="number"
                 name="areaSqm"
@@ -1645,6 +1654,7 @@ function InvestmentsPage() {
               />
 
               <InputField
+                key="buy-price-realestate-input"
                 label="Purchase price (optional)"
                 type="number"
                 name="buyPrice"
@@ -1657,6 +1667,7 @@ function InvestmentsPage() {
           ) : (
             <>
               <InputField
+                key="amount-owned-input"
                 label={`Amount (${selectedUnitLabel})`}
                 type="number"
                 name="amountOwned"
@@ -1697,6 +1708,7 @@ function InvestmentsPage() {
               ) : form.category === 'Gold' ? null : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <InputField
+                    key="buy-price-generic-input"
                     label="Purchase price / unit"
                     type="number"
                     name="buyPrice"
@@ -1706,6 +1718,7 @@ function InvestmentsPage() {
                     error={errors.buyPrice}
                   />
                   <InputField
+                    key="current-price-generic-input"
                     label="Today's price / unit"
                     type="number"
                     name="currentPrice"

@@ -480,6 +480,7 @@ const ProfileSettings = () => {
               Full Name
             </label>
             <InputField
+              key="profile-fullname-input"
               type="text"
               name="fullName"
               value={editForm.fullName}
@@ -497,6 +498,7 @@ const ProfileSettings = () => {
                 Email
               </label>
               <InputField
+                key="profile-email-input"
                 type="email"
                 name="email"
                 value={editForm.email}
@@ -512,6 +514,7 @@ const ProfileSettings = () => {
                 Phone number
               </label>
               <InputField
+                key="profile-phone-input"
                 type="tel"
                 name="phoneNumber"
                 value={editForm.phoneNumber}
