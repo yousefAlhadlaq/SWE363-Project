@@ -597,7 +597,7 @@ function ExpensesPage() {
   ];
 
 
-  const openModal = ({ tab = 'category', mode = 'add', targetId = null } = {}) => {
+  const openModal = useCallback(({ tab = 'category', mode = 'add', targetId = null } = {}) => {
     setModalTab(tab);
     setModalMode(mode);
     setModalError('');
@@ -632,16 +632,16 @@ function ExpensesPage() {
     }
 
     setIsModalOpen(true);
-  };
+  }, [categories, budgetByCategory, goals]);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setIsModalOpen(false);
     setModalError('');
     setEditingId(null);
     setModalSaving(false);
-  };
+  }, []);
 
-  const handleSubmitCategory = async (event) => {
+  const handleSubmitCategory = useCallback(async (event) => {
     event.preventDefault();
     const trimmedName = categoryForm.name.trim();
     const limitValue = Number(categoryForm.budget);
@@ -767,9 +767,9 @@ function ExpensesPage() {
     } finally {
       setModalSaving(false);
     }
-  };
+  }, [categoryForm, user, modalMode, editingId, budgets, syncFromServer, closeModal]);
 
-  const handleSubmitGoal = async (event) => {
+  const handleSubmitGoal = useCallback(async (event) => {
     event.preventDefault();
     const trimmedName = goalForm.name.trim();
     const targetValue = Number(goalForm.targetAmount);
@@ -836,9 +836,9 @@ function ExpensesPage() {
     } finally {
       setModalSaving(false);
     }
-  };
+  }, [goalForm, user, modalMode, editingId, syncFromServer, closeModal]);
 
-  const handleToggleCategory = async (categoryId) => {
+  const handleToggleCategory = useCallback(async (categoryId) => {
     if (!user) {
       setStoredCategories((prev) =>
         prev.map((category) => {
@@ -862,9 +862,9 @@ function ExpensesPage() {
         error: error.response?.data?.error || error.message || 'Failed to toggle category'
       }));
     }
-  };
+  }, [user, syncFromServer]);
 
-  const handleDeleteGoal = async (goalId) => {
+  const handleDeleteGoal = useCallback(async (goalId) => {
     if (!user) {
       setStoredGoals((prev) => prev.filter((goal) => goal.id !== goalId));
       return;
@@ -880,9 +880,9 @@ function ExpensesPage() {
         error: error.response?.data?.error || error.message || 'Failed to delete goal'
       }));
     }
-  };
+  }, [user, syncFromServer]);
 
-  const handleTabChange = (tab) => {
+  const handleTabChange = useCallback((tab) => {
     setModalTab(tab);
     setModalError('');
     setModalMode('add');
@@ -892,7 +892,7 @@ function ExpensesPage() {
     } else {
       setGoalForm({ name: '', targetAmount: '', savedAmount: '', deadline: '' });
     }
-  };
+  }, []);
 
   const ensureSpendAccountId = useCallback(async (preferredAccountId) => {
     if (!user) {
@@ -918,7 +918,7 @@ function ExpensesPage() {
     }
   }, [accounts, syncFromServer, user]);
 
-  const openSpendModal = (categoryId) => {
+  const openSpendModal = useCallback((categoryId) => {
     const category = categories.find((item) => item.id === categoryId);
     setSpendForm((prev) => ({
       ...prev,
@@ -931,16 +931,16 @@ function ExpensesPage() {
     setSpendError('');
     setSpendSaving(false);
     setSpendModal({ open: true, categoryId });
-  };
+  }, [categories, accounts, today]);
 
-  const closeSpendModal = () => {
+  const closeSpendModal = useCallback(() => {
     setSpendModal({ open: false, categoryId: null });
     setSpendSaving(false);
     setSpendError('');
     setSpendForm((prev) => ({ ...prev, amount: '', notes: '', title: '', date: today }));
-  };
+  }, [today]);
 
-  const handleSpendSubmit = async (event) => {
+  const handleSpendSubmit = useCallback(async (event) => {
     event.preventDefault();
     if (!spendModal.categoryId) return;
     const amountValue = Number(spendForm.amount);
@@ -996,9 +996,9 @@ function ExpensesPage() {
     } finally {
       setSpendSaving(false);
     }
-  };
+  }, [spendModal.categoryId, spendForm, user, ensureSpendAccountId, closeSpendModal]);
 
-  const CategoryForm = (
+  const CategoryForm = useMemo(() => (
     <form onSubmit={handleSubmitCategory} className="space-y-4">
       <InputField
         key="category-name-input"
@@ -1072,9 +1072,9 @@ function ExpensesPage() {
         </Button>
       </div>
     </form>
-  );
+  ), [categoryForm, modalError, modalSaving, modalMode, closeModal, handleSubmitCategory]);
 
-  const GoalForm = (
+  const GoalForm = useMemo(() => (
     <form onSubmit={handleSubmitGoal} className="space-y-4">
       <InputField
         key="goal-name-input"
@@ -1124,7 +1124,7 @@ function ExpensesPage() {
         </Button>
       </div>
     </form>
-  );
+  ), [goalForm, modalError, modalSaving, modalMode, closeModal, handleSubmitGoal]);
 
   // Show full-page spinner while initial data is loading
   if (user && syncInfo.status === 'loading' && !syncInfo.lastSuccess) {

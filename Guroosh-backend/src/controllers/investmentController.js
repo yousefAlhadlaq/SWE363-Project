@@ -375,6 +375,54 @@ exports.deleteInvestment = async (req, res) => {
   }
 };
 
+/**
+ * Generate a simulated time series for the portfolio
+ * This replaces the frontend's buildTrendSeries logic
+ */
+const generateTimeSeries = (startValue, endValue, points = 7) => {
+  const series = [];
+  const now = new Date();
+  
+  // If no investment, flat line at 0
+  if (startValue === 0 && endValue === 0) {
+    for (let i = 0; i < points; i++) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - (points - 1 - i));
+      series.push({
+        date: date.toISOString().split('T')[0],
+        label: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        value: 0
+      });
+    }
+    return series;
+  }
+
+  // Use purchase value as start, or 90% of current if no purchase value (profit only)
+  const effectiveStart = startValue > 0 ? startValue : endValue * 0.9;
+  const step = (endValue - effectiveStart) / (points - 1);
+
+  for (let i = 0; i < points; i++) {
+    const date = new Date(now);
+    date.setDate(now.getDate() - (points - 1 - i));
+    
+    // Add some random noise to make it look realistic, but keep start/end fixed
+    let noise = 0;
+    if (i > 0 && i < points - 1) {
+      noise = (Math.random() - 0.5) * (step * 0.5);
+    }
+
+    const value = effectiveStart + (step * i) + noise;
+    
+    series.push({
+      date: date.toISOString().split('T')[0],
+      label: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      value: Number(Math.max(0, value).toFixed(2))
+    });
+  }
+
+  return series;
+};
+
 // Get portfolio summary
 exports.getPortfolioSummary = async (req, res) => {
   try {
@@ -395,8 +443,13 @@ exports.getPortfolioSummary = async (req, res) => {
         }
       }
 
-      const currentValue = currentPrice * inv.amountOwned;
-      const investedValue = inv.buyPrice * inv.amountOwned;
+      // Ensure currentPrice is a number
+      currentPrice = Number(currentPrice) || 0;
+      const amountOwned = Number(inv.amountOwned) || 1;
+      const buyPrice = Number(inv.buyPrice) || 0;
+
+      const currentValue = currentPrice * amountOwned;
+      const investedValue = buyPrice * amountOwned;
 
       totalValue += currentValue;
       totalInvested += investedValue;
@@ -451,8 +504,8 @@ exports.getPortfolioSummary = async (req, res) => {
       const goldData = await externalDataService.fetchGoldReserves(req.userId);
 
       if (goldData.success && goldData.gold) {
-        const goldCurrentValue = goldData.gold.investmentValue || 0;
-        const goldInvestedValue = goldData.gold.purchaseValue || 0;
+        const goldCurrentValue = Number(goldData.gold.investmentValue) || 0;
+        const goldInvestedValue = Number(goldData.gold.purchaseValue) || 0;
 
         totalValue += goldCurrentValue;
         totalInvested += goldInvestedValue;
@@ -483,12 +536,13 @@ exports.getPortfolioSummary = async (req, res) => {
     res.json({
       success: true,
       portfolio: {
-        totalValue,
-        totalInvested,
-        totalGainLoss,
+        totalValue: Number(totalValue.toFixed(2)),
+        totalInvested: Number(totalInvested.toFixed(2)),
+        totalGainLoss: Number(totalGainLoss.toFixed(2)),
         gainLossPercentage: parseFloat(gainLossPercentage),
-        investmentCount: investments.length + (byCategory['Stocks']?.count || 0),
-        byCategory
+        investmentCount: investments.length + (byCategory['Stock']?.count || 0),
+        byCategory,
+        timeSeries: generateTimeSeries(totalInvested, totalValue)
       }
     });
   } catch (error) {

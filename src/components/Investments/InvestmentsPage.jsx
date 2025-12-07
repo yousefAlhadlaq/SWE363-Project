@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import Sidebar from '../Shared/Sidebar';
 import InputField from '../Shared/InputField';
 import Button from '../Shared/Button';
@@ -47,22 +47,11 @@ const getDefaultUnitLabel = (category) => defaultUnitLabels[category] || 'units'
 // USD to SAR conversion rate (fixed rate: 1 USD = 3.75 SAR)
 const USD_TO_SAR = 3.75;
 
-const formatCurrency = (value = 0, { fractionDigits = 0 } = {}) => {
-  const safeValue = Number.isFinite(value) ? value : 0;
-  return safeValue.toLocaleString('en-SA', {
-    style: 'currency',
-    currency: 'SAR',
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  });
-};
+import { formatCurrencySAR, formatSignedCurrencySAR } from '../../utils/formatCurrencySAR';
+import { usePortfolioSummary } from '../../hooks/usePortfolioSummary';
 
-const formatSignedCurrency = (value, options) => {
-  if (!value) {
-    return `±${formatCurrency(0, options)}`;
-  }
-  return `${value > 0 ? '+' : '-'}${formatCurrency(Math.abs(value), options)}`;
-};
+const formatCurrency = (value, options) => formatCurrencySAR(value, options);
+const formatSignedCurrency = (value, options) => formatSignedCurrencySAR(value, options);
 
 const formatDate = (value) => {
   if (!value) return 'Not provided';
@@ -733,14 +722,19 @@ function InvestmentsPage() {
     fetchCities();
   }, []);
 
-  const totalValue = useMemo(
-    () => investments.reduce((sum, investment) => sum + getCurrentValue(investment), 0),
-    [investments]
-  );
-  const totalPurchaseValue = useMemo(
-    () => investments.reduce((sum, investment) => sum + getPurchaseValue(investment), 0),
-    [investments]
-  );
+  const { portfolio, loading: portfolioLoading } = usePortfolioSummary();
+
+  // Use portfolio data from hook instead of calculating on frontend
+  const totalValue = portfolio.totalValue || 0;
+  const totalPurchaseValue = portfolio.totalInvested || 0;
+
+  // Use timeSeries from backend if available, otherwise fallback to empty
+  const baseTrendData = useMemo(() => {
+    if (portfolio.timeSeries && portfolio.timeSeries.length > 0) {
+      return portfolio.timeSeries;
+    }
+    return [];
+  }, [portfolio.timeSeries]);
 
   const distribution = useMemo(() => {
     const base = categoryOptions.reduce(
@@ -760,10 +754,11 @@ function InvestmentsPage() {
     return entries[0];
   }, [distribution]);
 
-  const baseTrendData = useMemo(
-    () => buildTrendSeries(selectedRange, totalValue, totalPurchaseValue),
-    [selectedRange, totalValue, totalPurchaseValue]
-  );
+  // Removed redundant baseTrendData calculation
+  // const baseTrendData = useMemo(
+  //   () => buildTrendSeries(selectedRange, totalValue, totalPurchaseValue),
+  //   [selectedRange, totalValue, totalPurchaseValue]
+  // );
 
   const categoryTotalsForSeries = useMemo(() => {
     return categoryOptions.reduce((acc, { value }) => {
@@ -826,9 +821,21 @@ function InvestmentsPage() {
     setCategoryModal({ open: true, category });
   };
 
-  const handleCloseCategoryModal = () => {
+  const handleCloseCategoryModal = useCallback(() => {
     setCategoryModal({ open: false, category: null });
-  };
+  }, []);
+
+  const handleCloseAddModal = useCallback(() => {
+    setShowAddModal(false);
+  }, []);
+
+  const handleCloseZakahModal = useCallback(() => {
+    setShowZakahModal(false);
+  }, []);
+
+  const handleCloseZakatResultsModal = useCallback(() => {
+    setZakatResults(null);
+  }, []);
 
   const activeCategoryLabel = categoryModal.category ? getCategoryLabel(categoryModal.category) : 'Category';
   const filteredCategoryLabel = filteredCategory ? getCategoryLabel(filteredCategory) : 'All categories';
@@ -1482,7 +1489,7 @@ function InvestmentsPage() {
 
       <Modal
         isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={handleCloseAddModal}
         title="Add investment"
         subtitle="Track a new asset across stocks, property, crypto, or gold."
         maxWidth="max-w-3xl"
@@ -1754,7 +1761,7 @@ function InvestmentsPage() {
 
       <Modal
         isOpen={showZakahModal}
-        onClose={() => setShowZakahModal(false)}
+        onClose={handleCloseZakahModal}
         title="Calculate zakah"
         subtitle="Select which categories should be included (2.5% of selected assets)."
         maxWidth="max-w-3xl"
@@ -1923,7 +1930,7 @@ function InvestmentsPage() {
 
       <ZakatResultsModal
         isOpen={!!zakatResults}
-        onClose={() => setZakatResults(null)}
+        onClose={handleCloseZakatResultsModal}
         zakatData={zakatResults}
       />
     </>

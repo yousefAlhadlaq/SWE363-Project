@@ -90,11 +90,10 @@ const Modal = memo(function Modal({
       {/* Modal Container - better mobile padding */}
       <div
         ref={modalRef}
-        className="fixed inset-0 z-[10000] flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+        className="fixed inset-0 z-[10000] flex items-center justify-center p-2 sm:p-4 overflow-y-auto outline-none focus:outline-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
-        tabIndex={-1}
       >
         <div
           className={`relative w-full ${maxWidth} bg-white dark:bg-slate-800/95 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-2xl animate-scaleIn transition-colors max-h-[95vh] sm:max-h-[90vh] overflow-y-auto`}

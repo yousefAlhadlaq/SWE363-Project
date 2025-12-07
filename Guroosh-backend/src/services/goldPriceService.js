@@ -32,11 +32,30 @@ const parsePricePerGramFromGoldApi = (data) => {
  * Fallback: GoldAPI (requires API key)
  * @returns {Promise<number>} Current price per gram in SAR
  */
+// Cache object
+let goldPriceCache = {
+  value: null,
+  timestamp: 0
+};
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
+/**
+ * Fetch current gold price per gram in SAR
+ * Primary: Yahoo Finance (FREE, no API key needed)
+ * Fallback: GoldAPI (requires API key)
+ * @returns {Promise<number>} Current price per gram in SAR
+ */
 async function getCurrentGoldPrice() {
   // Allow manual override for exact pricing (assumes SAR input)
   const envPrice = Number(process.env.GOLD_PRICE_PER_GRAM);
   if (!Number.isNaN(envPrice) && envPrice > 0) {
     return roundToTwo(envPrice);
+  }
+
+  const now = Date.now();
+  // Return cached value if valid
+  if (goldPriceCache.value && (now - goldPriceCache.timestamp < CACHE_DURATION)) {
+    return goldPriceCache.value;
   }
 
   // PRIMARY: Try Yahoo Finance first (FREE, no API key needed)
@@ -50,7 +69,15 @@ async function getCurrentGoldPrice() {
       const pricePerGramSAR = pricePerGramUSD * USD_TO_SAR;
 
       console.log(`✅ Yahoo Finance Gold: $${pricePerOunceUSD}/oz → ${roundToTwo(pricePerGramSAR)} SAR/gram`);
-      return roundToTwo(pricePerGramSAR);
+      const price = roundToTwo(pricePerGramSAR);
+      
+      // Update cache
+      goldPriceCache = {
+        value: price,
+        timestamp: now
+      };
+      
+      return price;
     }
   } catch (yahooError) {
     console.log('⚠️ Yahoo Finance unavailable, trying GoldAPI...');
@@ -60,6 +87,8 @@ async function getCurrentGoldPrice() {
   try {
     if (!GOLD_API_KEY) {
       console.warn('No GOLD_API_KEY configured, will use fallback price');
+      // If we have a stale cache, use it
+      if (goldPriceCache.value) return goldPriceCache.value;
       return null;
     }
 
@@ -74,14 +103,27 @@ async function getCurrentGoldPrice() {
     if (pricePerGramUSD && pricePerGramUSD > 0) {
       // Convert USD to SAR
       console.log(`✅ GoldAPI Gold: ${roundToTwo(pricePerGramUSD * USD_TO_SAR)} SAR/gram`);
-      return roundToTwo(pricePerGramUSD * USD_TO_SAR);
+      const price = roundToTwo(pricePerGramUSD * USD_TO_SAR);
+      
+      // Update cache
+      goldPriceCache = {
+        value: price,
+        timestamp: now
+      };
+      
+      return price;
     }
 
     console.warn('GoldAPI returned unexpected payload, will use fallback price');
+    if (goldPriceCache.value) return goldPriceCache.value;
     return null;
   } catch (error) {
     // This is expected when API key is missing or rate-limited - fallback silently
     console.log('ℹ️  Gold price APIs unavailable, using fallback');
+    
+    // Use stale cache if available
+    if (goldPriceCache.value) return goldPriceCache.value;
+    
     // Return null to allow fallback instead of throwing
     return null;
   }

@@ -9,6 +9,24 @@ const axios = require('axios');
 const CENTRAL_BANK_API = process.env.CENTRAL_BANK_API || 'http://localhost:5002/api';
 const MAX_RECENT_LIMIT = 50;
 
+// Daily appreciation rate for Real Estate (0.02% per day = ~7.5% per year)
+const DAILY_APPRECIATION_RATE = 0.0002; // 0.02%
+
+/**
+ * Calculate appreciated value for Real Estate based on days elapsed
+ * Formula: newValue = originalValue * (1 + dailyRate) ^ daysElapsed
+ */
+const calculateAppreciatedValue = (originalValue, purchaseDate) => {
+  const now = new Date();
+  const purchase = new Date(purchaseDate);
+  const daysElapsed = Math.floor((now - purchase) / (1000 * 60 * 60 * 24));
+
+  // Apply compound interest formula
+  const appreciatedValue = originalValue * Math.pow(1 + DAILY_APPRECIATION_RATE, daysElapsed);
+
+  return Math.round(appreciatedValue * 100) / 100; // Round to 2 decimal places
+};
+
 const getStartOfWeek = () => {
   const now = new Date();
   const day = now.getDay();
@@ -233,7 +251,17 @@ exports.getDashboardData = async (req, res) => {
       investmentsTotal += goldData.investmentValue || (goldData.amountOunces * goldData.currentPrice) || 0;
     }
     investmentsFromDB.forEach(inv => {
-      const currentValue = (inv.currentPrice || 0) * (inv.amountOwned || 1);
+      let currentPrice = inv.currentPrice || 0;
+
+      // Apply daily appreciation to Real Estate
+      if (inv.category === 'Real Estate') {
+        const basePrice = inv.buyPrice || inv.currentPrice;
+        if (basePrice) {
+          currentPrice = calculateAppreciatedValue(basePrice, inv.purchaseDate || inv.createdAt);
+        }
+      }
+
+      const currentValue = currentPrice * (inv.amountOwned || 1);
       investmentsTotal += currentValue;
 
       allTransactions.push({
@@ -400,7 +428,20 @@ exports.getInvestments = async (req, res) => {
 
     const localStocks = await ExternalStock.find({ userId });
     const localGold = await ExternalGold.findOne({ userId });
-    const investments = await Investment.find({ userId });
+    let investments = await Investment.find({ userId });
+
+    // Apply daily appreciation to Real Estate investments
+    investments = investments.map(inv => {
+      const invObj = inv.toObject();
+
+      if (invObj.category === 'Real Estate') {
+        const basePrice = invObj.buyPrice || invObj.currentPrice;
+        if (basePrice) {
+          invObj.currentPrice = calculateAppreciatedValue(basePrice, invObj.purchaseDate || invObj.createdAt);
+        }
+      }
+      return invObj;
+    });
 
     const stockData = centralBankStocks || {
       portfolios: localStocks.map(s => ({
@@ -426,7 +467,8 @@ exports.getInvestments = async (req, res) => {
         otherInvestments: investments,
         totalValue: (stockData.summary?.totalValue || 0) +
           (goldData?.investmentValue || 0) +
-          investments.reduce((sum, inv) => sum + (inv.currentValue || inv.amount || 0), 0),
+          (goldData?.investmentValue || 0) +
+          investments.reduce((sum, inv) => sum + ((inv.currentPrice || 0) * (inv.amountOwned || 1)), 0),
       }
     });
   } catch (error) {

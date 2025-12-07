@@ -20,6 +20,22 @@ const servers = [
     args: ['mock-servers/centralBankServer.js'],
     cwd: __dirname,
     env: { ...process.env, CENTRAL_BANK_PORT: 5002 }
+  },
+  {
+    name: 'Crypto API',
+    icon: '🪙',
+    command: 'node',
+    args: ['mock-servers/cryptoServer.js'],
+    cwd: __dirname,
+    env: { ...process.env, CRYPTO_PORT: 5003 }
+  },
+  {
+    name: 'Real Estate API',
+    icon: '🏠',
+    command: 'node',
+    args: ['mock-servers/realEstateServer.js'],
+    cwd: __dirname,
+    env: { ...process.env, REAL_ESTATE_PORT: 5004 }
   }
 ];
 

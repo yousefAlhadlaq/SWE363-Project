@@ -10,17 +10,43 @@ const axios = require('axios');
 const GOLD_API_KEY = process.env.GOLD_API_KEY || 'goldapi-demo-key'; // Users need to get their own key
 const GOLD_API_BASE_URL = 'https://www.goldapi.io/api';
 
+// Cache object
+let goldPriceCache = {
+  value: null,
+  timestamp: 0
+};
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
 /**
  * Fetch current gold price per ounce in USD
  * @returns {Promise<number>} Current price per ounce
  */
 async function getCurrentGoldPrice() {
+  const now = Date.now();
+
+  // Return cached value if valid
+  if (goldPriceCache.value && (now - goldPriceCache.timestamp < CACHE_DURATION)) {
+    return goldPriceCache.value;
+  }
+
   try {
     // If no API key is set, use a realistic fallback price
     if (GOLD_API_KEY === 'goldapi-demo-key') {
-      console.log('⚠️ Using fallback gold price - set GOLD_API_KEY in .env for real prices');
-      // Return a realistic current gold price (around $2000-2100 per oz in 2025)
-      return 2050 + Math.random() * 50; // Random between 2050-2100
+      // Only log this once per server start or long interval, not every call
+      if (!goldPriceCache.value) {
+        console.log('⚠️ Using fallback gold price - set GOLD_API_KEY in .env for real prices');
+      }
+      
+      // Return a realistic current gold price (around $2600 per oz in late 2025)
+      // We cache this random value so it doesn't jump around on every refresh
+      const price = 2600 + Math.random() * 50; 
+      
+      goldPriceCache = {
+        value: price,
+        timestamp: now
+      };
+      
+      return price;
     }
 
     const response = await axios.get(`${GOLD_API_BASE_URL}/XAU/USD`, {
@@ -31,15 +57,39 @@ async function getCurrentGoldPrice() {
     });
 
     if (response.data && response.data.price) {
-      return response.data.price;
+      const price = response.data.price;
+      
+      // Update cache
+      goldPriceCache = {
+        value: price,
+        timestamp: now
+      };
+      
+      return price;
     }
 
     throw new Error('Invalid response from Gold API');
   } catch (error) {
-    // This is expected when API key is missing or rate-limited - use fallback silently
-    console.log('ℹ️  Gold price API unavailable, using fallback price');
-    // Fallback to realistic price if API fails
-    return 2050 + Math.random() * 50;
+    // Only log error if we don't have a stale cache to fall back to
+    // OR if enough time has passed since last error log (to avoid spam)
+    const shouldLog = !goldPriceCache.value || (now - goldPriceCache.timestamp > CACHE_DURATION);
+    
+    if (shouldLog) {
+      console.log(`ℹ️  Gold price API unavailable (${error.message}), using fallback/cached price`);
+    }
+    
+    // If we have a stale cache, keep using it to avoid drastic jumps
+    if (goldPriceCache.value) {
+      return goldPriceCache.value;
+    }
+    
+    // Absolute fallback if nothing else works
+    const fallbackPrice = 2600 + Math.random() * 50;
+    goldPriceCache = {
+      value: fallbackPrice,
+      timestamp: now
+    };
+    return fallbackPrice;
   }
 }
 

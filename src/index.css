@@ -96,3 +96,18 @@ body.modal-open {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
+
+/* Global focus override - Only allow outline on inputs */
+*:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+[role="listbox"]:focus,
+[contenteditable="true"]:focus {
+  outline: 2px solid transparent !important; /* Tailwind focus ring handles this */
+  /* We don't want to override the Tailwind ring/shadow if it's applied */
+}

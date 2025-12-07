@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FinancialSidebar from '../Shared/FinancialSidebar';
 import Button from '../Shared/Button';
@@ -128,6 +128,10 @@ function FinancialSettingsPage() {
     setShowEditProfileModal(true);
   };
 
+  const handleCloseEditProfileModal = useCallback(() => {
+    setShowEditProfileModal(false);
+  }, []);
+
   const handleSaveProfile = async () => {
     if (!validateEditForm()) {
       return;
@@ -189,9 +193,9 @@ function FinancialSettingsPage() {
     setShowRecoveryCodesModal(true);
   };
 
-  const handleCloseRecoveryCodes = () => {
+  const handleCloseRecoveryCodes = useCallback(() => {
     setShowRecoveryCodesModal(false);
-  };
+  }, []);
 
   const handleLogout = () => {
     // Convenience handler (not used by modal) - ensure it logs out and redirects
@@ -407,7 +411,7 @@ function FinancialSettingsPage() {
 
         <Modal
           isOpen={showEditProfileModal}
-          onClose={() => setShowEditProfileModal(false)}
+          onClose={handleCloseEditProfileModal}
           title="Edit Profile"
           subtitle="Update your name, contact info, and password."
           maxWidth="max-w-lg"

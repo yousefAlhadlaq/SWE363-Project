@@ -15,22 +15,23 @@ import {
   Inbox,
   BarChart3,
   Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import Sidebar from '../Shared/Sidebar';
 import Card from '../Shared/Card';
+import RemoveAccountForm from './RemoveAccountForm';
 import Button from '../Shared/Button';
 import Modal from '../Shared/Modal';
 import InputField from '../Shared/InputField';
 import SelectMenu from '../Shared/SelectMenu';
 import EmptyState from '../Shared/EmptyState';
 import { useAuth } from '../../context/AuthContext';
+import { formatCurrencySAR } from '../../utils/formatCurrencySAR';
+import { usePortfolioSummary } from '../../hooks/usePortfolioSummary';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
-const formatSR = (value = 0, digits = 2) =>
-  `SR ${Number(value).toLocaleString('en-US', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })}`;
+const formatSR = (value) => formatCurrencySAR(value);
 
 const financialStatusOptions = [
   { key: 'weekly', label: 'Weekly' },
@@ -342,6 +343,8 @@ function DashboardPage() {
   }, [linkedAccountOptions]);
 
   // Fetch analytics chart data
+  const { portfolio, loading: portfolioLoading } = usePortfolioSummary();
+
   const fetchChartData = useCallback(async (range) => {
     const token = localStorage.getItem('token');
 
@@ -575,11 +578,11 @@ function DashboardPage() {
     });
   }, [chartData, statusRange]);
 
-  const addLatestUpdate = (update) => {
+  const addLatestUpdate = useCallback((update) => {
     setLatestUpdates((prev) =>
       [{ id: Date.now(), ...update }, ...prev].slice(0, latestUpdatesLimit)
     );
-  };
+  }, []);
 
   const displayName = user?.name || user?.fullName || 'Jordan Carter';
   const userInitials = useMemo(() => {
@@ -595,14 +598,6 @@ function DashboardPage() {
     return `${parts[0][0]?.toUpperCase() || ''}${parts[1][0]?.toUpperCase() || ''}`;
   }, [displayName]);
 
-  // Use real data from backend instead of hardcoded financialStatusData
-  const normalizedChart = normalizeChartData;
-  const activeFinancialData = normalizedChart;
-  const maxFinancialValue = Math.max(
-    ...normalizedChart.map((item) => item.value),
-    1
-  );
-
   const chartWidth = 720;
   const chartHeight = 240;
   const chartPaddingLeft = 70; // Extra space for Y-axis labels
@@ -611,67 +606,85 @@ function DashboardPage() {
   const usableWidth = chartWidth - chartPaddingLeft - chartPaddingRight;
   const usableHeight = chartHeight - chartPaddingY * 2;
 
-  const chartPoints = normalizedChart.map((entry, index) => {
-    const x =
-      normalizedChart.length === 1
-        ? chartPaddingLeft + usableWidth / 2
-        : chartPaddingLeft + (index / (normalizedChart.length - 1)) * usableWidth;
-    const normalizedValue = entry.value / maxFinancialValue;
-    const y =
-      chartHeight - chartPaddingY - normalizedValue * usableHeight;
-    return { ...entry, x, y };
-  });
-
-  const linePath = chartPoints
-    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
-    .join(' ');
-
-  const areaPath = chartPoints.length
-    ? `${linePath} L ${chartPoints[chartPoints.length - 1].x.toFixed(2)} ${chartHeight - chartPaddingY
-    } L ${chartPoints[0].x.toFixed(2)} ${chartHeight - chartPaddingY} Z`
-    : '';
-
-  // Calculate Y-axis grid lines and labels
-  const yAxisTicks = [0, 0.25, 0.5, 0.75, 1.0].map((ratio) => {
-    const value = maxFinancialValue * (1 - ratio); // Inverted because Y increases downward in SVG
-    const y = chartPaddingY + ratio * usableHeight;
-    return { y, value };
-  });
-
-  const gridLines = yAxisTicks.slice(1, -1); // Skip top (1.0) and bottom (0) for grid lines
-
-  // ✅ Show loading state while auth initializes OR data is loading
-  if (authLoading || loading) {
-    return (
-      <div className="flex min-h-screen bg-page text-white pt-16 lg:pt-20">
-        <Sidebar />
-        <div className="flex-1 lg:ml-64 px-4 sm:px-6 py-8">
-          <div className="max-w-6xl flex items-center justify-center min-h-[60vh]">
-            <div className="flex flex-col items-center gap-4">
-              <div className="relative">
-                <div className="w-16 h-16 border-4 border-teal-500/20 rounded-full"></div>
-                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-teal-500 rounded-full animate-spin"></div>
-                <div className="absolute inset-2 w-12 h-12 bg-teal-500/10 rounded-full animate-pulse"></div>
-              </div>
-              <p className="text-gray-400 text-sm animate-pulse">Loading dashboard...</p>
-            </div>
-          </div>
-        </div>
-      </div>
+  // Use real data from backend instead of hardcoded financialStatusData
+  const {
+    normalizedChart,
+    maxFinancialValue,
+    chartPoints,
+    linePath,
+    areaPath,
+    yAxisTicks,
+    gridLines
+  } = useMemo(() => {
+    const normalizedChart = normalizeChartData;
+    const maxFinancialValue = Math.max(
+      ...normalizedChart.map((item) => item.value),
+      1
     );
-  }
+
+    const chartPoints = normalizedChart.map((entry, index) => {
+      const x =
+        normalizedChart.length === 1
+          ? chartPaddingLeft + usableWidth / 2
+          : chartPaddingLeft + (index / (normalizedChart.length - 1)) * usableWidth;
+      const normalizedValue = entry.value / maxFinancialValue;
+      const y =
+        chartHeight - chartPaddingY - normalizedValue * usableHeight;
+      return { ...entry, x, y };
+    });
+
+    const linePath = chartPoints
+      .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+      .join(' ');
+
+    const areaPath = chartPoints.length
+      ? `${linePath} L ${chartPoints[chartPoints.length - 1].x.toFixed(2)} ${chartHeight - chartPaddingY
+      } L ${chartPoints[0].x.toFixed(2)} ${chartHeight - chartPaddingY} Z`
+      : '';
+
+    // Calculate Y-axis grid lines and labels
+    const yAxisTicks = [0, 0.25, 0.5, 0.75, 1.0].map((ratio) => {
+      const value = maxFinancialValue * (1 - ratio); // Inverted because Y increases downward in SVG
+      const y = chartPaddingY + ratio * usableHeight;
+      return { y, value };
+    });
+
+    const gridLines = yAxisTicks.slice(1, -1); // Skip top (1.0) and bottom (0) for grid lines
+
+    return {
+      normalizedChart,
+      maxFinancialValue,
+      chartPoints,
+      linePath,
+      areaPath,
+      yAxisTicks,
+      gridLines
+    };
+  }, [normalizeChartData]);
+
+
 
   const currentAction = quickActions.find((action) => action.id === activeAction);
-  const handleCancelAction = (actionId) => {
+  const resetActionForm = useCallback((actionId) => {
+    setActionValues((prev) => ({
+      ...prev,
+      [actionId]: actionId === 'manual-entry'
+        ? getManualEntryInitialValues()
+        : actionInitialValues[actionId],
+    }));
+  }, []);
+
+  const handleCancelAction = useCallback((actionId) => {
     if (actionId) {
       resetActionForm(actionId);
     }
     setActiveAction(null);
     setLinkingAccount(false);
     setLinkAccountStep(1);
-  };
+    setRemoveConfirmationStep(false);
+  }, [resetActionForm]);
 
-  const updateActionValue = (actionId, field, value) => {
+  const updateActionValue = useCallback((actionId, field, value) => {
     setActionValues((prev) => ({
       ...prev,
       [actionId]: {
@@ -679,30 +692,17 @@ function DashboardPage() {
         [field]: value,
       },
     }));
-  };
+  }, []);
 
-  const resetActionForm = (actionId) => {
-    setActionValues((prev) => ({
-      ...prev,
-      [actionId]: actionId === 'manual-entry'
-        ? getManualEntryInitialValues()
-        : actionInitialValues[actionId],
-    }));
-  };
+  const handleNextStep = useCallback(() => {
+    setLinkAccountStep(prev => (prev < 3 ? prev + 1 : prev));
+  }, []);
 
-  const handleNextStep = () => {
-    if (linkAccountStep < 3) {
-      setLinkAccountStep(linkAccountStep + 1);
-    }
-  };
+  const handlePreviousStep = useCallback(() => {
+    setLinkAccountStep(prev => (prev > 1 ? prev - 1 : prev));
+  }, []);
 
-  const handlePreviousStep = () => {
-    if (linkAccountStep > 1) {
-      setLinkAccountStep(linkAccountStep - 1);
-    }
-  };
-
-  const handleManualEntryTypeChange = (transactionType) => {
+  const handleManualEntryTypeChange = useCallback((transactionType) => {
     setActionValues(prev => ({
       ...prev,
       'manual-entry': {
@@ -710,7 +710,7 @@ function DashboardPage() {
         transactionType,
       },
     }));
-  };
+  }, []);
 
   const validateManualEntry = (data) => {
     const errors = {};
@@ -737,7 +737,7 @@ function DashboardPage() {
     return errors;
   };
 
-  const handleSubmitAction = async (actionId, event) => {
+  const handleSubmitAction = useCallback(async (actionId, event) => {
     event.preventDefault();
 
     if (actionId === 'link-account') {
@@ -1035,57 +1035,7 @@ function DashboardPage() {
     }
 
     if (actionId === 'remove-account') {
-      const { accountId } = actionValues['remove-account'];
-
-      if (!accountId) {
-        alert('Please select an account to remove');
-        return;
-      }
-
-      const selectedOption = linkedAccountOptions.find(opt => opt.value === accountId);
-      const confirmationLabel = selectedOption?.label || 'this account';
-      const token = localStorage.getItem('token');
-
-      const confirmed = window.confirm(`Are you sure you want to remove ${confirmationLabel}?`);
-      if (!confirmed) return;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/accounts/external/${accountId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          credentials: 'include',
-        });
-
-        const result = await response.json().catch(() => ({}));
-
-        if (!response.ok || result.success === false) {
-          throw new Error(result.error || 'Failed to remove account');
-        }
-
-        // Optimistically update local state
-        setLinkedAccounts(prev => prev.filter(acc => (acc.id || acc._id) !== accountId));
-        setDashboardData(prev => ({
-          ...prev,
-          accounts: prev?.accounts?.filter(acc => (acc.id || acc._id) !== accountId) || [],
-        }));
-        // Refresh to ensure balance and states are current
-        fetchDashboardData();
-
-        fetchChartData(statusRange);
-
-
-        setSuccessMessage(`Removed ${confirmationLabel}`);
-        setTimeout(() => setSuccessMessage(null), 4000);
-
-        resetActionForm(actionId);
-        setActiveAction(null);
-      } catch (error) {
-        console.error('Error removing account:', error);
-        alert(`Failed to remove account: ${error.message}`);
-      }
-
+      // Logic moved to handleDeleteAccount
       return;
     }
 
@@ -1144,9 +1094,55 @@ function DashboardPage() {
 
     resetActionForm(actionId);
     setActiveAction(null);
-  };
+  }, [actionValues, linkedAccountOptions, statusRange, fetchDashboardData, fetchChartData, addLatestUpdate, handleCancelAction, resetActionForm]);
 
-  const renderActionForm = () => {
+  const handleDeleteAccount = useCallback(async () => {
+    const accountId = actionValues['remove-account'].accountId;
+    if (!accountId) return;
+
+    const selectedOption = linkedAccountOptions.find(opt => opt.value === accountId);
+    const confirmationLabel = selectedOption?.label || 'this account';
+    const token = localStorage.getItem('token');
+
+    const response = await fetch(`${API_BASE_URL}/accounts/external/${accountId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      credentials: 'include',
+      body: JSON.stringify({})
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || result.success === false) {
+      throw new Error(result.error || 'Failed to remove account');
+    }
+
+    // Optimistically update local state
+    setLinkedAccounts(prev => prev.filter(acc => (acc.id || acc._id) !== accountId));
+    setDashboardData(prev => ({
+      ...prev,
+      accounts: prev?.accounts?.filter(acc => (acc.id || acc._id) !== accountId) || [],
+    }));
+
+    setSuccessMessage(`Removed ${confirmationLabel}`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+
+    // Close modal immediately
+    resetActionForm('remove-account');
+    setActiveAction(null);
+
+    // Refresh data in background
+    fetchDashboardData();
+    fetchChartData(statusRange);
+  }, [actionValues, linkedAccountOptions, statusRange, fetchDashboardData, fetchChartData, resetActionForm]);
+
+  const handleCloseModal = useCallback(() => {
+    handleCancelAction(activeAction);
+  }, [handleCancelAction, activeAction]);
+
+  const actionFormContent = useMemo(() => {
     if (!currentAction) return null;
 
     switch (currentAction.id) {
@@ -1632,35 +1628,13 @@ function DashboardPage() {
       }
       case 'remove-account':
         return (
-          <form
-            onSubmit={(event) => handleSubmitAction('remove-account', event)}
-            className="space-y-4"
-          >
-            <SelectMenu
-              label="Account to Remove"
-              name="accountId"
-              value={actionValues['remove-account'].accountId}
-              onChange={(event) =>
-                updateActionValue('remove-account', 'accountId', event.target.value)
-              }
-              options={realAccountOptions}
-              required
-            />
-            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              Removing an account will also remove its transactions from your dashboard summary.
-              This action cannot be undone.
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => handleCancelAction('remove-account')}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">{currentAction.submitLabel}</Button>
-            </div>
-          </form>
+          <RemoveAccountForm
+            accounts={realAccountOptions}
+            selectedAccountId={actionValues['remove-account'].accountId}
+            onSelectAccount={(val) => updateActionValue('remove-account', 'accountId', val)}
+            onCancel={() => handleCancelAction('remove-account')}
+            onConfirm={handleDeleteAccount}
+          />
         );
 
       case 'export':
@@ -1732,7 +1706,28 @@ function DashboardPage() {
       default:
         return null;
     }
-  };
+  }, [currentAction, linkAccountStep, actionValues, formErrors, bankOptions, linkedAccountOptions, realAccountOptions, transactionTypeOptions, expenseCategoryOptions, incomeCategoryOptions, linkingAccount, handleCancelAction, handleNextStep, handlePreviousStep, handleSubmitAction, updateActionValue, handleManualEntryTypeChange]);
+
+  // ✅ Show loading state while auth initializes OR data is loading
+  if (authLoading || loading) {
+    return (
+      <div className="flex min-h-screen bg-page text-white pt-16 lg:pt-20">
+        <Sidebar />
+        <div className="flex-1 lg:ml-64 px-4 sm:px-6 py-8">
+          <div className="max-w-6xl flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-teal-500/20 rounded-full"></div>
+                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-teal-500 rounded-full animate-spin"></div>
+                <div className="absolute inset-2 w-12 h-12 bg-teal-500/10 rounded-full animate-pulse"></div>
+              </div>
+              <p className="text-gray-400 text-sm animate-pulse">Loading dashboard...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-page text-white pt-16 lg:pt-20">
@@ -1840,7 +1835,7 @@ function DashboardPage() {
                       {
                         key: 'investments',
                         label: 'Investments',
-                        amount: dashboardData?.investmentsTotal || 0,
+                        amount: portfolio?.totalValue || 0,
                         icon: TrendingUp,
                         hint: 'Stocks, Gold & more',
                       },
@@ -2181,11 +2176,11 @@ function DashboardPage() {
 
       <Modal
         isOpen={Boolean(currentAction)}
-        onClose={() => handleCancelAction(currentAction?.id)}
+        onClose={handleCloseModal}
         title={currentAction?.modalTitle}
         subtitle={currentAction?.modalSubtitle}
       >
-        {renderActionForm()}
+        {actionFormContent}
       </Modal>
     </div>
   );
